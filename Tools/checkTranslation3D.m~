@@ -1,0 +1,31 @@
+function checkTranslation3D( co, R_c_s, t_c_s )
+
+Q = zeros(3,0);
+LABELS = zeros(1,0);
+for nco=1:length(co)
+    gt = co(nco).gt;
+    
+    t_w_s = gt.t_w_c + gt.R_w_c * t_c_s;
+    R_w_s = gt.R_w_c * R_c_s;
+    
+    q = cell2mat( co(nco).q );
+    Npts = size(q,2);
+    q = R_w_s(:,1:2) * q + repmat( t_w_s, 1,Npts );
+    Q = [Q , q];
+    
+    lab = co(nco).lab_line;
+    LABELS = [LABELS lab];
+end
+
+COLORS = zeros(3,size(LABELS,2));
+COLORS(1, LABELS==1) 
+
+figure, hold on
+% subplot(121), hold on
+plotframe( eye(4), 1, 'W', 'k' )
+plot3( Q(1,:), Q(2,:), Q(3,:), '.' )
+
+% subplot(122), hold on
+% figure
+% imshow( img.I ); hold on
+% checkRotationReprojection( c, R_c_w, img.K )
