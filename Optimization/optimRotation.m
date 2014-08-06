@@ -49,6 +49,8 @@ J = cross( R(1:3,1:2) * line_LRF, n_cam, 1 )';
 end
 
 function [residual, J, W] = FunW( rot_input, R )
+global WITH_MONTECARLO
+
 n_cam = [rot_input.N];
 line_LRF = [rot_input.l];
 residual = dot( n_cam, R(1:3,1:2) * line_LRF, 1 )';
@@ -61,63 +63,52 @@ W = cell(1, N_obs);
 ort = [ 0 -1
         1  0 ];
     
-R = R(1:3,1:2); % Only 2 columns are used
+R12 = R(1:3,1:2); % Only 2 columns are used
 
 for i=1:N_obs
     N = rot_input(i).N;
     A_N = rot_input(i).A_N;
     L = rot_input(i).l;
     A_L = rot_input(i).A_l;
-    if size( N, 2 ) == 3
-%         i = 3*(k-1);
-%         span = (1:3)+i;
-%         iN = 9*(k-1);
-%         spanN = (1:9)+iN;
-        n1 = N(:,1);
-        n2 = N(:,2);
-        n3 = N(:,3);
-        l1 = L(:,1);
-        l2 = L(:,2);
-        l3 = L(:,3);
         
-        JN  = blkdiag( l1'*R', l2'*R', l3'*R' );
-        Ja1 = n1' * R * ort * l1;
-        Ja2 = n2' * R * ort * l2;
-        Ja3 = n3' * R * ort * l3;
-        
-        A_Nk = JN * A_N * JN';
-        A_Lk = diag( [Ja1 Ja2 Ja3].^2 ) * A_L;
-        A_k  = A_Nk + A_Lk;
-    elseif size( N, 2 ) == 2
-        n1 = N(:,1);
-        n2 = N(:,2);
-        l1 = L(:,1);
-        l2 = L(:,2);
-        
-        JN  = blkdiag( l1'*R', l2'*R' );
-        Ja1 = n1' * R * ort * l1;
-        Ja2 = n2' * R * ort * l2;
-        
-        A_Nk = JN * A_N * JN';
-        A_Lk = diag( [Ja1 Ja2].^2 ) * A_L;
-        A_k  = A_Nk + A_Lk;
-    else
-        n1 = N(:,1);
-        l1 = L(:,1);
-        
-        JN  = blkdiag(l1'*R');
-        Ja1 = n1' * R * ort * l1;
-        
-        A_Nk = JN * A_N * JN';
-        A_Lk = diag( Ja1^2 ) * A_L;
-        A_k  = A_Nk + A_Lk;
-    end
+    s  = size( N, 2 );
+    RL = mat2cell( R12*L, 3, ones(1,s) );
+    JN = blkdiag( RL{:} )';
+    Ja = diag( dot( N, R12*ort*L ) );
+    A_k = JN * A_N * JN' + Ja * A_L * Ja';
+
     W{i} = pinv(A_k);
+    if WITH_MONTECARLO
+        if s==3
+            MonteCarlo_simulate( )
+        end
+    end
 end
 
 % Build complete matrix from diagonal blocks
 W = blkdiag(W{:});
 % % Temporal debug:
 % W = diag(diag(W));
+
+    function MonteCarlo_simulate( )
+        
+        X0 = [ N(:); L(:) ];
+        function e = F_e(X0)
+            N = reshape(X0(1:3*3),3,3);
+            L = reshape(X0(3*3+1:end),2,3);
+            e = dot( N, R(1:3,1:2)*L, 1 )';
+        end
+        
+        [~,J_man] = MonteCarlo.manDiffRot( N );
+        A_N_man = J_man * A_N * J_man';
+        % TODO: Input covariance A_N should be minimal covariance
+        % NOTE: R for differential is not R_c_s but R_c_w=N -> Corrected
+        fprintf('Montecarlo analysis of error covariance from N and L\n')
+        [manSum,manSubtraction,manMean] = MonteCarlo.spaceOps( {'SO(3)','S1','S1','S1'}, {'R','R','R'} );
+        tic, [mu,A] = MonteCarlo.simulate( @F_e, X0, blkdiag(A_N_man,A_L), 'manSum',manSum, 'manSubtraction',manSubtraction, 'manMean',manMean,...
+            'AF', A_k, 'N', 1e4 ); toc
+        keyboard
+        
+    end
 
 end
