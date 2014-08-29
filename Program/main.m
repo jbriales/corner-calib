@@ -13,27 +13,11 @@ set(0,'defaultfigureposition', [642   503   560   420])
 global WITH_MONTECARLO
 WITH_MONTECARLO = false;
 
-USER_INITIALISE = true;
-WindowStyle  = 'docked'; % normal, docked, modal
-VIDEO_PREVIEW = false;
-typeOfSource = 'Blender';
-dataset_base = 'Blender';
-dataset_Nr = 3;
-stereoLabel = '';
-hokuyoLabel = '';
-decimation = 10;
-dataset = strcat( dataset_base, num2str(dataset_Nr) );
-userOpts = struct('typeOfSource',typeOfSource,...
-                  'USER_INITIALISE', USER_INITIALISE,...
-                  'dataset',dataset,...
-                  'stereoLabel',stereoLabel,...
-                  'hokuyoLabel',hokuyoLabel,...
-                  'decimation',decimation,...
-                  'WindowStyle',WindowStyle,...
-                  'VIDEO_PREVIEW',VIDEO_PREVIEW);
+userOpts = readConfigFile( fullfile(pwd,'main.ini') );
+extractStructFields( userOpts );
 
-[imgs, scans, imgtrack, scantrack, R_c_w, signOfAxis, ...
-       path, hWin, hLidar, hImg, WITHGT, gt ] = loadDataset( userOpts );
+all_dataset_data = loadDataset( userOpts );
+extractStructFields( all_dataset_data );
 
 debug = 0;
 [img_params, A_img_params, imgtrack, checkImage] = ...
@@ -306,9 +290,9 @@ solveTranslation
 solveTranslation_3D
 
 %% Save calibration results
-[path_datasets, dataset]  = fileparts( path );
+[path_datasets, datasetname]  = fileparts( path );
 fbase = fullfile(path_datasets, 'Results',...
-	strcat(typeOfSource,'_',dataset,...
+	strcat(typeOfSource,'_',datasetname,...
     stereoLabel,hokuyoLabel,'_',datestr(now,'mm_dd_HH_MM'),'_'));
 save( strcat(fbase,'R_c_s_W'), 'R_c_s_w', '-ascii' )
 save( strcat(fbase,'R_c_s_NW'), 'R_c_s_nw', '-ascii' )

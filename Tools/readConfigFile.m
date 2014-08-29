@@ -22,13 +22,16 @@ else
         line = fgetl( FID );
         
         % Remove comments
-        pos.comment = strfind( line, '//' );
+        pos.comment = [ strfind( line, '#' ), strfind( line, '//' ) ];
         if ~isempty( pos.comment )
             line(pos.comment:end) = [];
         end
         
         % Find = symbol
         pos.eq = strfind( line, '=' );
+        if isempty( pos.eq )
+            continue
+        end
         
         % Find key word
         pos.key = pos.eq - 1;
@@ -39,12 +42,12 @@ else
         
         % Find value
         pos.val = pos.eq + 1;
-        val = textscan(line(pos.val:end), '%f');
+        str = strtrim( line(pos.val:end) );
         
         % Store value in struct
-        S.(key) = val{:}'; % Using dynamic fieldname
+        eval( strcat( 'S.(key)=', str,';' ) )
         
-        % Deletes previous parameters
+        % Delete previous parameters
         clear pos
        
     end

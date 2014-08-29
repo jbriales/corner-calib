@@ -1,22 +1,44 @@
-function [imgs, scans, imgtrack, scantrack,R_c_w,signOfAxis,...
-          path, hWin, hLidar, hImg, WITHGT, gt ] = loadDataset( userOpts )
-
+function out = loadDataset( userOpts )
+% out = loadDataset( userOpts )
+% Receives the fields specified in userOpts and load data related to
+% dataset accordingly
+% The output data is stored in a struct
+% 
+% See also extractStructFields
+      
 % Copy struct values to variables with field names
-vars = fieldnames( userOpts );
-for k=1:length(vars)
-    field = vars{k};
-    eval([ field,'= userOpts.',field,';' ]);
-end
-clear k field vars userOpts
+extractStructFields( userOpts );
 
-if exist(fullfile(pwd,'cache','path.mat'),'file')
-    load( fullfile(pwd,'cache','path'),'-mat', 'path' );
+if exist(fullfile(pwd,'cache','path'),'file')
+    % Read path value from cache file
+    FID = fopen( fullfile(pwd,'cache','path'), 'r' );
+    if ( FID >= 0 )
+        path = fgetl( FID );
+        fclose(FID);
+    else
+        error('Could not read file: %s',fullfile(pwd,'cache','path'))
+    end
+    % Look chosen dataset in parent folder
+    hint_path = fullfile( fileparts(path), datasetname );
+    if ~exist(hint_path,'dir')
+        % If do not exist: uigetdir in parent folder
+        path = uigetdir(fileparts(path),'Choose dataset parent folder');
+    else
+        path = hint_path;
+    end
 else
-    path = pwd;
+    % If there is no path stored in cache: uigetdir
+    path = uigetdir(pwd,'Choose dataset parent folder');
 end
+
 if USER_INITIALISE
-    path = uigetdir(path,'Choose dataset parent folder');
-    save( fullfile(pwd,'cache','path'), 'path' );
+    FID = fopen( fullfile(pwd,'cache','path'), 'w' );
+    if ( FID >= 0 )
+        fprintf( FID, '%s', path );
+        fclose( FID );
+    else
+        error('Could not write file: %s',fullfile(pwd,'cache','path'))
+    end
 end
 
 % Set plotting space
@@ -77,6 +99,11 @@ else
         warning('No images selected. The program will finish')
         return
     end
+    if isempty( [imgs.ts] )
+        warning('Wrong image name format: %s\n Check stereo config',...
+                imgFormat);
+        return
+    end
     
     if VIDEO_PREVIEW
         imgsStack = stackImages( imgs );
@@ -124,6 +151,20 @@ else
 end
 winPosition = get(gcf,'Position');
 save( fullfile(pwd,'cache','winPosition'), 'winPosition' )
+
+out = struct( );
+out.imgs = imgs;
+out.scans = scans;
+out.imgtrack = imgtrack;
+out.scantrack = scantrack;
+out.R_c_w = R_c_w;
+out.signOfAxis = signOfAxis;
+out.path = path;
+out.hWin = hWin;
+out.hLidar = hLidar;
+out.hImg = hImg;
+out.WITHGT = WITHGT;
+out.gt = gt;
 end
 
 %% Local functions
