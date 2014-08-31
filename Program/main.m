@@ -1,5 +1,8 @@
 % All scripts
 
+% Global variables
+global WITH_MONTECARLO %#ok<NUSED>
+
 % Previous assertions:
 clear
 close all
@@ -7,11 +10,8 @@ dbstop if error % Set debug mode on if error occurs
 kbhit('stop')
 kbhit('init') % Track keyboard hits
 
+% To position figures centered and visible by default
 set(0,'defaultfigureposition', [642   503   560   420])
-
-% Control variables:
-global WITH_MONTECARLO
-WITH_MONTECARLO = false;
 
 userOpts = readConfigFile( fullfile(pwd,'main.ini') );
 extractStructFields( userOpts );
@@ -44,7 +44,8 @@ for nframe=1:length(scans)
     % Set algorithm input
     scan = scans(nframe);
     
-    if im_frame < find( [imgs.ts] <= scan.ts, 1, 'last' );
+%     if im_frame < find( [imgs.ts] <= scan.ts, 1, 'last' );
+    if 1
         new_image_reached = true;
     else
         new_image_reached = false;
@@ -53,7 +54,8 @@ for nframe=1:length(scans)
     if new_image_reached
         nco = nco + 1; % If new image is reached new Corner Observation will be added
         
-        im_frame = find( [imgs.ts] <= scan.ts, 1, 'last' );
+%         im_frame = find( [imgs.ts] <= scan.ts, 1, 'last' );
+        im_frame = nframe;
         img = imgs(im_frame);
         
         if WITHGT
@@ -62,30 +64,42 @@ for nframe=1:length(scans)
         end
         
         %% Go from image to Camera-World data
+        % Load image: Remove if not necessary to improve speed
+        img.I = imread( img.path );
+        
         imgtrack0 = imgtrack;
         img_gray = rgb2gray( img.I );
         
         subplot( hImg )
         fprintf('Image tracking in frame %d\n',nframe)
-        tic
-        debug = 0;
-        [img_params, A_img_params, imgtrack, CHECK_IMAGE] = ...
-            corner_calib(imgtrack, img_gray, debug);
-        fprintf('CORNER_CALIB TIME: %f\n',toc)
-        clear debug
-        
-        if CHECK_IMAGE
-            subplot( hImg )
-            corner_calib_plot(imgtrack.x, imgtrack0.x, img_gray)
-            
-            imgtrack = initialisation_calib( img_gray );
-
-            [~, ~, imgtrack, ~] = corner_calib(imgtrack, img_gray, debug);
-            [img_params, A_img_params, imgtrack, ~] = ...
+%         metafile = fullfile( path, 'meta_img', img.file );
+        metafile = img.metafile;
+        if exist(metafile,'file')
+            load( metafile, '-mat', 'img_params', 'A_img_params', 'imgtrack' );
+        else
+            tic
+            debug = 0;
+            [img_params, A_img_params, imgtrack, CHECK_IMAGE] = ...
                 corner_calib(imgtrack, img_gray, debug);
-            % Twice to avoid gradient direction alarm from initialisation
-            CHECK_IMAGE = false;
+            fprintf('CORNER_CALIB TIME: %f\n',toc)
+            
+            if CHECK_IMAGE
+                subplot( hImg )
+                corner_calib_plot(imgtrack.x, imgtrack0.x, img_gray)
+                
+                imgtrack = initialisation_calib( img_gray );
+                
+                [~, ~, imgtrack, ~] = corner_calib(imgtrack, img_gray, debug);
+                [img_params, A_img_params, imgtrack, ~] = ...
+                    corner_calib(imgtrack, img_gray, debug);
+                % Twice to avoid gradient direction alarm from initialisation
+                CHECK_IMAGE = false;
+            end
+            clear debug
+            save( metafile, 'img_params', 'A_img_params', 'imgtrack' );
         end
+        clear metafile
+        
         x = img_params;
         A_x = A_img_params;
         [NL, c, A_co, L_P2] = imgParams2calibratedData( x, img.K, A_x );
@@ -95,6 +109,13 @@ for nframe=1:length(scans)
         tic
         subplot( hImg )
         corner_calib_plot(img_params, imgtrack0.x, img_gray)
+        % Store image for later visualisation
+        if 0
+            F = getframe(hImg);
+            [track_im,~] = frame2im(F);
+            imwrite(track_im, fullfile(path,'track_img',img.file));
+            clear F
+        end
         fprintf('IMAGE PLOT TIME: %f\n',toc)
             
         % Solve world plane normals seen from camera and uncertainty
@@ -149,8 +170,16 @@ for nframe=1:length(scans)
     end
         
     debug = 0;
-    tic
-    [scantrack, inPts, lost] = updateSegments( scan, scantrack, debug );
+    metafile = scan.metafile;
+    if exist(metafile,'file')
+        % TODO: What to do with lost var?
+        load( metafile, '-mat', 'scantrack', 'inPts', 'lost' );
+    else
+        tic
+        [scantrack, inPts, lost] = updateSegments( scan, scantrack, debug );
+        save( metafile, 'scantrack', 'inPts', 'lost' );
+    end
+    clear metafile
     [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = computeScanCorner( scan, {scantrack.all_inliers}, debug );
     [scantrack.lin] = deal( lin{:} );
     [scantrack.seg] = deal( seg{:} );

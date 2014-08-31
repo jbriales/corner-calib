@@ -60,7 +60,7 @@ if ~USER_INITIALISE
     toc
     
     % hDocked = figure('Name',['Calibration in ',path], 'WindowStyle','docked');
-%     hDocked = figure('Name',['Calibration in ',path], 'Position', [350 345 1108 571]);
+    % hDocked = figure('Name',['Calibration in ',path], 'Position', [350 345 1108 571]);
     subplot( hImg );
     imshow( rgb2gray(imgs(1).I) )
     
@@ -94,7 +94,7 @@ else
     %% LOAD INITIAL DATA AND USER INPUT
     % Load images
     blur = false;
-    imgs = loadCamData( path, imgFormat, imgFormat, blur, decimation );
+    imgs = loadCamData( path, imgFormat, blur, decimation, img_idxs );
     if isempty( imgs )
         warning('No images selected. The program will finish')
         return
@@ -105,12 +105,13 @@ else
         return
     end
     
-    if VIDEO_PREVIEW
-        imgsStack = stackImages( imgs );
-        implay( imgsStack, 80 )
-        pause
-        clear imgsStack
-    end
+%     Temporarily unavailable
+%     if VIDEO_PREVIEW
+%         imgsStack = stackImages( imgs );
+%         implay( imgsStack, 80 )
+%         pause
+%         clear imgsStack
+%     end
     
     % Load LIDAR
     scans = loadLidarData(typeOfSource, path, LIDAR_tag);
@@ -121,23 +122,34 @@ else
     imgs  = cropImgsArray( scans, imgs );
     % Remove scans before and after images limits:
 %     plotTs( scans, imgs )
-    scans = cropScansArray( scans, imgs );
-    % Find scan closest to each image and assign:
+    %scans = cropScansArray( scans, imgs );
+    % Set image-scan synchronised pairs by finding scan closest to each image and assign:
 %     plotTs( scans, imgs )
-    scans = filterClosestScans( scans, imgs );
+    [scans, delta_ts] = filterClosestScans( scans, imgs );
     % Plot scans and images timestamps:
 %     plotTs( scans, imgs )
     
     % User input: Set initial points in image for tracking
-    imgtrack = initialisation_calib( rgb2gray(imgs(1).I) );
+    if exist(imgs(1).metafile,'file')
+        load( imgs(1).metafile, '-mat', 'imgtrack' );
+    else
+        imgs(1).I = imread( imgs(1).path );
+        imgtrack = initialisation_calib( rgb2gray(imgs(1).I) );
+    end
     
     subplot(hImg);
+    imgs(1).I = imread( imgs(1).path );
     imshow( rgb2gray(imgs(1).I) );
     
     % User input: Set segments of interest in scan observation
     hLidar = subplot(121);
     hold on, title('First scan')
-    scantrack = manualSetScanlines( scans(1).xy, [1 1 1] );
+    if exist(scans(1).metafile,'file')
+        load( scans(1).metafile, '-mat', 'scantrack' );
+        scantrack = manualSetScanlines( scans(1).xy, [0 0 0] );
+    else
+        scantrack = manualSetScanlines( scans(1).xy, [1 1 1] );
+    end
     
     [R_w_c, t_w_c] = manualSetCameraPose( signOfCam, 0 );
     % [R_w_c, t_w_c] = manualSetCameraPose( );
@@ -188,12 +200,16 @@ scans(scan_last_idx+1:end) = [];
 scans(1:scan_first_idx-1) = [];
 end
 
-function scans = filterClosestScans( scans, imgs )
+function [scans, delta_ts] = filterClosestScans( scans, imgs )
 scan_ts = [scans.ts];
+delta_ts = zeros(1,length(imgs));
 for i=1:length(imgs)
     diff = scan_ts - imgs(i).ts;
-    [~,I] = min( abs(diff) );
+    [delta_ts(i),I] = min( abs(diff) );
     scans_(i) = scans(I);
+end
+for i=1:length(imgs)
+    scans_(i).delta_ts = delta_ts(i);
 end
 scans = scans_; % Substitute array
 clear scans_

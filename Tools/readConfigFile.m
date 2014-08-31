@@ -3,11 +3,10 @@ function S = readConfigFile( filename )
 % Returns a struct where fields are different lines in config file
 % 
 % ConfigFile Example:
-%   dir = 1 0
-%   Npts = 1081
-%   range = 60
+%   dir = [1 0]
+%   M = [1 1 ; 2 3]
+%   str = 'this is a string'
 %   FOVd = 270.2
-
 
 FID = fopen( filename, 'r' );
 

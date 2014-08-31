@@ -74,6 +74,7 @@ for i=1:Nobs
     scans(i).xy   = [ x(i,:) ; y(i,:) ];
     scans(i).mask = mask(i,:);
     scans(i).ts   = ts(i);
+    scans(i).metafile = fullfile(path,'meta_laser',num2str(ts(i),'%.6f'));
 end
 
 end
@@ -81,8 +82,7 @@ end
 
 function scans = loadBlender( path )
 
-path = fullfile( path, 'laser' );
-files = dir( path );
+files = dir( fullfile( path, 'laser' ) );
 files(1:2) = []; % Deletes first two elements (current and parent directory)
 files = {files(:).name}; % Keeps only the names of files
 
@@ -97,7 +97,7 @@ for i=1:Nobs
     name = files{i};
     
     ts = sscanf(name,'%f.pcd');
-    pts = double(loadpcd( fullfile(path,name) ));
+    pts = double(loadpcd( fullfile(path,'laser',name) ));
     
     % Scan frame needs to be transformed from Blender to typical
     % Scanner-to-World coordinates
@@ -111,6 +111,8 @@ for i=1:Nobs
     scans(i).xy   = pts(1:2,:);
     scans(i).mask = ones(1, size(pts,2));
     scans(i).ts   = ts;
+    scans(i).metafile = num2str(ts,'%.6f');
+    scans(i).metafile = fullfile(path,'meta_laser',num2str(ts(i),'%.6f'));
 end
 
 end
