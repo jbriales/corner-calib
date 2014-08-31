@@ -301,8 +301,8 @@ co0 = co;
 precondwithErrFun
 
 %% Optimize rotations
-[ R_c_s_w, err_w, ~, ~ ] = optimRotation( rot_input, R0, true, all_label );
-[ R_c_s_nw, err_nw, ~, ~ ] = optimRotation( rot_input, R0, false, all_label );
+[ R_c_s_w, cov_w, err_w, ~, ~ ] = optimRotation( rot_input, R0, true, all_label );
+[ R_c_s_nw, cov_nw, err_nw, ~, ~ ] = optimRotation( rot_input, R0, false, all_label );
 
 fprintf('Optimized (weighted) solution R:\n')
 disp(R_c_s_w)
@@ -327,6 +327,8 @@ save( strcat(fbase,'R_c_s_W'), 'R_c_s_w', '-ascii' )
 save( strcat(fbase,'R_c_s_NW'), 'R_c_s_nw', '-ascii' )
 % save( fullfile(path, 't_c_s_w'), 't_c_s_w', '-ascii' )
 % save( fullfile(path, 't_c_s_nw'), 't_c_s_nw', '-ascii' )
+saveConfigFile( strcat(fbase,'R_c_s_W*'), struct('R',R_c_s_w,'cov',cov_w) )
+saveConfigFile( strcat(fbase,'R_c_s_NW*'), struct('R',R_c_s_nw,'cov',cov_nw) )
 
 % plotCalibration( imgs, scans, gt );
 

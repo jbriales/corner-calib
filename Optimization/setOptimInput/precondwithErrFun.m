@@ -13,7 +13,7 @@ all_l = cell2mat([co.l]);
 
 corresps = [ all_n ; all_l ];
 %         thres_ort = 1e-3;
-thres_ort = 1e-2;
+thres_ort = 1e-1;
 feedback = true;
 [R, inliers] = ransacFitTransNormals(corresps, thres_ort, feedback);
 all_inliers = all_idxs( inliers );
@@ -66,7 +66,7 @@ if debug
 end
 
 % Set input data (correspondences)
-cont = 1;
+count = 1;
 for i=1:numel(all_mask)/3
     k = 1 + (i-1)*3;
     
@@ -82,11 +82,17 @@ for i=1:numel(all_mask)/3
         l   = cell2mat(co(i).l(occ));
         A_l = diag(cell2mat(co(i).A_l(occ)));
         
-        rot_input(cont).N = N;
-        rot_input(cont).A_N = A_N;
-        rot_input(cont).l = l;
-        rot_input(cont).A_l = A_l;
-        cont = cont + 1;
+        rot_input(count).N = N;
+        rot_input(count).A_N = A_N;
+        rot_input(count).l = l;
+        rot_input(count).A_l = A_l;
+        
+        % For Monte Carlo simulation
+        J_eps_R = MonteCarlo.manDiffRotLog( co(i).R_c_w ); 
+        rot_input(count).A_eps = J_eps_R * co(i).A_R_c_w * J_eps_R';
+        
+        % Increase counter
+        count = count + 1;
     end
 end
 

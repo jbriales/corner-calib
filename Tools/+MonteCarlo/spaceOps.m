@@ -38,21 +38,28 @@ idx_man = 0;
 
 % Sum operation
 for k=1:length(cellSpaces)
-    switch cellSpaces{k}
+    man = cellSpaces{k};
+    switch man.topo
         case 'R'
-            Nspa = 1;
-            Nman = 1;
+            Nspa = man.dim;
+            Nman = man.dim;
             sum_funs{k} = @MonteCarlo.manSumRn;
-        case 'SO(3)'
-            Nspa = 9;
-            Nman = 3;
-            sum_funs{k} = @MonteCarlo.manSumRot;
-        case 'S1'
-            Nspa = 2;
-            Nman = 1;
-            sum_funs{k} = @MonteCarlo.manSumS1;
-        case 'S2'
-            error('2-sphere space not implemented yet')
+        case 'SO'
+            if man.dim == 3
+                Nspa = 9;
+                Nman = 3;
+                sum_funs{k} = @MonteCarlo.manSumRot;
+            else
+                error('%s(%d) not implemented yet',man.topo,man.dim);
+            end
+        case 'S'
+            if man.dim == 1
+                Nspa = 2;
+                Nman = 1;
+                sum_funs{k} = @MonteCarlo.manSumS1;
+            else
+                error('%s(%d) not implemented yet',man.topo,man.dim);
+            end
         otherwise
             error('The specified space does not exist')
     end
@@ -84,24 +91,31 @@ idx_spa = 0;
 idx_man = 0;
 
 for k=1:length(cellSpaces)
-    switch cellSpaces{k}
+    man = cellSpaces{k};
+    switch man.topo
         case 'R'
-            Nspa = 1;
-            Nman = 1;
+            Nspa = man.dim;
+            Nman = man.dim;
             sub_funs{k} = @MonteCarlo.manSubtractionRn;
             mean_funs{k} = @MonteCarlo.manMeanRn;
-        case 'SO(3)'
-            Nspa = 9;
-            Nman = 3;
-            sub_funs{k} = @MonteCarlo.manSubtractionRot;
-            mean_funs{k} = @MonteCarlo.manMeanRot;
-        case 'S1'
-            Nspa = 2;
-            Nman = 1;
-            sub_funs{k} = @MonteCarlo.manSubtractionS1;
-            mean_funs{k} = @MonteCarlo.manMeanS1;
-        case 'S2'
-            error('2-sphere space not implemented yet')
+        case 'SO'
+            if man.dim == 3
+                Nspa = 9;
+                Nman = 3;
+                sub_funs{k} = @MonteCarlo.manSubtractionRot;
+                mean_funs{k} = @MonteCarlo.manMeanRot;
+            else
+                error('%s(%d) not implemented yet',man.topo,man.dim);
+            end
+        case 'S'
+            if man.dim == 1
+                Nspa = 2;
+                Nman = 1;
+                sub_funs{k} = @MonteCarlo.manSubtractionS1;
+                mean_funs{k} = @MonteCarlo.manMeanS1;
+            else
+                error('%s(%d) not implemented yet',man.topo,man.dim);
+            end
         otherwise
             error('The specified space does not exist')
     end
