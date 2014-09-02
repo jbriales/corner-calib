@@ -1,4 +1,4 @@
-function imgs = loadCamData( path, imgFormat, blur, decimation, indexs )
+function imgs = loadCamData( path, imgFormat, blur, decimation, idx_span )
 % imgs = loadCamData( path, imgFormat, ptsFormat )
 %   path - path of the parent dataset directory
 %   imgFormat - string with format of input images
@@ -19,7 +19,7 @@ K          = load( fullfile( path, 'intrinsic_matrix.txt' ) );
 distortion = load( fullfile( path, 'distortion.txt' ) );
 [~,~,img_ext] = fileparts(imgFormat);
 
-if ~exist('indexs','var') || isempty(indexs)
+if ~exist('idx_span','var') || isempty(idx_span)
     img_files = uigetfile( fullfile(path,'img',strcat('*',img_ext)), 'Choose the images to calibrate', 'MultiSelect', 'on' );
     if isnumeric( img_files ) && img_files == 0
         imgs = [];
@@ -30,7 +30,14 @@ else
     img_files = dir(fullfile(path,'img'));
     img_files(1:2) = []; % . and .. items
     img_files = {img_files.name};
-    img_idxs = indexs(1):decimation:indexs(end);
+    % Filter with label
+    prefix = imgFormat( 1:strfind(imgFormat,'%')-1 );
+    for k=length(img_files):-1:1
+        if isempty( strfind( img_files{k}, prefix ) )
+            img_files(k) = [];
+        end
+    end
+    img_idxs = idx_span(1):decimation:idx_span(end);
 end
 imgs = repmat( struct('I',[], 'file',[], 'path',[], 'ts',[], 'K',[], 'distortion', [] ), length(img_idxs), 1 );
 for k=1:length(imgs)
@@ -49,6 +56,7 @@ for k=1:length(imgs)
     
 %     imgs(k).I = Im_;
     imgs(k).file = img_files{i};
+    imgs(k).file_idx = int8(img_idxs(k));
     imgs(k).path = fullfile(path,'img',img_files{i});
     imgs(k).metafile = fullfile(path,'meta_img',img_files{i});
     imgs(k).ts = sscanf(img_files{i}, imgFormat);

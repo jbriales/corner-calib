@@ -3,6 +3,9 @@
 % Global variables
 global WITH_MONTECARLO %#ok<NUSED>
 
+% TODO: Create two auxiliary functions for tracking and storing
+% metadata in images and scans before optimization
+
 % Previous assertions:
 clear
 close all
@@ -41,8 +44,7 @@ for nframe=1:length(scans)
         keyboard
     end
     
-    % Set algorithm input
-    scan = scans(nframe);
+
     
 %     if im_frame < find( [imgs.ts] <= scan.ts, 1, 'last' );
     if 1
@@ -70,7 +72,7 @@ for nframe=1:length(scans)
         imgtrack0 = imgtrack;
         img_gray = rgb2gray( img.I );
         
-        subplot( hImg )
+        subplot( hImg ), set( gcf, 'Visible', win_visibility )
         fprintf('Image tracking in frame %d\n',nframe)
 %         metafile = fullfile( path, 'meta_img', img.file );
         metafile = img.metafile;
@@ -84,7 +86,7 @@ for nframe=1:length(scans)
             fprintf('CORNER_CALIB TIME: %f\n',toc)
             
             if CHECK_IMAGE
-                subplot( hImg )
+                subplot( hImg ), set( gcf, 'Visible', win_visibility )
                 corner_calib_plot(imgtrack.x, imgtrack0.x, img_gray)
                 
                 imgtrack = initialisation_calib( img_gray );
@@ -107,7 +109,7 @@ for nframe=1:length(scans)
         
         %% Plot image tracking
         tic
-        subplot( hImg )
+        subplot( hImg ), set( gcf, 'Visible', win_visibility )
         corner_calib_plot(img_params, imgtrack0.x, img_gray)
         % Store image for later visualisation
         if 0
@@ -149,6 +151,17 @@ for nframe=1:length(scans)
     end
 
     %% Go from LIDAR information to Corner Observation
+    % Set algorithm input
+    scan = scans(nframe);
+    if isempty(scan.xy)
+        switch typeOfSource
+            case 'Blender'
+                scan.xy = loadBlenderPCD( scan.path );
+            case 'Rawlog'
+                % TODO: Not necessary?
+        end
+    end
+    
     % User reallocation of LIDAR segments
     if upper(kbhit) == 'L' % To stop after pressing 'L' key
         disp('L was hit: Manual reallocation of segments')
@@ -160,7 +173,7 @@ for nframe=1:length(scans)
             selection_mask = ~thereis_line;
         end
         
-        subplot( hLidar )
+        subplot( hLidar ), set( gcf, 'Visible', win_visibility )
         scantrack_aux = manualSetScanlines( scan.xy, selection_mask );
         for k=1:3
             if selection_mask(k) % Substitutes only user selected segments
@@ -177,10 +190,10 @@ for nframe=1:length(scans)
     else
         tic
         [scantrack, inPts, lost] = updateSegments( scan, scantrack, debug );
-        save( metafile, 'scantrack', 'inPts', 'lost' );
+        save( metafile, '-mat', 'scantrack', 'inPts', 'lost' );
     end
     clear metafile
-    [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = computeScanCorner( scan, {scantrack.all_inliers}, debug );
+    [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = computeScanCorner( scan, scan_sigma, {scantrack.all_inliers}, debug );
     [scantrack.lin] = deal( lin{:} );
     [scantrack.seg] = deal( seg{:} );
 
@@ -206,7 +219,7 @@ for nframe=1:length(scans)
 
     %% Update LIDAR visualization
     tic
-    subplot(hLidar)
+    subplot(hLidar), set( gcf, 'Visible', win_visibility )
     ax = axis;
     cla, hold on
     hold on, title('Current scan segmentation')
@@ -231,6 +244,11 @@ for nframe=1:length(scans)
         
         % Closed estimation of R_c_s according to current frame
         co(nco).R_c_s = R_c_w * R_w_s;
+        if ~isreal( co(nco).R_c_s )
+            warning('Complex value for R_c_s in iteration %d',nframe)
+            keyboard
+            co(nco).R_c_s = [];
+        end
         
         if 0
             % Average of estimated rotations
@@ -301,8 +319,8 @@ co0 = co;
 precondwithErrFun
 
 %% Optimize rotations
-[ R_c_s_w, cov_w, err_w, ~, ~ ] = optimRotation( rot_input, R0, true, all_label );
-[ R_c_s_nw, cov_nw, err_nw, ~, ~ ] = optimRotation( rot_input, R0, false, all_label );
+[ R_c_s_w, cov_w, cov_eps_w, err_w, ~, ~ ] = optimRotation( rot_input, R0, true, all_label );
+[ R_c_s_nw, cov_nw, cov_eps_nw, err_nw, ~, ~ ] = optimRotation( rot_input, R0, false, all_label );
 
 fprintf('Optimized (weighted) solution R:\n')
 disp(R_c_s_w)
@@ -315,20 +333,34 @@ if WITHGT
 end
 
 %% Optimize translations
-solveTranslation
-solveTranslation_3D
+% TODO: Solve translation fails when triples are not complete
+% solveTranslation
+% solveTranslation_3D
+
+%% Plot some results
+fprintf('Cov of weighted: %f\n', max(eig(cov_w)));
+disp( cov_w );
+fprintf('Cov of non weighted: %f\n', max(eig(cov_nw)));
+disp (cov_nw );
 
 %% Save calibration results
 [path_datasets, datasetname]  = fileparts( path );
-fbase = fullfile(path_datasets, 'Results',...
-	strcat(typeOfSource,'_',datasetname,...
-    stereoLabel,hokuyoLabel,'_',datestr(now,'mm_dd_HH_MM'),'_'));
+fbase = fullfile(path_datasets, 'Results');
+fext = strcat(typeOfSource,'_',datasetname,...
+    stereoLabel,hokuyoLabel,'_',datestr(now,'mm_dd_HH_MM'));
 save( strcat(fbase,'R_c_s_W'), 'R_c_s_w', '-ascii' )
 save( strcat(fbase,'R_c_s_NW'), 'R_c_s_nw', '-ascii' )
 % save( fullfile(path, 't_c_s_w'), 't_c_s_w', '-ascii' )
 % save( fullfile(path, 't_c_s_nw'), 't_c_s_nw', '-ascii' )
-saveConfigFile( strcat(fbase,'R_c_s_W*'), struct('R',R_c_s_w,'cov',cov_w) )
-saveConfigFile( strcat(fbase,'R_c_s_NW*'), struct('R',R_c_s_nw,'cov',cov_nw) )
+% saveConfigFile( fullfile(fbase,strcat('W_',fext,'.out')),...
+%     struct('R',R_c_s_w,'cov',cov_w,'cov_eps',cov_eps_w ));
+% saveConfigFile( fullfile(fbase,strcat('NW_',fext,'.out')),...
+%     struct('R',R_c_s_nw,'cov',cov_nw,'cov_eps',cov_eps_nw ));
+indexes = [imgs.file_idx];
+saveConfigFile( fullfile(fbase,strcat('W_',fext,'.out')),...
+    R_c_s_w, cov_w, cov_eps_w, datasetname, stereoLabel, hokuyoLabel, indexes );
+saveConfigFile( fullfile(fbase,strcat('NW_',fext,'.out')),...
+    R_c_s_nw,cov_nw,cov_eps_nw, datasetname, stereoLabel, hokuyoLabel, indexes );
 
 % plotCalibration( imgs, scans, gt );
 

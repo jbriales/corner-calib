@@ -1,4 +1,4 @@
-function scantrack = manualSetScanlines( xy, mask )
+function scantrack = manualSetScanlines( xy, mask, metafile )
 
 plot( xy(1,:), xy(2,:), '.k' )
 axis equal
@@ -48,6 +48,7 @@ for k=1:3
                 lin = lin / norm(lin(1:2));
                 seg = [p1 p2];
                 inliers = idx1:idx2;
+                % TODO: Filter with mask?
                 ax = axis;
                 plotHomLineWin( lin, 'm' )
                 plot( p1(1), p1(2), 'om' )
@@ -66,6 +67,18 @@ for k=1:3
         scantrack(k) = setVoidStruct( );
 %         scantrack(k).n = 0;
     end    
+end
+
+% Store metadata
+if exist('metafile','var')
+    % If metafile path is given the data is stored there
+    inPts = cell(1,3);
+    for k=1:3
+        inliers = [scantrack(k).inliers{:}]; % Stack inliers of different pieces all together
+        inPts{k} = xy(:,inliers);
+    end
+    lost = 0;
+    save( metafile, '-mat', 'scantrack', 'inPts', 'lost' );
 end
 
 title( 'Final Zoom the image - Press enter to continue' )

@@ -1,4 +1,4 @@
-function [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = computeScanCorner( scan, inliers, debug )
+function [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = computeScanCorner( scan, sigma, inliers, debug )
 % [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = computeScanCorner( scan, inliers, debug )
 % Input:
 %   scan - scan structure with 2D points field (xy)
@@ -14,7 +14,7 @@ function [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = computeScanCorner( scan, inliers, d
 %   seg   - 1x3 cell array with 2 2x1 segment limit points
 
 % Control variables
-sigma = 0.01; % SD of LIDAR sensor: Hokuyo UTM-30LX: 0.010 <10m and 0.030 <30m
+% sigma = 0.01; % SD of LIDAR sensor: Hokuyo UTM-30LX: 0.010 <10m and 0.030 <30m
 % debug = 0;
 
 % Input data

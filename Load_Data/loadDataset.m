@@ -46,10 +46,12 @@ if exist(fullfile(pwd,'cache','winPosition.mat'),'file')
     load( fullfile(pwd,'cache','winPosition.mat'), 'winPosition' );
     hWin = figure('Name',['Calibration in ',path],...
                      'WindowStyle',WindowStyle,...
-                     'Position', winPosition );
+                     'Position', winPosition,...
+                     'Visible', win_visibility);
 else
     hWin = figure('Name',['Calibration in ',path],...
-                     'WindowStyle',WindowStyle);
+                     'WindowStyle',WindowStyle,...
+                     'Visible', win_visibility);
 end
 hLidar = subplot(1,2,1);
 hImg = subplot(1,2,2);
@@ -75,7 +77,7 @@ else
     % TODO: Change signOfAxis and signOfCam by automated
     switch typeOfSource
         case 'Blender'
-            imgFormat = '%f.png';
+            imgFormat = 'CAM_%f.png';
             WITHGT = true;
             gt = loadCalibrationGT();
             signOfAxis = [1 1 -1]';
@@ -137,18 +139,27 @@ else
         imgtrack = initialisation_calib( rgb2gray(imgs(1).I) );
     end
     
-    subplot(hImg);
     imgs(1).I = imread( imgs(1).path );
+    subplot(hImg);
     imshow( rgb2gray(imgs(1).I) );
     
     % User input: Set segments of interest in scan observation
+    scan = scans(1);
+    switch typeOfSource
+        case 'Blender'
+            scan.xy = loadBlenderPCD( scan.path );
+        case 'Rawlog'
+    end
     hLidar = subplot(121);
     hold on, title('First scan')
-    if exist(scans(1).metafile,'file')
-        load( scans(1).metafile, '-mat', 'scantrack' );
-        scantrack = manualSetScanlines( scans(1).xy, [0 0 0] );
+    if exist(scan.metafile,'file')
+        load( scan.metafile, '-mat', 'scantrack' );
+        plot( scan.xy(1,:), scan.xy(2,:), '.k' )
+        axis equal
+        plotLIDARframe
     else
-        scantrack = manualSetScanlines( scans(1).xy, [1 1 1] );
+%         scantrack = manualSetScanlines( scans(1).xy, [1 1 1] );
+        scantrack = manualSetScanlines( scan.xy, [1 1 1], scan.metafile );
     end
     
     [R_w_c, t_w_c] = manualSetCameraPose( signOfCam, 0 );

@@ -74,7 +74,8 @@ for i=1:Nobs
     scans(i).xy   = [ x(i,:) ; y(i,:) ];
     scans(i).mask = mask(i,:);
     scans(i).ts   = ts(i);
-    scans(i).metafile = fullfile(path,'meta_laser',num2str(ts(i),'%.6f'));
+    scans(i).metafile = fullfile(path,'meta_laser',...
+        strcat(tag(end),num2str(ts(i),'%.6f')));
 end
 
 end
@@ -96,23 +97,24 @@ scans = repmat( voidStruct, Nobs, 1 );
 for i=1:Nobs
     name = files{i};
     
-    ts = sscanf(name,'%f.pcd');
-    pts = double(loadpcd( fullfile(path,'laser',name) ));
+    ts = sscanf(name,'%d.pcd');
+    % Data will be loaded during run-time
+    % pts = double(loadpcd( fullfile(path,'laser',name) ));
     
     % Scan frame needs to be transformed from Blender to typical
     % Scanner-to-World coordinates
-    R_s_b = [ 0 0 -1
-             -1 0  0
-             0 1  0 ];
-    pts = R_s_b * pts(1:3,:);
+%     R_s_b = [ 0 0 -1
+%              -1 0  0
+%              0 1  0 ];
+%     pts = R_s_b * pts(1:3,:);
     
-%     scans(i).x  = pts(1,:);
-%     scans(i).y  = pts(2,:);
-    scans(i).xy   = pts(1:2,:);
-    scans(i).mask = ones(1, size(pts,2));
+    scans(i).path = fullfile(path,'laser',name);
+%     scans(i).xy   = pts(1:2,:);
+    scans(i).xy   = []; % Loaded in run-time
+%     scans(i).mask = ones(1, size(pts,2)); % TODO: Not used by now
     scans(i).ts   = ts;
-    scans(i).metafile = num2str(ts,'%.6f');
-    scans(i).metafile = fullfile(path,'meta_laser',num2str(ts(i),'%.6f'));
+    scans(i).metafile = fullfile(path,'meta_laser',...
+        strcat(num2str(ts,'%d')));
 end
 
 end
