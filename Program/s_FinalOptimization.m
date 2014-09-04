@@ -204,25 +204,28 @@ else
 end
 
 % s6_solveOptim
-s6_solveRotation
+% s6_solveRotation % TODO: Change to optimRotation
+[ R_c_s_w, cov_w, cov_eps_w, err_w, ~, ~ ] = optimRotation( rot_input, R_c_s, true, all_label );
+[ R_c_s_nw, cov_nw, cov_eps_nw, err_nw, ~, ~ ] = optimRotation( rot_input, R_c_s, false, all_label );
 
-figure, hold on
-all_label( all_label==0 ) = [];
-rgb = 'rgb';
-subplot(221), hold on
-for i=1:length(all_label)
-    bar(i,err(i), rgb(all_label(i)))
-end
-subplot(223), hold on
-for i=1:length(all_label)
-    bar(i,W(i,i), rgb(all_label(i)))
-end
-subplot(222), hold on
-for i=1:length(all_label)
-    bar(i,err_(i), rgb(all_label(i)))
-end
-subplot(224), hold on
-for i=1:length(all_label)
-    bar(i,W_(i,i), rgb(all_label(i)))
-end
+
+% figure, hold on
+% all_label( all_label==0 ) = [];
+% rgb = 'rgb';
+% subplot(221), hold on
+% for i=1:length(all_label)
+%     bar(i,err(i), rgb(all_label(i)))
+% end
+% subplot(223), hold on
+% for i=1:length(all_label)
+%     bar(i,W(i,i), rgb(all_label(i)))
+% end
+% subplot(222), hold on
+% for i=1:length(all_label)
+%     bar(i,err_(i), rgb(all_label(i)))
+% end
+% subplot(224), hold on
+% for i=1:length(all_label)
+%     bar(i,W_(i,i), rgb(all_label(i)))
+% end
 
