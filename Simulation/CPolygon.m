@@ -24,33 +24,27 @@ classdef CPolygon < CPlane3D
             aug_p = [ obj.p , obj.p(:,1) ];
             v  = diff( aug_p, 1, 2 );
             vn = [0 -1; 1 0] * v;
-            cross = vn' * pts2D;
+            N  = size(pts2D,2);
+            cross = zeros( 4, N );
+            for i=1:4
+                cross(i,:) = vn(:,i)' * (pts2D - repmat(obj.p(:,i),1,N));
+            end
+%             cross = vn' * pts2D;
             in_mask = all( cross >= 0, 1 );
         end
-        
-%         function pts2D = transform2Dto3D( obj, pts3D )
-%             N = size( pts3D, 2 );
-%             rel = pts3D - repmat( obj.t, 1, N );
-%             % Check that all points belong to plane
-%             inPlane = ( obj.n' * rel == 0 );
-%             if ~all( inPlane )
-%                 error('[CPolygon::transform2D] Points outside plane');
-%             end
-%             pts2D = obj.R(:,1:2)' * rel;
-%         end
-        
+                
         % 3D representation
         function p3D = get.p3D(obj)
-            p3D = obj.Ms * makehomogeneous( obj.p );
+            p3D = makeinhomogeneous( obj.M * makehomogeneous( obj.p ) );
         end
         function plot3( obj ) % Plot polygon in 3D space
             p3D = obj.p3D;
             p3D(:,end+1) = p3D(:,1); % Close polygon to plot
             plot3( p3D(1,:), p3D(2,:), p3D(3,:), 'o-' );
-            hold on
+%             hold on
             quiver3( obj.t(1),obj.t(2),obj.t(3),...
                      obj.n(1),obj.n(2),obj.n(3) );
-            hold off
+%             hold off
         end
     end
     

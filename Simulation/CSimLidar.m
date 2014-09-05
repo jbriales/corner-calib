@@ -18,20 +18,30 @@ classdef CSimLidar < CBaseLidar
             obj = obj@CBaseLidar( R, t, N, FOVd, sd, d_range );
         end
         
-        % Measurements from scanning polygon
-        function scanPolygon( obj, polygon )
+        % Indexes of measurements given when scanning polygon
+        function [xy, range, angles, idxs] = scanPolygon( obj, polygon )
             % Compute P2 intersection line of polygon plane with Lidar plane
-            % TODO: Mistake here
-            % figure, hold on, plotframe(eye(4),2,'W','k'), Lidar.plot3, pol.plot3
-            % figure, plot(x(1,:),x(2,:),'.r'), hold on, plotHomLineWin( line, 'g' ), N = obj.N, quiver(zeros(1,N), zeros(1,N), dir(1,:), dir(2,:))
-            line = makehomogeneous( obj.Ms )' * polygon.plane;
-            % Compute P2 intersection points of Lidar rays with line
-            dir  = obj.getSamplingVectors; % Debug
+            line = obj.M' * polygon.plane;
+            % Compute R2 intersection points of Lidar rays with line
             rays = obj.getSamplingLines;
-            x = makeinhomogeneous( skew(line) * rays );
-            pts3D = transform2Dto3D( obj, x );
-            pts2D = transform3Dto2D( polygon, pts3D );
-            in_mask = inInside( polygon, pts2D );
+            xy = makeinhomogeneous( skew(line) * rays );
+            % Transform R2 points in Lidar frame to R3 points in World frame
+            pts3D = obj.transform2Dto3D( xy );
+            % Transform R3 points in World frame to R2 points in polygon frame
+            pts2D = polygon.transform3Dto2D( pts3D );
+            % Check which points are inside polygon
+            in_mask = polygon.isInside( pts2D );
+            % Check negative direction intersections and set infinity
+            dir  = obj.getSamplingVectors;
+            dir_sign = dot( dir, xy, 1 );
+            in_mask( dir_sign < 0 ) = false;
+            
+            % Return measurements data inside polygon
+            idxs  = find( in_mask );
+            xy = xy( :, in_mask );
+            angles = obj.getSamplingAngles;
+            angles = angles( in_mask );
+            range = sqrt( sum( xy.^2, 1 ) );
         end
     end
 end
