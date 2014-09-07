@@ -1,27 +1,20 @@
-classdef CPlane3D
+classdef CPlane3D < CPose3D
     %CPlane3D Plane placed in 3D space
     %   Plane object is fully defined through its orientation and 
     %   translation wrt reference frame
     %   Constructor:
     %   plane = CPlane( R, t )
-
-    properties
-        R   % 3x3 rotation matrix of Polygon seen from World
-        t   % 3x1 translation vector of Polygon seen from World
-    end
-    
-    properties (SetAccess = private, Dependent) % (Read-only)
-        T       % 4x4 pose of Polygon seen from World
+   
+    properties (SetAccess = protected, Dependent) % (Read-only)
         n       % 3x1 plane normal vector
         plane   % 4x1 plane vector (normal and distance)
-        M       % 3x4 matrix for conversion from 2D to 3D frame
+        M       % 4x3 matrix for conversion from 2D to 3D frame
     end
     
     methods
         % Constructor
         function obj = CPlane3D( R, t )
-            obj.R  = R;
-            obj.t  = t;
+            obj = obj@CPose3D( R, t );
         end
         
         % Convert points in 3D to plane 2D frame (checking if in)
@@ -31,7 +24,7 @@ classdef CPlane3D
             % Check that all points belong to plane
             prod = obj.n' * rel;
             max_prod = max( abs( prod ) );
-            if max_prod > 100 * eps % TODO: 2 orders margin due to numerical instability
+            if max_prod > 1e-6 % micron distance
                 error('[CPolygon::transform2D] Points outside plane. max(n''·(p3D-t)=%e',max_prod);
             end
             pts2D = obj.R(:,1:2)' * rel;
@@ -43,9 +36,6 @@ classdef CPlane3D
         end
         
         % Get methods
-        function T = get.T( obj )
-            T = [ obj.R obj.t ; zeros(1,3) 1 ];
-        end
         function n = get.n( obj )
             n = obj.R(:,3);
         end
@@ -55,5 +45,6 @@ classdef CPlane3D
         function M = get.M( obj )
             M = obj.T(:,[1 2 4]); % Remove Z column
         end
+        
     end
 end

@@ -46,16 +46,6 @@ classdef CPolygon < CPlane3D
                      obj.n(1),obj.n(2),obj.n(3) );
 %             hold off
         end
-    end
-    
-%     methods (Access = protected)
-%         function vh = mh( vnh )
-%             vh = [vnh ; 1];
-%         end
-%         function vnh = mnh( vh )
-%             vnh = vh(1:end-1);
-%         end
-%     end
-    
+    end    
 end
 

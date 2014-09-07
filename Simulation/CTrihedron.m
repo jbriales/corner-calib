@@ -67,6 +67,16 @@ classdef CTrihedron
             end
             plot3( obj.p3D(1,:), obj.p3D(2,:), obj.p3D(3,:), '*' );
         end
+        
+        function plotScan( obj, SimLidar )
+            h = zeros(3,1);
+            for i=1:3
+                h_ = SimLidar.plotPolygonScan( obj.face{i} );
+                if ~isempty(h_)
+                    h(i) = h_;
+                end
+            end
+        end
     end
     
 end

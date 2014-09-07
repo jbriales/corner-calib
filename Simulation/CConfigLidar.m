@@ -15,17 +15,23 @@ classdef CConfigLidar
     %   d_min - minimum readable distance
     %   d_max - maximum readable distance
     
-    properties
+    properties (SetAccess = protected ) % Only changeable through constructor
         N       % Number of points
         FOVd    % Field Of View in degrees
         d_range % 1x2 Minimum and maximum ranges for measurements
         sd      % Standard Deviation in range measurements
     end
     
-    properties (SetAccess = private, Dependent)
+    properties (SetAccess = protected, Dependent)
         FOVr
         d_min
         d_max
+    end
+    
+    properties (SetAccess = protected)
+        theta
+        dir
+        lines
     end
     
     methods
@@ -35,23 +41,29 @@ classdef CConfigLidar
             obj.FOVd = FOVd;
             obj.sd = sd;
             obj.d_range = d_range;
+            
+            obj.theta = linspace( -deg2rad(FOVd)/2, +deg2rad(FOVd)/2, N );
+            obj.dir   = [ cos( obj.theta )
+                          sin( obj.theta ) ];
+            obj.lines = [ [0 -1; 1 0] * obj.dir
+                          zeros(1,N) ];
         end
         
         % Get vector of sampled angles
-        function vtheta = getSamplingAngles( obj )
-            vtheta = linspace( -obj.FOVr/2, +obj.FOVr/2, obj.N );
-        end
-        function dir = getSamplingVectors( obj )
-            vtheta = getSamplingAngles( obj );
-            dir    = [ cos( vtheta )
-                       sin( vtheta ) ];
-        end
-        function lines = getSamplingLines( obj )
-            dir   = getSamplingVectors( obj );
-            dir   = [0 -1; 1 0] * dir;
-            lines = [ dir
-                      zeros(1, obj.N) ];
-        end
+%         function theta = getSamplingAngles( obj )
+%             theta = linspace( -obj.FOVr/2, +obj.FOVr/2, obj.N );
+%         end
+%         function dir = getSamplingVectors( obj )
+%             vtheta = getSamplingAngles( obj );
+%             dir    = [ cos( vtheta )
+%                        sin( vtheta ) ];
+%         end
+%         function lines = getSamplingLines( obj )
+%             dir   = getSamplingVectors( obj );
+%             dir   = [0 -1; 1 0] * dir;
+%             lines = [ dir
+%                       zeros(1, obj.N) ];
+%         end
         
         % Get methods
         function FOVr = get.FOVr(obj)
