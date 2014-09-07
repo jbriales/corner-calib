@@ -1,5 +1,5 @@
 classdef CCorner < CPattern
-    %CTrihedron 3D pattern formed by 2 intersecting planes
+    %CCorner 3D pattern formed by 2 intersecting planes
     %   Constructor:
     %   pol = CCorner( R, t, L, betad )
     %       L is the size of corner side
@@ -10,14 +10,16 @@ classdef CCorner < CPattern
     %   faces borders, respectively
     
     properties (SetAccess = protected) % (Read-only)
-        % Empty
+        betad   % Angle formed by two planes in degrees
+        betar   % Angle formed by two planes in radians
     end
     
     methods
         % Constructor
         function obj = CCorner( R, t, L, betad )
             if ~exist('R','var')
-                R = eye(3);
+%                 R = eye(3);
+                R = expmap( [-1 +1 0], deg2rad(-45) );
             end
             if ~exist('t','var')
                 t = zeros(3,1);
@@ -31,6 +33,8 @@ classdef CCorner < CPattern
             obj = obj@CPattern( R, t );
 
             obj.L = L;
+            obj.betad = betad;
+            obj.betar = deg2rad(betad);
             obj.NF = 2;
             % Create faces: 1,2 correspond to planes perpendicular to
             % X,Y axes respectively
@@ -62,7 +66,5 @@ classdef CCorner < CPattern
             end
             h = plot3( obj.p3D(1,:), obj.p3D(2,:), obj.p3D(3,:), '*' );
         end
-        
     end
-    
 end

@@ -50,6 +50,7 @@ classdef (Abstract) CPattern < CPose3D
             SimLidar.plotFrame('S','g');
             obj.plotScan( SimLidar );
             rotate3d on, axis equal
+            view(115,45)
         end
     end
     
