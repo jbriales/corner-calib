@@ -1,4 +1,4 @@
-function [R, t] = generate_random_poses( )
+function [R, t, rand_ang_z, rand_ang_x] = generate_random_poses( )
 % Input options:
 % N     - number of frames
 % min_d - min distance to origin at which Camera is placed
@@ -8,13 +8,22 @@ function [R, t] = generate_random_poses( )
 % ang_z_max - max rotation wrt Z axis of camera pointing to origin
 % ang_x_max - max rotation wrt X axis of camera pointint to origin
 
-N = 1000;
-min_d = 2;
-max_d = 5;
-min_ang = 10;
+% N = 1000;
+% min_d = 2;
+% max_d = 5;
+% min_ang = 30;
+% 
+% ang_z_max = pi/3;
+% ang_x_max = deg2rad( 10 );
+% 
+% device = 'Lidar';
+
+userOpts = readConfigFile( fullfile(pwd,'pose_gen.ini') );
+extractStructFields( userOpts );
+
+% Auxiliar variables
 max_ang = 90 - min_ang;
-ang_z_max = 2*pi;
-ang_x_max = deg2rad( 30 );
+R_c_s = [ 0 -1 0 ; 0 0 -1 ; 1 0 0 ];
 
 % Function to normalize array of column vectors
 normalize = @(X) X ./ repmat( sqrt( sum( X.^2, 1 ) ),3,1 );
@@ -46,12 +55,18 @@ R_x = -skew([0 0 1]') * R_z;
 R_x = normalize( R_x );
 R_y = cross(R_z,R_x,1);
 % Add random rotation on Cam X and Z axis
-ang_z = ang_z_max * rand(1,N); % ang_z_max typically 2*pi
-ang_x = ang_x_max * rand(1,N); % ang_x_max typically FOV
+rand_ang_z = ang_z_max * (-1 + 2*rand(1,N)); % ang_z_max typically pi
+rand_ang_x = ang_x_max * (-1 + 2*rand(1,N)); % ang_x_max typically FOV
 R = reshape( [R_x;R_y;R_z], 3,3,N );
 for i=1:N
     % Check premultiplication and good order
-    R(:,:,i) = R(:,:,i) * RotationX(ang_x(i)) * RotationZ(ang_z(i));
+%     R(:,:,i) = R(:,:,i) * RotationX(ang_x(i)) * RotationZ(ang_z(i));
+    R(:,:,i) = R(:,:,i) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i));
+    switch device
+        case 'Lidar'
+            R(:,:,i) = R(:,:,i) * R_c_s;
+        % Case camera is default does not need any change
+    end
 end
 
 % Transform output to cell arrays:
