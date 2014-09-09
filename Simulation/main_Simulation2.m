@@ -31,17 +31,20 @@ for i=1:Nsamples
     % Update reference (Camera) pose in Rig
     Rig.updatePose( R_w_c{i}, t_w_c{i} );
     
-%     trihedron.plotScene( Rig.Lidar, Rig.Camera );
-%     corner.plotScene( Rig.Lidar, Rig.Camera );
-%     checkerboard.plotScene( Rig.Lidar, Rig.Camera );
-%     set(gcf,'units','normalized','position',[0 0 1 1]);
-%     pause( 1 )
-%     close
-%     tic
-    for j=1:3
-        pattern{j}.getProjection( Rig.Camera );
-        pattern{j}.getScan( Rig.Lidar );
+    if 1 % For plotting
+        trihedron.plotScene( Rig.Lidar, Rig.Camera );
+        corner.plotScene( Rig.Lidar, Rig.Camera );
+        checkerboard.plotScene( Rig.Lidar, Rig.Camera );
+        set(gcf,'units','normalized','position',[0 0 1 1]);
+        pause( )
+        close
+    else % For computation only
+        tic
+        for j=1:3
+            pattern{j}.getProjection( Rig.Camera );
+            pattern{j}.getScan( Rig.Lidar );
+        end
+        toc
     end
-%     toc
 end
 toc
