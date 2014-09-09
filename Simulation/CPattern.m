@@ -22,6 +22,7 @@ classdef (Abstract) CPattern < CPose3D
         %% Simulation methods
         % Get cell array of scans on every polygon in pattern
         function [xy, range, angles, idxs] = getScan( obj, SimLidar )
+            % The order of the output is right - left
             xy = cell(1,obj.NF);
             range = cell(1,obj.NF);
             angles = cell(1,obj.NF);
@@ -34,6 +35,7 @@ classdef (Abstract) CPattern < CPose3D
         
         % Get array of projection of interest points in pattern
         function [uv_proj, uv_pixels] = getProjection( obj, SimCamera )
+            % The order of the output is Center - Right - Left
             [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
         end
         
