@@ -1,4 +1,4 @@
-function [N, c, A_co] = getCalibratedCornerData( obj, Camera )
+function [N, c, A_co, L_P2] = getCalibratedCornerData( obj, Camera )
 % [N, c, A_co] = getCalibratedCornerData( obj, Camera )
 % Input:
 %   Camera  - CSimCamera object grabbing the pattern
