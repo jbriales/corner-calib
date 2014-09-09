@@ -72,8 +72,7 @@ classdef CCorner < CPattern
             K       = Rig.Camera.K;
             theta   = Rig.Lidar.FOVd / Rig.Lidar.N ; 
             
-            % Fit left and right scan line (TODO: check the order of the
-            % points)
+            % Fit left and right scan line 
             [~, ~, ~, ~, lin_s_l] = computeSegmentSVD( xy{2} , 0, 0);
             [~, ~, ~, ~, lin_s_r] = computeSegmentSVD( xy{1} , 0, 0);
             
