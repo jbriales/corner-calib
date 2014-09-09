@@ -1,5 +1,9 @@
-function [R, t, rand_ang_z, rand_ang_x] = generate_random_poses( )
-% Input options:
+function [R, t, rand_ang_z, rand_ang_x] = generate_random_poses( config_file )
+% [R, t, rand_ang_z, rand_ang_x] = generate_random_poses( config_file )
+% Main input:
+% config_file - path to .ini file with configuration parameters
+% 
+% Input options in config file:
 % N     - number of frames
 % min_d - min distance to origin at which Camera is placed
 % max_d - max distance to origin at which Camera is placed
@@ -18,7 +22,7 @@ function [R, t, rand_ang_z, rand_ang_x] = generate_random_poses( )
 % 
 % device = 'Lidar';
 
-userOpts = readConfigFile( fullfile(pwd,'pose_gen.ini') );
+userOpts = readConfigFile( config_file );
 extractStructFields( userOpts );
 
 % Auxiliar variables

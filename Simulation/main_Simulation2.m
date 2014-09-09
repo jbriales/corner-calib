@@ -3,16 +3,22 @@
 % Simulated data for the Extrinsic Calibration of a 2D Lidar and a
 % Monocular Camera based on Corner Structures without Pattern
 
-clear classes
+% clear classes
 
 % Generate Rig (Camera) poses
-[R_w_c, t_w_c] = generate_random_poses( );
+% [R_w_c, t_w_c] = generate_random_poses( );
+gen_config_file = fullfile( pwd, 'pose_gen.ini' );
+[R_w_c, t_w_c, rand_ang_z, rand_ang_x] = generate_random_poses( gen_config_file ); % For debug purposes only
+rand_ang_x = rad2deg( rand_ang_x );
+rand_ang_z = rad2deg( rand_ang_z );
 % N = length(R_w_c);
 Nsamples = 1000;
 
 % Set Rig properties
-R_c_s = [ 0 -1 0 ; 0 0 -1 ; 1 0 0 ] * RotationZ(deg2rad(30));
-t_c_s = [0.5 0.25 0]';
+% R_c_s = [ 0 -1 0 ; 0 0 -1 ; 1 0 0 ] * RotationZ(deg2rad(30));
+% t_c_s = [0.5 0.25 0]';
+R_c_s = [ 0 -1 0 ; 0 0 -1 ; 1 0 0 ];
+t_c_s = [0.15 0 0]';
 N = 1081; FOVd = 270.2; scan_sd = 0.03; d_range = [0.1 30];
 K = [ 1050 0 480
       0 1050 270
@@ -32,9 +38,10 @@ for i=1:Nsamples
     Rig.updatePose( R_w_c{i}, t_w_c{i} );
     
     if 1 % For plotting
-        trihedron.plotScene( Rig.Lidar, Rig.Camera );
+%         trihedron.getCornerData( Rig.Camera );
+%         trihedron.plotScene( Rig.Lidar, Rig.Camera );
         corner.plotScene( Rig.Lidar, Rig.Camera );
-        checkerboard.plotScene( Rig.Lidar, Rig.Camera );
+%         checkerboard.plotScene( Rig.Lidar, Rig.Camera );
         set(gcf,'units','normalized','position',[0 0 1 1]);
         pause( )
         close
