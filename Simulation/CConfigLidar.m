@@ -48,23 +48,7 @@ classdef CConfigLidar
             obj.lines = [ [0 -1; 1 0] * obj.dir
                           zeros(1,N) ];
         end
-        
-        % Get vector of sampled angles
-%         function theta = getSamplingAngles( obj )
-%             theta = linspace( -obj.FOVr/2, +obj.FOVr/2, obj.N );
-%         end
-%         function dir = getSamplingVectors( obj )
-%             vtheta = getSamplingAngles( obj );
-%             dir    = [ cos( vtheta )
-%                        sin( vtheta ) ];
-%         end
-%         function lines = getSamplingLines( obj )
-%             dir   = getSamplingVectors( obj );
-%             dir   = [0 -1; 1 0] * dir;
-%             lines = [ dir
-%                       zeros(1, obj.N) ];
-%         end
-        
+                
         % Get methods
         function FOVr = get.FOVr(obj)
             FOVr  = deg2rad( obj.FOVd );

@@ -22,8 +22,10 @@ classdef CBaseLidar < CPlane3D & CConfigLidar
             z = zeros(1,obj.N);
             h = quiver( z,z, obj.dir(1,:), obj.dir(2,:) );
         end
-        
-%         function h = plot3_LidarRays( obj, idxs, range )
+
+        function h = plot3_LidarRays( obj )
+            
+            %         function h = plot3_LidarRays( obj, idxs, range )
 %             if ~exist('idxs','var')
 %                 dir = obj.dir;
 %             else
@@ -35,8 +37,6 @@ classdef CBaseLidar < CPlane3D & CConfigLidar
 %                 end
 %                 dir = dir .* repmat(range,2,1);
 %             end
-        function h = plot3_LidarRays( obj )
-            dir = obj.dir;
             t = repmat(obj.t,1,obj.N);
             dir3 = obj.R(:,1:2) * dir;
             h = quiver3( t(1,:),t(2,:),t(3,:),...

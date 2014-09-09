@@ -52,6 +52,12 @@ classdef CTrihedron < CPattern
             end
             h = plot3( obj.p3D(1,:), obj.p3D(2,:), obj.p3D(3,:), '*' );
         end
+        
+        function h = plotImage( obj, SimCamera )
+            [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
+            % TODO
+            h = [];
+        end
     end
     
 end

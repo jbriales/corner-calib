@@ -14,11 +14,12 @@ classdef (Abstract) CPattern < CPose3D
     end
     
     methods
-        % Constructor
+        %% Constructor
         function obj = CPattern( R, t )
             obj = obj@CPose3D( R, t );
         end
         
+        %% Simulation methods
         % Get cell array of scans on every polygon in pattern
         function [xy, range, angles, idxs] = getScan( obj, SimLidar )
             xy = cell(1,obj.NF);
@@ -31,6 +32,13 @@ classdef (Abstract) CPattern < CPose3D
             end
         end
         
+        % Get array of projection of interest points in pattern
+        function [uv_proj, uv_pixels] = getProjection( obj, SimCamera )
+            [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
+        end
+        
+        %% Plotting functions
+        
         % Plot scanning points on pattern polygons
         function h = plotScan( obj, SimLidar )
             h = zeros(obj.NF,1);
@@ -41,6 +49,17 @@ classdef (Abstract) CPattern < CPose3D
                 end
             end
         end
+        
+        % Plot projected points from pattern
+%         function h = plotImage( obj, SimLidar )
+%             h = zeros(obj.NF,1);
+%             for i=1:obj.NF
+%                 h_ = SimLidar.plotPolygonScan( obj.face{i} );
+%                 if ~isempty(h_)
+%                     h(i) = h_;
+%                 end
+%             end
+%         end
         
         % Plot scene with Lidar and pattern
         function plotScene( obj, SimLidar )
@@ -57,6 +76,8 @@ classdef (Abstract) CPattern < CPose3D
     methods (Abstract)
         % 3D representation
         h = plot3( obj ) % Plot pattern in 3D space
+        
+        h = plotImage( obj, SimCamera )
     end
     
 end

@@ -22,7 +22,7 @@ classdef CSimLidar < CBaseLidar
             obj = obj@CBaseLidar( R, t, N, FOVd, sd, d_range );
         end
         
-        % Indexes of measurements given when scanning polygon
+        % Simulate measurements given when scanning polygon
         function [xy, range, angles, idxs] = scanPolygon( obj, polygon )
                         
             % Compute P2 intersection line of polygon plane with Lidar plane
@@ -32,7 +32,7 @@ classdef CSimLidar < CBaseLidar
 %             xy = makeinhomogeneous( skew(line) * rays );
             xy = skew(line) * obj.lines;
             % Check if there is any point at infinity
-            inf_idxs = abs( xy(3,:) ) < eps;
+            inf_idxs = abs( xy(3,:) ) < 1e-10; % Make more robust than eps
             xy = makeinhomogeneous( skew(line) * obj.lines );
             xy(:, inf_idxs) = NaN;
             
@@ -55,6 +55,9 @@ classdef CSimLidar < CBaseLidar
 %             angles = angles( in_mask );
             angles = obj.theta( in_mask );
             range = sqrt( sum( xy.^2, 1 ) );
+            % Add generated gaussian noise to Lidar measurements and update
+            range = range + obj.sd * randn(1,length(range));
+            xy = obj.dir(:,in_mask) .* repmat(range,2,1);
         end
         
         % Plotting functions
