@@ -59,6 +59,14 @@ classdef CCorner < CPattern
             obj.p3D(:,5:6) = obj.face{1}.p3D(:,[2 3]);            
         end
         
+        % Get 1x3 cell array with correspondences (lines and points)
+        function corresp = getCorrespondence( obj, Rig )
+            [xy, range, angles, idxs] = obj.getScan( Rig.Lidar );
+            [uv_proj, uv_pixels] = obj.getProjection( Rig.Camera );
+            % Do whatever necessary here
+            corresp = cell(1,3);
+        end
+        
         % Pattern 3D representation
         function h = plot3( obj ) % Plot trihedron in 3D space
             for i=1:2

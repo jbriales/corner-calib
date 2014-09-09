@@ -37,6 +37,15 @@ classdef (Abstract) CPattern < CPose3D
             [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
         end
         
+        % Get 1x3 cell array with correspondences (lines and points)
+%         function corresp = getCorrespondence( obj, Rig )
+%             [xy, range, angles, idxs] = obj.getScan( Rig.Lidar );
+%             [uv_proj, uv_pixels] = obj.getProjection( Rig.Camera );
+%             % Do whatever necessary here
+%             corresp = cell(1,3);
+%         end
+            
+        
         %% Plotting functions
         
         % Plot scanning points on pattern polygons
@@ -62,12 +71,22 @@ classdef (Abstract) CPattern < CPose3D
 %         end
         
         % Plot scene with Lidar and pattern
-        function plotScene( obj, SimLidar )
+        function plotScene( obj, varargin )
             figure, hold on
-            SimLidar.plotReference;
+            obj.plotReference;
             obj.plot3;
-            SimLidar.plotFrame('S','g');
-            obj.plotScan( SimLidar );
+            for i=1:nargin-1
+                sensor = varargin{i};
+                switch class(sensor)
+                    case 'CSimLidar'
+                        sensor.plotFrame('S','g');
+                        obj.plotScan( sensor );
+                    case 'CSimCamera'
+                        sensor.plotFrame('C','r');
+                        sensor.plot3_PatternProjection( obj );
+                        sensor.plot3_CameraFrustum;
+                end
+            end
             rotate3d on, axis equal
             view(115,45)
         end
@@ -77,7 +96,7 @@ classdef (Abstract) CPattern < CPose3D
         % 3D representation
         h = plot3( obj ) % Plot pattern in 3D space
         
-        h = plotImage( obj, SimCamera )
+        % h = plotImage( obj, SimCamera )
     end
     
 end

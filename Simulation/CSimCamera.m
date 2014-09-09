@@ -1,16 +1,12 @@
 classdef CSimCamera < CBaseCamera
-    %CSimLidar Class for simulated Lidar object
+    %CSimCamera Class for simulated Camera object
     % This class stores configuration parameters and pose and ease methods
-    % to simulate intersection with polygons in 3D space
+    % to simulate projection of pattern points
     %   Constructor:
-    %   Lidar = CSimLidar( R, t, N, FOVd, sd, d_range )
-    % This class inherits from CBaseLidar
+    %   Camera = CSimCamera( R, t, K, res, f, sd )
+    % This class inherits from CBaseCamera
     %
-    % Own methods:
-    % [xy, range, angles, idxs] = scanPolygon( CPolygon )
-    %   Get 2D points, range, angles and indexes for scan on polygon
-    %
-    % See also CBaseLidar.
+    % See also CBaseCamera.
     
     properties
         % Empty
@@ -41,7 +37,6 @@ classdef CSimCamera < CBaseCamera
         function h = plot2_PatternProjection( obj, pattern )
             [~, uv_pixels] = projectPattern( obj, pattern );
             if ~isempty(uv_pixels)
-                % TODO: Set ij axis?
                 h = plot( uv_pixels(1,:), uv_pixels(2,:), '*' );
                 axis(obj.ax);
                 axis ij
@@ -52,6 +47,9 @@ classdef CSimCamera < CBaseCamera
         
         function h = plot3_PatternProjection( obj, pattern )
             [uv_proj, ~] = projectPattern( obj, pattern );
+            % Transform projection vectors with focal length f to lie on
+            % plane to f distance
+            uv_proj = obj.f * uv_proj;
             if ~isempty(uv_proj)
                 pts3D = makeinhomogeneous( obj.T * makehomogeneous( uv_proj ) );
                 h = plot3( pts3D(1,:), pts3D(2,:), pts3D(3,:), '*' );

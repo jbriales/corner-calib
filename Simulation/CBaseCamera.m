@@ -19,11 +19,20 @@ classdef CBaseCamera < CPose3D & CConfigCamera
         end
         
         function h = plot3_CameraFrustum( obj )
-            % TODO
-%             t = repmat(obj.t,1,obj.N);
-%             dir3 = obj.R(:,1:2) * dir;
-%             h = quiver3( t(1,:),t(2,:),t(3,:),...
-%                          dir3(1,:), dir3(2,:), dir3(3,:) );
+            % First coordinate is X (width) and second Y (height)
+            corners = [ 1 1;
+                        1 obj.res(2);
+                        obj.res(1) obj.res(2);
+                        obj.res(1) 1;
+                        1 1 ]';
+            frustum_corners = obj.f * hnormalise( obj.K \ makehomogeneous( corners ) );
+            pts3D = makeinhomogeneous( obj.T * makehomogeneous( frustum_corners ) );
+            h = zeros(1,5);
+            h(5) = line( pts3D(1,:), pts3D(2,:), pts3D(3,:) );
+            for i=1:4
+                v = [ obj.t , pts3D(:,i) ];
+                h(i) = line( v(1,:), v(2,:), v(3,:) );
+            end
         end
     end
 end
