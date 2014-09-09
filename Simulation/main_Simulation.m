@@ -18,7 +18,7 @@ signOfCam  = [1 1 +1]';
 % Generation of synthetic data 
 fprintf('Generating synthetic data...');
 tic
-[img, scan, gt] = generate_random_poses('N',10,'sd_pixel',1,'sd_laser',1,'outlier_k',0,'withPlot',false);
+[img, scan, gt] = generate_random_poses_BAK('N',100,'sd_pixel',0,'sd_laser',0,'outlier_k',0,'withPlot',false);
 img             = computeCameraCorner( img );
 fprintf(' done in %f seconds.\n', toc);
 
@@ -113,6 +113,6 @@ end
 co0 = co;
 s_FinalOptimization
 % TODO: Doesn't work
-% solveTranslation
-% solveTranslation_3D
+solveTranslation
+solveTranslation_3D
 

@@ -5,10 +5,17 @@ R  = R0; % Initial estimate employed for rotation optimization
 %R  = R_c_s_nw;
 
 L  = [co.L_P2];
+L  = L(:, [co.thereis_corner]); % Pre-filter L (to meet q)
 q  = cell2mat([co.q]);  %TODO: different sizes of q
-K  = img.K;
+if exist('Rig','var')
+    K  = Rig.Camera.K;
+elseif exist('img','var')
+    K  = img.K;
+end
 A_lh = [co.A_lh]; % TODO: is this covariance the good one?
+A_lh = A_lh( [co.thereis_line] ); % Pre-filter A_q (to meet q)
 A_q = [co.A_q];
+A_q = A_q( [co.thereis_corner] ); % Pre-filter A_q (to meet q)
 
 % for i = 600:610
 %     L(:,i)    = L(:,i-5) + rand(3,1) * 0.01;
@@ -38,6 +45,7 @@ b = - dot( L, R(:,1:2) * q, 1 )';
 A = L';
 t_lin = A \ b;
 t0 = zeros(3,1);
+% t0 = [0.16 0.01 -0.02]';
 % LM optimisation without weighting
 F_Lev                               = @(t)f_Corner_2D( t, R, L, q, K);
 [ t_c_s_nw, err_nw, errNorm, ~ ]    = LM_Man_optim(F_Lev, t0,'space','Rn','debug',2, 'maxIters', 200);
