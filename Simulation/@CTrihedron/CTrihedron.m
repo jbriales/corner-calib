@@ -57,7 +57,6 @@ classdef CTrihedron < CPattern
         % covariance)
         [N, c, A_co] = getCalibratedCornerData( obj, Camera )
 
-        
         % Pattern 3D representation
         function h = plot3( obj ) % Plot trihedron in 3D space
             for i=1:3
