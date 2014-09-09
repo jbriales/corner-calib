@@ -24,10 +24,7 @@ for i=1:length(varargin)
             line = fgetl( FID );
             
             % Remove comments
-            pos.comment = [ strfind( line, '#' ), strfind( line, '//' ) ];
-            if ~isempty( pos.comment )
-                line(pos.comment:end) = [];
-            end
+            removeComment( line )
             
             % Find = symbol
             pos.eq = strfind( line, '=' );
@@ -53,6 +50,7 @@ for i=1:length(varargin)
                 mat = strtrim( mat );
                 str = [str, mat];
             end
+            str = removeComment( str );
             %         if mat(end)~=']'
             %             error('Matrix has to finish with ]')
             %         end
@@ -66,6 +64,14 @@ for i=1:length(varargin)
         end
     end
     varargout(i) = {S};
+end
+end
+
+function line = removeComment( line )
+pos_comment = [ strfind( line, '#' ), strfind( line, '//' ) ];
+if ~isempty( pos_comment )
+    line(pos_comment(1):end) = [];
+end
 end
     
     
