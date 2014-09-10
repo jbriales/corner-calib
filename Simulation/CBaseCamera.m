@@ -18,7 +18,10 @@ classdef CBaseCamera < CPose3D & CConfigCamera
             obj = obj@CConfigCamera( K, res, f, sd );
         end
         
-        function h = plot3_CameraFrustum( obj )
+        function h = plot3_CameraFrustum( obj, color )
+            if ~exist('color','var')
+                color = 'k';
+            end
             % First coordinate is X (width) and second Y (height)
             corners = [ 1 1;
                         1 obj.res(2);

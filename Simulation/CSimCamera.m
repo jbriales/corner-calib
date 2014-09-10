@@ -34,10 +34,13 @@ classdef CSimCamera < CBaseCamera
         end
         
         % Plotting functions
-        function h = plot2_PatternProjection( obj, pattern )
+        function h = plot2_PatternProjection( obj, pattern, color )
+            if ~exist('color','var')
+                color = 'k';
+            end
             [~, uv_pixels] = projectPattern( obj, pattern );
             if ~isempty(uv_pixels)
-                h = plot( uv_pixels(1,:), uv_pixels(2,:), '*' );
+                h = plot( uv_pixels(1,:), uv_pixels(2,:), ['*',color] );
                 axis(obj.ax);
                 axis ij
             else
@@ -45,14 +48,17 @@ classdef CSimCamera < CBaseCamera
             end
         end
         
-        function h = plot3_PatternProjection( obj, pattern )
+        function h = plot3_PatternProjection( obj, pattern, color )
+            if ~exist('color','var')
+                color = 'k';
+            end
             [uv_proj, ~] = projectPattern( obj, pattern );
             % Transform projection vectors with focal length f to lie on
             % plane to f distance
             uv_proj = obj.f * uv_proj;
             if ~isempty(uv_proj)
                 pts3D = makeinhomogeneous( obj.T * makehomogeneous( uv_proj ) );
-                h = plot3( pts3D(1,:), pts3D(2,:), pts3D(3,:), '*' );
+                h = plot3( pts3D(1,:), pts3D(2,:), pts3D(3,:), ['*',color] );
             else
                 h = [];
             end

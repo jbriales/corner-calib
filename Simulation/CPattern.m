@@ -51,10 +51,13 @@ classdef (Abstract) CPattern < CPose3D
         %% Plotting functions
         
         % Plot scanning points on pattern polygons
-        function h = plotScan( obj, SimLidar )
+        function h = plotScan( obj, SimLidar, color )
+            if ~exist('color','var')
+                color = 'k';
+            end
             h = zeros(obj.NF,1);
             for i=1:obj.NF
-                h_ = SimLidar.plotPolygonScan( obj.face{i} );
+                h_ = SimLidar.plotPolygonScan( obj.face{i}, color );
                 if ~isempty(h_)
                     h(i) = h_;
                 end
@@ -74,19 +77,22 @@ classdef (Abstract) CPattern < CPose3D
         
         % Plot scene with Lidar and pattern
         function plotScene( obj, varargin )
-            figure, hold on
+%             figure
+            hold on
             obj.plotReference;
             obj.plot3;
             for i=1:nargin-1
                 sensor = varargin{i};
                 switch class(sensor)
                     case 'CSimLidar'
-                        sensor.plotFrame('S','g');
-                        obj.plotScan( sensor );
+                        color = 'g';
+                        sensor.plotFrame('S',color);
+                        obj.plotScan( sensor, color );
                     case 'CSimCamera'
-                        sensor.plotFrame('C','r');
-                        sensor.plot3_PatternProjection( obj );
-                        sensor.plot3_CameraFrustum;
+                        color = 'r';
+                        sensor.plotFrame('C',color);
+                        sensor.plot3_PatternProjection( obj,color );
+                        sensor.plot3_CameraFrustum( color );
                 end
             end
             rotate3d on, axis equal

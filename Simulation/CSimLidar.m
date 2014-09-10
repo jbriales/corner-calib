@@ -61,11 +61,14 @@ classdef CSimLidar < CBaseLidar
         end
         
         % Plotting functions
-        function h = plotPolygonScan( obj, polygon )
+        function h = plotPolygonScan( obj, polygon, color )
+            if ~exist('color','var')
+                color = 'k';
+            end
             [xy, ~, ~, ~] = scanPolygon( obj, polygon );
             if ~isempty(xy)
                 pts3D = obj.transform2Dto3D( xy );
-                h = plot3( pts3D(1,:), pts3D(2,:), pts3D(3,:), '.' );
+                h = plot3( pts3D(1,:), pts3D(2,:), pts3D(3,:), ['.',color] );
             else
                 h = [];
             end
