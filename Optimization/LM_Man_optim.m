@@ -208,8 +208,11 @@ end
         % WARNING: COULD NEED NEGATIVE SIGN (DEPENDING ON ERROR DEFINITION)
         switch opt.space
             case 'SE(3)'
-                rotInc = rotation_angle_axis( epsInc(1:3) );
-                tInc   = epsInc(4:6);
+%                 rotInc = rotation_angle_axis( epsInc(1:3) );
+%                 tInc   = epsInc(4:6);
+                
+                rotInc = rotation_angle_axis( epsInc(4:6) );
+                tInc   = epsInc(1:3);                
                 
                 param(1:3,1:3) = rotInc * prevParam(1:3,1:3);
                 param(1:3,4)   = tInc   + prevParam(1:3,4);
