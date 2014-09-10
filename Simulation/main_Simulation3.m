@@ -20,11 +20,11 @@ corresp  = cell(2,3,Nsamples);
 R_c_s = [ 0 -1 0 ; 0 0 -1 ; 1 0 0 ];
 t_c_s = [0.15 0 0]';
 
-N = 1081; FOVd = 270.2; scan_sd = 0.03; d_range = [0.1 30];
+N = 1081; FOVd = 270.2; scan_sd = 0.000000000000000000003; d_range = [0.1 30];
 K = [ 1050 0 480
       0 1050 270
       0    0   1 ];
-res = [960 540]; f = 1; cam_sd = 1;
+res = [960 540]; f = 1; cam_sd = 0.0000000000000000000000001;
 Rig = CSimRig( eye(3), zeros(3,1), R_c_s, t_c_s,... % Extrinsic options
                N, FOVd, scan_sd, d_range,... % Lidar options
                K, res, f, cam_sd ); % Camera options 
@@ -75,28 +75,46 @@ for i=1:Nsamples
     check_corresp{2,i} = checkerboard.getProjection( Rig.Camera );    
     check_corresp{3,i} = 1000 * cell2mat(checkerboard.getScan( Rig.Lidar ));
     
+    % Correspondences for trihedron 
+    co(i) = trihedron.getCorrespondence( Rig );
+    
+    
 end
+
+% ------------- Trihedron ----------------
+co0 = co;
+s_FinalOptimization
+R0 = R_c_s;
+% solveTranslation
+% solveTranslation_3D
+R_c_s
+R_c_s_w
+R_c_s_nw
+angularDistance( R_c_s, R_c_s_w )
+
    
 % ------------- Kwak -------------------
 x_w  = corner.optim(corner_corresp,0,1,Rig);
 x_gt = [Rig.R_c_s Rig.t_c_s];
-fprintf('Kwak translation error (m): \t %f \n', norm(x_w(:,4) - x_gt(:,4)) );
-fprintf('Kwak rotation error (deg): \t %f \n', angularDistance(x_w(1:3,1:3),x_gt(1:3,1:3)) );
 
 % ---------- Vasconcelos -------------------------
 [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
 [T, ~,~,~,~] = lccMinSol(T_planes,lidar_points);
 [T_z, ~,~,~,~] = lccZhang(T_planes, lidar_points);
 x_v = pose_inverse(T); x_v(1:3,4) = x_v(1:3,4)/1000;
-fprintf('Vasconcelos translation error (m): \t %f \n', norm(x_v(:,4) - x_gt(:,4)) );
+x_z = pose_inverse(T_z); x_z(1:3,4) = x_z(1:3,4)/1000;
+
+% ---------- Display the errors -------------------------
+%fprintf('Kwak translation error (m): \t %f \n', norm(x_w(:,4) - x_gt(:,4)) );
+fprintf('Trihedron rotation error (deg): \t %f \n', angularDistance(R_c_s_w(1:3,1:3),x_gt(1:3,1:3)) );
+
+fprintf('Kwak translation error (m): \t %f \n', norm(x_w(:,4) - x_gt(:,4)) );
+fprintf('Kwak rotation error (deg): \t %f \n', angularDistance(x_w(1:3,1:3),x_gt(1:3,1:3)) );
+
+fprintf('Vasconcelos translation error (m): \t %f \n', norm(x_v(1:3,4) - x_gt(1:3,4)) );
 fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );
 
-x_z = pose_inverse(T_z); x_z(1:3,4) = x_z(1:3,4)/1000;
-fprintf('Zhang translation error (m): \t %f \n', norm(x_z(:,4) - x_gt(:,4)) );
+fprintf('Zhang translation error (m): \t %f \n', norm(x_z(1:3,4) - x_gt(1:3,4)) );
 fprintf('Zhang rotation error (deg): \t %f \n', angularDistance(x_z(1:3,1:3),x_gt(1:3,1:3)) );
-
-
-
-
 
 toc
