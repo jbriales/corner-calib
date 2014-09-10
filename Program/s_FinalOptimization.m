@@ -78,7 +78,7 @@ switch method
         
         corresps = [ all_n ; all_l ];
 %         thres_ort = 1e-3;
-        thres_ort = 1e-2;
+        thres_ort = 100 * 7e-2;
         feedback = true;
         [R, inliers] = ransacFitTransNormals(corresps, thres_ort, feedback);
         all_inliers = all_idxs( inliers );
@@ -194,19 +194,19 @@ end
 
 % Average of calibration rotation matrices
 if isfield(co,'R_c_s')
-    R_c_s = sum( reshape([co.R_c_s],3,3,[]), 3 );
-    [U,~,V] = svd( R_c_s );
-    R_c_s = U*V';
+    R0 = sum( reshape([co.R_c_s],3,3,[]), 3 );
+    [U,~,V] = svd( 0 );
+    R0 = U*V';
 else
-    R_c_s = [ 0 -1  0
+    R0 = [ 0 -1  0
               0  0 -1
               1  0  0 ];
 end
 
 % s6_solveOptim
 % s6_solveRotation % TODO: Change to optimRotation
-[ R_c_s_w, cov_w, cov_eps_w, err_w, ~, ~ ] = optimRotation( rot_input, R_c_s, true, all_label );
-[ R_c_s_nw, cov_nw, cov_eps_nw, err_nw, ~, ~ ] = optimRotation( rot_input, R_c_s, false, all_label );
+[ R_c_s_w, cov_w, cov_eps_w, err_w, ~, ~ ] = optimRotation( rot_input, R0, true, all_label );
+[ R_c_s_nw, cov_nw, cov_eps_nw, err_nw, ~, ~ ] = optimRotation( rot_input, R0, false, all_label );
 
 
 % figure, hold on

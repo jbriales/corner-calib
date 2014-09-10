@@ -122,7 +122,7 @@ while(1) % The loop is stopped from inside with internal conditions for converge
         end
     end
     
-    if opt.debug==1
+    if opt.debug>=1
         fprintf('It = %d\t|Err|=%e\tState is %s\tlog10(lambda)=%d\n',iters,errNorm,Cstate{state+1},log10(lambda))
     end
 end
@@ -184,8 +184,15 @@ end
             lambda = lambda / 10;
         end
         iters = iters + 1;
-        paramChange = norm( param - prevParam, 2 );
+        paramChange = norm( param - prevParam, 2 ); % TODO: Measure paramChange in manifold
         errorChange = prevErrNorm - errNorm;
+        if errorChange <= 0
+            warning('Error change in last LM iteration is negative (increased error)');
+            warning('Error function could not be decreased: Check error function is correct');
+            exit_optim = false;
+            exit_cond = false(1,3);
+            return
+        end
         exit_cond  = [iters > maxIters , paramChange < minChange , errorChange < minErrorChange];
         if( any( exit_cond ) )
             state = DONE;

@@ -88,8 +88,10 @@ angularDistance( R_c_s, R_c_s_w )
    
 % ------------- Kwak -------------------
 x0 = [R0 [0.15 0 0]'];
-x_w  = corner.optim(corner_corresp,x0,0,Rig);
+weighted = false;
+x_w  = corner.optim(corner_corresp,x0,weighted,Rig);
 x_gt = [Rig.R_c_s Rig.t_c_s];
+clear weighted
 
 % % ---------- Vasconcelos -------------------------
 % [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
