@@ -4,6 +4,7 @@
 % Monocular Camera based on Corner Structures without Pattern
 
 % clear classes
+%clear;
 
 % Generate Rig (Camera) poses
 % [R_w_c, t_w_c] = generate_random_poses( );
@@ -15,23 +16,13 @@ Nsamples = length(R_w_c);
 corresp  = cell(2,3,Nsamples);
 
 % Set Rig properties
-% R_c_s = [ 0 -1 0 ; 0 0 -1 ; 1 0 0 ] * RotationZ(deg2rad(30));
-% t_c_s = [0.5 0.25 0]';
-R_c_s = [ 0 -1 0 ; 0 0 -1 ; 1 0 0 ];
-t_c_s = [0.15 0 0]';
-
-N = 1081; FOVd = 270.2; scan_sd = 0.000000000000000000003; d_range = [0.1 30];
-K = [ 1050 0 480
-      0 1050 270
-      0    0   1 ];
-res = [960 540]; f = 1; cam_sd = 0.0000000000000000000000001;
+rig_config_file = fullfile( pwd, 'rig.ini' );
+rigOpts = readConfigFile( rig_config_file );
+extractStructFields( rigOpts );
+clear rigOpts
 Rig = CSimRig( eye(3), zeros(3,1), R_c_s, t_c_s,... % Extrinsic options
                N, FOVd, scan_sd, d_range,... % Lidar options
-               K, res, f, cam_sd ); % Camera options 
-           
-% Rig = CSimRig( eye(3), zeros(3,1), R_c_s, t_c_s,... % Extrinsic options
-%    N, FOVd, 0, d_range,... % Lidar options
-%    K, res, f, 0 ); % Camera options       
+               K, res, f, cam_sd ); % Camera options                
 
 trihedron = CTrihedron;
 corner = CCorner( expmap( [-1 +1 0], deg2rad(-45) ) );
@@ -76,6 +67,8 @@ for i=1:Nsamples
     check_corresp{3,i} = 1000 * cell2mat(checkerboard.getScan( Rig.Lidar ));
     
     % Correspondences for trihedron 
+%     trihedron.plotScene(Rig.Camera, Rig.Lidar);
+%     close;
     co(i) = trihedron.getCorrespondence( Rig );
     
     
@@ -94,27 +87,29 @@ angularDistance( R_c_s, R_c_s_w )
 
    
 % ------------- Kwak -------------------
-x_w  = corner.optim(corner_corresp,0,1,Rig);
+x0 = [R0 [0.15 0 0]'];
+x_w  = corner.optim(corner_corresp,x0,0,Rig);
 x_gt = [Rig.R_c_s Rig.t_c_s];
 
-% ---------- Vasconcelos -------------------------
-[T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
-[T, ~,~,~,~] = lccMinSol(T_planes,lidar_points);
-[T_z, ~,~,~,~] = lccZhang(T_planes, lidar_points);
-x_v = pose_inverse(T); x_v(1:3,4) = x_v(1:3,4)/1000;
-x_z = pose_inverse(T_z); x_z(1:3,4) = x_z(1:3,4)/1000;
+% % ---------- Vasconcelos -------------------------
+% [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
+% [T, ~,~,~,~] = lccMinSol(T_planes,lidar_points);
+% [T_z, ~,~,~,~] = lccZhang(T_planes, lidar_points);
+% x_v = pose_inverse(T); x_v(1:3,4) = x_v(1:3,4)/1000;
+% x_z = pose_inverse(T_z); x_z(1:3,4) = x_z(1:3,4)/1000;
 
 % ---------- Display the errors -------------------------
 %fprintf('Kwak translation error (m): \t %f \n', norm(x_w(:,4) - x_gt(:,4)) );
-fprintf('Trihedron rotation error (deg): \t %f \n', angularDistance(R_c_s_w(1:3,1:3),x_gt(1:3,1:3)) );
+fprintf('Trihedron (weighted) rotation error (deg): \t %f \n', angularDistance(R_c_s_w(1:3,1:3),x_gt(1:3,1:3)) );
+fprintf('Trihedron (non-weighted) rotation error (deg): \t %f \n', angularDistance(R_c_s_nw(1:3,1:3),x_gt(1:3,1:3)) );
 
-fprintf('Kwak translation error (m): \t %f \n', norm(x_w(:,4) - x_gt(:,4)) );
-fprintf('Kwak rotation error (deg): \t %f \n', angularDistance(x_w(1:3,1:3),x_gt(1:3,1:3)) );
+% fprintf('Kwak translation error (m): \t %f \n', norm(x_w(:,4) - x_gt(:,4)) );
+fprintf('Kwak rotation error (deg): \t \t \t %f \n', angularDistance(x_w(1:3,1:3),x_gt(1:3,1:3)) );
 
-fprintf('Vasconcelos translation error (m): \t %f \n', norm(x_v(1:3,4) - x_gt(1:3,4)) );
-fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );
+% fprintf('Vasconcelos translation error (m): \t %f \n', norm(x_v(1:3,4) - x_gt(1:3,4)) );
+% fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );
 
-fprintf('Zhang translation error (m): \t %f \n', norm(x_z(1:3,4) - x_gt(1:3,4)) );
-fprintf('Zhang rotation error (deg): \t %f \n', angularDistance(x_z(1:3,1:3),x_gt(1:3,1:3)) );
+% fprintf('Zhang translation error (m): \t %f \n', norm(x_z(1:3,4) - x_gt(1:3,4)) );
+% fprintf('Zhang rotation error (deg): \t %f \n', angularDistance(x_z(1:3,1:3),x_gt(1:3,1:3)) );
 
 toc
