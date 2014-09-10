@@ -3,7 +3,7 @@ function [ x, err, errNorm, W ] = optim( obj, corresp, x0, weighted, Rig )
 % :: Inputs
 %
 %   corresp  - cell array ( 2, 3, N ) with the input data (PRE-PROCESS)
-%   x0       - initial estimation of the SE(3) transformation (6-vector)
+%   x0       - initial estimation of the SE(3) transformation (3x4 matrix)
 %   weighted - parameter to choose the optimization method
 %
 % :: Outputs
@@ -12,19 +12,22 @@ function [ x, err, errNorm, W ] = optim( obj, corresp, x0, weighted, Rig )
 K = Rig.Camera.K;
 theta = Rig.Lidar.FOVd / Rig.Lidar.N ;
 
-R0 = [ 0 -1  0
-       0  0 -1
-       1  0  0 ];
-x0 = [R0 zeros(3,1)];
-
+% R0 = [ 0 -1  0
+%        0  0 -1
+%        1  0  0 ];
+% x0 = [R0 zeros(3,1)];
 x0 = [Rig.R_c_s Rig.t_c_s];
-x0 = [Rig.R_c_s [0.16 0.01 -0.02]'];
+% x0 = [Rig.R_c_s [0.16 0.001 -0.001]'];
+% 
+R_aux = Rig.R_c_s + randn(3,3)*0.01;
+[U,S,V] = svd(R_aux);
+x0 = [U*V' [0.15 0 0]'];
 
 if ~weighted
-    Lev_Fun = @(x) Fun_sum( corresp, x, K );
+    Lev_Fun = @(x) Fun( corresp, x, K );
     [ x, err, errNorm, W ] = LM_Man_optim(Lev_Fun,x0,'space','SE(3)','debug',0, 'maxIters', 200);
 else
-    Lev_Fun = @(x) FunW_sum( corresp, x, K, theta );
+    Lev_Fun = @(x) FunW( corresp, x, K, theta );
     [ x, err, errNorm, W ] = LM_Man_optim(Lev_Fun,x0,'space','SE(3)','debug',0, 'maxIters', 200);   
 end
 
@@ -89,7 +92,7 @@ for i=1:n,
     A_c     = L_c' * K * kroen_c / (den_c) - dot( L_c , num_c ) * ( K(3,:) * kroen_c ) / (den_c^2);
     A_r     = L_r' * K * kroen_r / (den_r) - dot( L_r , num_r ) * ( K(3,:) * kroen_r ) / (den_r^2);
     
-    J(i,:)       =  A_l * D + A_c * D + A_r * D ;
+    J(i,:)  = A_l * D + A_c * D + A_r * D ;
 
 end
 
@@ -188,8 +191,8 @@ C = [Z -skew(e1);
 
 D = B*C;
 
-J = zeros(n,6);
-residual = zeros(n,1);
+J = zeros(1,6);
+residual = 0;
 
 d   = zeros(3,n);
 d_d = zeros(3,n,6);
@@ -251,12 +254,16 @@ w = 1./e;
 d_e_s = sum(d_e,2); reshape(d_e_s,3,6);
 
 for i = 1:n
+    J_ = zeros(1,6); residual_ = 0;
     for j = 1:3
         
-        J(i,:) = -w(j)^2 * d_e_s(j,:) * H(j,i) / n + w(j) * d_H(j,i) * reshape(d_d(j,i,:),1,6);
-        residual(i,1) = w(j) * H(j,i);        
+        J_ =  J_ -w(j)^2 * d_e_s(j,:) * H(j,i) / n + w(j) * d_H(j,i) * reshape(d_d(j,i,:),1,6);
+        residual_ = residual_ + w(j) * H(j,i);        
         
     end
+    J(i,:) = J_;
+    residual(i,1) = residual_;
+    
 end
 
 end
