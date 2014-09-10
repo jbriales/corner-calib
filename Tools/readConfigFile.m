@@ -24,7 +24,7 @@ for i=1:length(varargin)
             line = fgetl( FID );
             
             % Remove comments
-            removeComment( line )
+            line = removeComment( line );
             
             % Find = symbol
             pos.eq = strfind( line, '=' );
