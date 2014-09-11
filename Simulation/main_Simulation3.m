@@ -32,6 +32,7 @@ pattern = { trihedron, corner, checkerboard };
 corner_corresp = cell(2,3,Nsamples);
 
 tic
+triOptim = CTrihedronOptimization;
 for i=1:Nsamples
     % Update reference (Camera) pose in Rig
     Rig.updatePose( R_w_c{i}, t_w_c{i} );
@@ -69,15 +70,22 @@ for i=1:Nsamples
     % Correspondences for trihedron 
 %     trihedron.plotScene(Rig.Camera, Rig.Lidar);
 %     close;
-    co(i) = trihedron.getCorrespondence( Rig );
-    
-    
+    co_ = trihedron.getCorrespondence( Rig );
+%     co(i) = co_;
+    triOptim.stackObservation( co_ );
 end
 
 % ------------- Trihedron ----------------
-co0 = co;
-s_FinalOptimization
-R0 = R_c_s;
+triOptim.setInitialRotation( [ 0 -1  0
+                               0  0 -1
+                               1  0  0 ] ); % Updated in RANSAC
+triOptim.filterRotationRANSAC;
+R_c_s_nw = triOptim.optimizeRotation_NonWeighted;
+R_c_s_w  = triOptim.optimizeRotation_Weighted;
+                           
+% co0 = co;
+% s_FinalOptimization
+% R0 = R_c_s;
 % solveTranslation
 % solveTranslation_3D
 R_c_s
@@ -87,6 +95,9 @@ angularDistance( R_c_s, R_c_s_w )
 
    
 % ------------- Kwak -------------------
+R0 = [ 0 -1  0
+    0  0 -1
+    1  0  0 ];
 x0 = [R0 [0.15 0 0]'];
 x_w  = corner.optim(corner_corresp,x0,0,Rig);
 x_gt = [Rig.R_c_s Rig.t_c_s];
