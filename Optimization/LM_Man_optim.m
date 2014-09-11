@@ -156,7 +156,7 @@ end
         % TODO: Measure paramChange in manifold
         paramChange = norm( param - prevParam, 2 );
         errorChange = prevErrNorm - errNorm;
-        if errorChange <= 0
+        if errorChange < 0
             warning('Error change in last LM iteration is negative (increased error)');
             warning('Error function could not be decreased: Check error function is correct');
             exit_optim = false;
