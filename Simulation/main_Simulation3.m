@@ -4,7 +4,7 @@
 % Monocular Camera based on Corner Structures without Pattern
 
 % clear classes
-%clear;
+clear;
 
 % Generate Rig (Camera) poses
 % [R_w_c, t_w_c] = generate_random_poses( );
@@ -32,7 +32,7 @@ pattern = { trihedron, corner, checkerboard };
 corner_corresp = cell(2,3,Nsamples);
 
 tic
-triOptim = CTrihedronOptimization;
+triOptim = CTrihedronOptimization( K );
 for i=1:Nsamples
     % Update reference (Camera) pose in Rig
     Rig.updatePose( R_w_c{i}, t_w_c{i} );
@@ -92,6 +92,11 @@ R_c_s
 R_c_s_w
 R_c_s_nw
 angularDistance( R_c_s, R_c_s_w )
+
+triOptim.setInitialTranslation( [0.15 0 0]' + 0.1*randn(3,1) );
+t_2D_w = triOptim.optimizeTranslation_2D_NonWeighted;
+t_2D_w
+
 
    
 % ------------- Kwak -------------------
