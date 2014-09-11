@@ -1,4 +1,3 @@
-
 function [residual, J] = FunW_sum( corresp, x, K, theta )
 
 % TODO: vectorize the code... but i still don't know how 'kwak_input' is
@@ -30,73 +29,73 @@ D = B*C;
 J = zeros(1,6);
 residual = 0;
 
-d   = zeros(3,n);
-d_d = zeros(3,n,6);
-d_e = zeros(3,n,6);
-H   = zeros(3,n);
-d_H = zeros(3,n);
+omega = zeros(3,1);
+H_n   = zeros(3,1);
+
+alpha = zeros(3,6);
+gamma = zeros(3,6);
 
 for i=1:n,
     
+    % Homogeneous 3D points in the lidar frame
+    p_s_c_h = makehomogeneous(corresp{2,1,i});
+    p_s_l_h = makehomogeneous(corresp{2,2,i});
+    p_s_r_h = makehomogeneous(corresp{2,3,i});
+    
+    
     % Transform the 3D points in the lidar frame to the image plane
-    p_c_c = K * T(1:3,1:4) * makehomogeneous(corresp{2,1,i});    p_c_c_h = makehomogeneous( p_c_c );
-    p_c_l = K * T(1:3,1:4) * makehomogeneous(corresp{2,2,i});    p_c_l_h = makehomogeneous( p_c_l );
-    p_c_r = K * T(1:3,1:4) * makehomogeneous(corresp{2,3,i});    p_c_r_h = makehomogeneous( p_c_r );
+    p_c_c = K * T(1:3,1:4) * p_s_c_h;
+    p_c_l = K * T(1:3,1:4) * p_s_l_h;
+    p_c_r = K * T(1:3,1:4) * p_s_r_h;
     
-    % Estimate the distance to the line in the image plane (px)   TODO
-    d_c = p_c_c' * corresp{1,1,i} / p_c_c(3);
-    d_l = p_c_l' * corresp{1,2,i} / p_c_l(3);    
-    d_r = p_c_r' * corresp{1,3,i} / p_c_r(3);
-    
+    % Estimate the distance to the line in the image plane (px)
     L_c = corresp{1,1,i};
     L_l = corresp{1,2,i};
-    L_r = corresp{1,3,i};    
+    L_r = corresp{1,3,i};
+    
+    d_c = p_c_c' * L_c / p_c_c(3);
+    d_l = p_c_l' * L_l / p_c_l(3);    
+    d_r = p_c_r' * L_r / p_c_r(3);    
     
     % Calculus of the weight
-    d(1,i)   = d_l^2;
-    d(2,i)   = d_c^2;
-    d(3,i)   = d_r^2;
+    omega(1,1)   = omega(1,1) + d_c^2;
+    omega(2,1)   = omega(2,1) + d_l^2;
+    omega(3,1)   = omega(3,1) + d_r^2;
     
     % Calculus of the huber penalty function
-    [H_aux, d_H_aux] = huber_penalty(d(:,i), d_max);
-    H(:,i) = H_aux;
-    d_H(:,i) = d_H_aux;
-       
+    [H, d_H] = huber_penalty([d_c d_l d_r]' , d_max);
+    H_n      = H_n + H;
+           
     % Calculus of the jacobian
-    kroen_l = kron(p_c_l_h', I);
-    kroen_c = kron(p_c_c_h', I);
-    kroen_r = kron(p_c_r_h', I);
+    kroen_c = kron(p_s_c_h', I);
+    kroen_l = kron(p_s_l_h', I);
+    kroen_r = kron(p_s_r_h', I);
     
-    num_l   = K * T(1:3,1:4) * p_c_l_h ;    den_l   = num_l(3) ;
-    num_c   = K * T(1:3,1:4) * p_c_c_h ;    den_c   = num_c(3) ;
-    num_r   = K * T(1:3,1:4) * p_c_r_h ;    den_r   = num_r(3) ;
+    num_c   = K * T(1:3,1:4) * p_s_c_h ;    den_c   = num_c(3) ;
+    num_l   = K * T(1:3,1:4) * p_s_l_h ;    den_l   = num_l(3) ;    
+    num_r   = K * T(1:3,1:4) * p_s_r_h ;    den_r   = num_r(3) ;
     
-    A_l     = L_l' * K * kroen_l / (den_l) - dot( L_l , num_l ) * ( K(3,:) * kroen_l ) / (den_l^2);
     A_c     = L_c' * K * kroen_c / (den_c) - dot( L_c , num_c ) * ( K(3,:) * kroen_c ) / (den_c^2);
+    A_l     = L_l' * K * kroen_l / (den_l) - dot( L_l , num_l ) * ( K(3,:) * kroen_l ) / (den_l^2);    
     A_r     = L_r' * K * kroen_r / (den_r) - dot( L_r , num_r ) * ( K(3,:) * kroen_r ) / (den_r^2);
     
-    for j = 1:6    
-        d_d(1,i,j) = A_l(j);    d_e(1,i,j) = d(1) * d_d(1,i,j);
-        d_d(2,i,j) = A_c(j);    d_e(2,i,j) = d(1) * d_d(2,i,j);
-        d_d(3,i,j) = A_r(j);    d_e(3,i,j) = d(1) * d_d(3,i,j);
-    end
+    alpha(1,:) = alpha(1,:) + d_H(1) * A_c * D;
+    alpha(2,:) = alpha(2,:) + d_H(2) * A_l * D;
+    alpha(3,:) = alpha(3,:) + d_H(3) * A_r * D;
     
+    gamma(1,:) = gamma(1,:) + d_c * A_c * D ;
+    gamma(2,:) = gamma(2,:) + d_l * A_l * D ;
+    gamma(3,:) = gamma(3,:) + d_r * A_r * D ;  
+  
 end
+
+% Calculus of the weight function
+omega = n./omega;
 
 % Calculus of the jacobian and the residual
-e = sum(d.^2,2)/n;
-w = 1./e;
-
-d_e_s = sum(d_e,2); reshape(d_e_s,3,6);
-
-for i = 1:n
-    for j = 1:3
-        
-        J = J -w(j)^2 * d_e_s(j,:) * H(j,i) / n + w(j) * d_H(j,i) * reshape(d_d(j,i,:),1,6);
-        residual = residual + w(j) * H(j,i);        
-        
-    end
+residual = omega' * H_n;
+for k = 1:3
+    J = J + omega(k) * alpha(k,:) - 2 * omega(k)^2 * H_n(k) * gamma(k,:) / n;   
 end
 
 end
-
