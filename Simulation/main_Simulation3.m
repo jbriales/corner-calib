@@ -119,4 +119,8 @@ if 0
 x_kw  = corner.optim(corner_corresp,x0,0,Rig);
 fprintf('Kwak (weighted) rotation error (deg): \t \t \t %f \n', angularDistance(x_kw(1:3,1:3),x_gt(1:3,1:3)) );
 
+<<<<<<< HEAD
 end
+=======
+end
+>>>>>>> zhang
