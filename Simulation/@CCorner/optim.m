@@ -211,23 +211,21 @@ omega = n./omega;
 
 % Calculus of the jacobian and the weight matrices
 for i = 1:n
-    % Full jacobian
-    J(3*i-2,:) = omega(1) * alpha(3*i-2,:) - 2 * omega(1)^2 * H_n(1) * gamma(3*i-2,:) / n;
-    J(3*i-1,:) = omega(2) * alpha(3*i-1,:) - 2 * omega(2)^2 * H_n(2) * gamma(3*i-1,:) / n;
-    J(3*i,:)   = omega(3) * alpha(3*i,:)   - 2 * omega(3)^2 * H_n(3) * gamma(3*i,:) / n;
-      
-%     % Simplified jacobian
-%     J(3*i-2,:) = 2 * omega(1) * gamma(3*i-2,:);
-%     J(3*i-1,:) = 2 * omega(2) * gamma(3*i-1,:);
-%     J(3*i,:)   = 2 * omega(3) * gamma(3*i,:);
     
+%     % Jacobian without the Huber penalty function
+%     J(3*i-2,:) = 2 * gamma(3*i-2,:);
+%     J(3*i-1,:) = 2 * gamma(3*i-1,:);
+%     J(3*i,:)   = 2 * gamma(3*i,:);
+%     
+    % Weight matrix
     W(3*i-2,3*i-2) = omega(1);
     W(3*i-1,3*i-1) = omega(2);
     W(3*i,3*i)     = omega(3);
 
 end
 
-
+% % Jacobian of the Huber penalty function
+J = alpha;
 
 end
 
