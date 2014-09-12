@@ -1,4 +1,4 @@
-function [ X, Err, errNorm, W ] = LM_Man_optim( Fun, X0, varargin )
+function [ X, Err, errNorm, W, debugging ] = LM_Man_optim( Fun, X0, varargin )
 % [ X, errNorm ] = LM_Man_optim( Fun, X0, 'options' )
 % Input:
 % Fun - function whose outputs are [F, JF]
@@ -34,6 +34,12 @@ inc_lambda = opt.inc_lambda;
 DONE = 0; STARTED = 1; CALC_J = 2; CHECK_ERR = 3;
 Cstate = {'DONE','STARTED','CALC_J','CHECK_ERR'};
 lambda = 1e-3; iters = 0; state = STARTED;
+
+% Store optimization steps for later representation and debugging
+if opt.debug >=3
+    debugging = repmat( struct('param',[],'errNorm',[]), 1,0 );
+end
+
 % Npoints = length(X);
 % -------------------------------------------------------------------------
 % Algorithm
@@ -57,6 +63,10 @@ while(1) % The loop is stopped from inside with internal conditions for converge
         % fprintf('Final error: %.3f\n',norm(Err))
         % fprintf('Final weighted error: %.3f\n',errNorm)
         % end
+        
+        if opt.debug<3
+            debugging = [];
+        end
         break
     end
     % WARNING: COULD NEED NEGATIVE SIGN (DEPENDING ON ERROR DEFINITION)
@@ -154,7 +164,14 @@ end
         if log10(lambda) >= -16
             lambda = lambda / 10;
         end
+        % Below: Good iteration was achieved
         iters = iters + 1;
+        
+        if opt.debug >=3
+            debugging(end+1).param = param;
+            debugging(end).errNorm = errNorm;
+        end
+        
         % TODO: Measure paramChange in manifold
         paramChange = norm( param - prevParam, 2 );
         errorChange = prevErrNorm - errNorm;
