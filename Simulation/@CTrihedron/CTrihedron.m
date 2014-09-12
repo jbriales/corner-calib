@@ -1,7 +1,7 @@
 classdef CTrihedron < CPattern
     %CTrihedron 3D pattern formed by 3 orthogonal intersecting planes
     %   Constructor:
-    %   pol = CTrihedron( R, t, L )
+    %   pol = CTrihedron( L, R, t )
     %       L is the size of trihedron side
     %
     %   face - a 1x3 cell array formed by polygons on faces X,Y,Z
@@ -13,7 +13,7 @@ classdef CTrihedron < CPattern
     
     methods
         % Constructor
-        function obj = CTrihedron( R, t, L )
+        function obj = CTrihedron( L, R, t )
             if ~exist('R','var')
                 R = eye(3);
             end

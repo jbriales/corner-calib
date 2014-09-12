@@ -24,7 +24,7 @@ Rig = CSimRig( eye(3), zeros(3,1), R_c_s, t_c_s,... % Extrinsic options
                N, FOVd, scan_sd, d_range,... % Lidar options
                K, res, f, cam_sd ); % Camera options                
 
-trihedron = CTrihedron;
+trihedron = CTrihedron( LPattern );
 corner = CCorner( expmap( [-1 +1 0], deg2rad(-45) ) );
 checkerboard = CCheckerboard( RotationZ(deg2rad(45))*RotationY(deg2rad(45)) );
 pattern = { trihedron, corner, checkerboard };
@@ -81,6 +81,7 @@ triOptim.setInitialRotation( [ 0 -1  0
                                1  0  0 ] ); % Updated in RANSAC
 triOptim.filterRotationRANSAC;
 R_c_s_nw = triOptim.optimizeRotation_NonWeighted;
+R_c_s_dw = triOptim.optimizeRotation_DiagWeighted;
 R_c_s_w  = triOptim.optimizeRotation_Weighted;
                            
 % co0 = co;
@@ -90,22 +91,25 @@ R_c_s_w  = triOptim.optimizeRotation_Weighted;
 % solveTranslation_3D
 R_c_s
 R_c_s_w
+R_c_s_dw
 R_c_s_nw
 angularDistance( R_c_s, R_c_s_w )
+angularDistance( R_c_s, R_c_s_dw )
 
+triOptim.filterTranslationRANSAC;
 triOptim.setInitialTranslation( [0.15 0 0]' + 0.1*randn(3,1) );
-t_2D_w = triOptim.optimizeTranslation_2D_NonWeighted;
-t_2D_w
+t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted;
+t_2D_nw
 
 
    
 % ------------- Kwak -------------------
-R0 = [ 0 -1  0
-    0  0 -1
-    1  0  0 ];
-x0 = [R0 [0.15 0 0]'];
-x_w  = corner.optim(corner_corresp,x0,0,Rig);
-x_gt = [Rig.R_c_s Rig.t_c_s];
+% R0 = [ 0 -1  0
+%     0  0 -1
+%     1  0  0 ];
+% x0 = [R0 [0.15 0 0]'];
+% x_w  = corner.optim(corner_corresp,x0,0,Rig);
+% x_gt = [Rig.R_c_s Rig.t_c_s];
 
 % % ---------- Vasconcelos -------------------------
 % [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
@@ -115,12 +119,20 @@ x_gt = [Rig.R_c_s Rig.t_c_s];
 % x_z = pose_inverse(T_z); x_z(1:3,4) = x_z(1:3,4)/1000;
 
 % ---------- Display the errors -------------------------
+
+
 %fprintf('Kwak translation error (m): \t %f \n', norm(x_w(:,4) - x_gt(:,4)) );
-fprintf('Trihedron (weighted) rotation error (deg): \t %f \n', angularDistance(R_c_s_w(1:3,1:3),x_gt(1:3,1:3)) );
-fprintf('Trihedron (non-weighted) rotation error (deg): \t %f \n', angularDistance(R_c_s_nw(1:3,1:3),x_gt(1:3,1:3)) );
+fprintf('Trihedron (weighted) rotation error (deg): \t %f \n',...
+    angularDistance(R_c_s_w,Rig.R_c_s) );
+fprintf('Trihedron (diag-weighted) rotation error (deg): \t %f \n',...
+    angularDistance(R_c_s_dw,Rig.R_c_s) );
+fprintf('Trihedron (non-weighted) rotation error (deg): \t %f \n',...
+    angularDistance(R_c_s_nw,Rig.R_c_s) );
+fprintf('Trihedron (non-weighted) translation error (m): \t %f \n',...
+    norm(t_2D_nw-Rig.t_c_s) );
 
 % fprintf('Kwak translation error (m): \t %f \n', norm(x_w(:,4) - x_gt(:,4)) );
-fprintf('Kwak rotation error (deg): \t \t \t %f \n', angularDistance(x_w(1:3,1:3),x_gt(1:3,1:3)) );
+% fprintf('Kwak rotation error (deg): \t \t \t %f \n', angularDistance(x_w(1:3,1:3),x_gt(1:3,1:3)) );
 
 % fprintf('Vasconcelos translation error (m): \t %f \n', norm(x_v(1:3,4) - x_gt(1:3,4)) );
 % fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );
