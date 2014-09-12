@@ -10,6 +10,7 @@ classdef CTrihedronOptimization < handle
         K   % Camera intrinsic matrix (for translation optimization)
         
         RANSAC_Rotation_threshold % Threshold for rotation error function
+        RANSAC_Translation_threshold % Threshold for translation error function
         debug_level % Verbose level when optimizing
     end
     
@@ -37,13 +38,18 @@ classdef CTrihedronOptimization < handle
     
     methods
         %% Constructor
-        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, debug_level )
+        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold, debug_level )
             obj.obs = CTrihedronObservation.empty(1,0);
             
             if ~exist('RANSAC_Rotation_threshold','var')
                 RANSAC_Rotation_threshold = 1e-1;
             end
             obj.RANSAC_Rotation_threshold = RANSAC_Rotation_threshold;
+            
+            if ~exist('RANSAC_Translation_threshold','var')
+                RANSAC_Translation_threshold = 1e-3;
+            end
+            obj.RANSAC_Translation_threshold = RANSAC_Translation_threshold;
             
             if ~exist('debug_level','var')
                 debug_level = 2;
@@ -67,6 +73,20 @@ classdef CTrihedronOptimization < handle
         
         %% Filter correspondences with RANSAC
         obj = filterRotationRANSAC( obj )
+        obj = filterTranslationRANSAC( obj )
+        % Functions to set all outlier masks to false
+        function obj = resetRotationRANSAC( obj )
+            Nobs = length( obj.obs );
+            for i=1:Nobs
+                obj.obs(i).is_R_outlier = false(1,3);
+            end
+        end
+        function obj = resetTranslationRANSAC( obj )
+            Nobs = length( obj.obs );
+            for i=1:Nobs
+                obj.obs(i).is_t_outlier = false(1,3);
+            end
+        end
         
         %% Compute initial estimate
         function obj = setInitialRotation( obj, R0 )
@@ -156,6 +176,7 @@ classdef CTrihedronOptimization < handle
         
         R = optimizeRotation_NonWeighted( obj )
         R = optimizeRotation_Weighted( obj )
+        R = optimizeRotation_DiagWeighted( obj )
         J = FJac_optimizeRotation_NonWeighted( obj, R )
         
         % TODO: Implement optimizeRotation_Covariance from optimRotation.m
