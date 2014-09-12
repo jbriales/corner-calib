@@ -63,7 +63,7 @@ function r = isdegenerate(X)
 %     fprintf('Det  = %f\n', abs( det(X(1:3,:)) ));
 %     fprintf('Cond = %f\n', cond( X(1:3,:) ));
 %     r = false;
-    r = ( abs(det(X(1:3,:))) < 5e-3 ); % Best value seems to be 1e-2
+    r = ( abs(det(X(1:3,:))) < 1e-3 ); % Best value seems to be 1e-2
 end
 
 end
