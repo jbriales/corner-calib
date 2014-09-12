@@ -74,9 +74,11 @@ for i=1:Nsamples
     check_corresp{2,i} = checkerboard.getProjection( Rig.Camera );    
     check_corresp{3,i} = 1000 * cell2mat(checkerboard.getScan( Rig.Lidar ));
     
-    % Correspondences for trihedron 
-%     trihedron.plotScene(Rig.Camera, Rig.Lidar);
-%     close;
+    % Correspondences for trihedron
+    figure
+    trihedron.plotScene(Rig.Camera, Rig.Lidar);
+    set(gcf,'units','normalized','position',[0 0 1 1]);
+    close;
     co_ = trihedron.getCorrespondence( Rig );
 %     co(i) = co_;
     triOptim.stackObservation( co_ );
