@@ -2,7 +2,7 @@ function [H, d_H]  =  huber_penalty(d, d_max)
 
 for i = 1:3
     
-    if d(i) >= d_max
+    if abs(d(i)) >= d_max
         H(i,1)   = d(i) ^ 2 ;
         d_H(i,1) = 2 * d(i) ;
     else
