@@ -12,6 +12,8 @@ classdef CTrihedronOptimization < handle
         RANSAC_Rotation_threshold % Threshold for rotation error function
         RANSAC_Translation_threshold % Threshold for translation error function
         debug_level % Verbose level when optimizing
+        
+        maxIters    % Max number of iterations in LM optimization
     end
     
     properties (SetAccess=private)
@@ -38,7 +40,7 @@ classdef CTrihedronOptimization < handle
     
     methods
         %% Constructor
-        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold, debug_level )
+        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold, debug_level, maxIters )
             obj.obs = CTrihedronObservation.empty(1,0);
             
             if ~exist('RANSAC_Rotation_threshold','var')
@@ -55,6 +57,11 @@ classdef CTrihedronOptimization < handle
                 debug_level = 2;
             end
             obj.debug_level = debug_level;
+            
+            if ~exist('maxIters','var')
+                maxIters = 50;
+            end
+            obj.maxIters = maxIters;
             
             obj.K = K;
             

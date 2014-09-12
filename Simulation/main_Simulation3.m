@@ -32,7 +32,14 @@ pattern = { trihedron, corner, checkerboard };
 corner_corresp = cell(2,3,Nsamples);
 
 tic
-triOptim = CTrihedronOptimization( K );
+optim_config_file = fullfile( pwd, 'optim_config.ini' );
+optimOpts = readConfigFile( optim_config_file );
+extractStructFields( optimOpts );
+clear optimOpts
+triOptim = CTrihedronOptimization( K,...
+    RANSAC_Rotation_threshold,...
+    RANSAC_Translation_threshold,...
+    debug_level, maxIters );
 for i=1:Nsamples
     % Update reference (Camera) pose in Rig
     Rig.updatePose( R_w_c{i}, t_w_c{i} );
@@ -102,7 +109,6 @@ t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted;
 t_2D_nw
 
 
-   
 % ------------- Kwak -------------------
 % R0 = [ 0 -1  0
 %     0  0 -1
@@ -128,8 +134,8 @@ fprintf('Trihedron (diag-weighted) rotation error (deg): \t %f \n',...
     angularDistance(R_c_s_dw,Rig.R_c_s) );
 fprintf('Trihedron (non-weighted) rotation error (deg): \t %f \n',...
     angularDistance(R_c_s_nw,Rig.R_c_s) );
-fprintf('Trihedron (non-weighted) translation error (m): \t %f \n',...
-    norm(t_2D_nw-Rig.t_c_s) );
+fprintf('Trihedron (non-weighted) translation error (cm): \t %f \n',...
+    norm(t_2D_nw-Rig.t_c_s)*100 );
 
 % fprintf('Kwak translation error (m): \t %f \n', norm(x_w(:,4) - x_gt(:,4)) );
 % fprintf('Kwak rotation error (deg): \t \t \t %f \n', angularDistance(x_w(1:3,1:3),x_gt(1:3,1:3)) );
