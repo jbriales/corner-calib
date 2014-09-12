@@ -3,8 +3,8 @@ load('rot_input_ex.mat');
 n_cam       = [rot_input.N];
 line_LRF    = [rot_input.l];
 
-dist  = 0.8;    % Simulation distance (rad)
-inc   = 0.05;    % Increments
+dist  = 0.1;    % Simulation distance (rad)
+inc   = 0.01;    % Increments
 
 w_gt    = rodrigues(R_c_s);    % GT rotation vector
 
@@ -21,14 +21,14 @@ for i = 1:size( w_sim(1,:) , 2 )
         
         w = [w_x(i,j) w_y(i,j) w_z(i,j)]';
         R = rodrigues(w);
-        residual = dot( n_cam, R(1:3,1:2) * line_LRF, 1 )';
-        E_trihedron(i,j) = residual' * residual;
-         
+%         residual = dot( n_cam, R(1:3,1:2) * line_LRF, 1 )';
+%         E_trihedron(i,j) = residual' * residual;
+
         x = [R [0.15 0 0]'];
         theta = Rig.Lidar.FOVd / Rig.Lidar.N ;
         %[residual_,~] = Fun_sum( corner_corresp, x, K );
-        [residual_,~] = FunW( corner_corresp, x, K, theta );
-        E_kwak(i,j) = residual_' * residual_;
+        [residual_,~] = FunW_sum( corner_corresp, x, K, theta );
+        E_kwak(i,j) = residual_;
         
     end
 end
