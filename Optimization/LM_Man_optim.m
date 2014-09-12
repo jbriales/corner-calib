@@ -23,12 +23,14 @@ allfields = {'debug', 1
     'maxIters', 15
     'minChange', eps
     'minErrorChange', 1e-14
+    'inc_lambda', 2
     'weighted', false
     'erode', false
     };
 opt = setVarargin(allfields, varargin{:});
 % Algorithm options
 maxIters = opt.maxIters; minChange = opt.minChange; minErrorChange = opt.minErrorChange;
+inc_lambda = opt.inc_lambda;
 DONE = 0; STARTED = 1; CALC_J = 2; CHECK_ERR = 3;
 Cstate = {'DONE','STARTED','CALC_J','CHECK_ERR'};
 lambda = 1e-3; iters = 0; state = STARTED;
@@ -141,7 +143,7 @@ end
             warning('Bug in state values');
         end
         if( errNorm > prevErrNorm )
-            lambda = lambda * 10;
+            lambda = lambda * 10^(inc_lambda);
             if( log10(lambda) <= 16 )
                 step()
                 state = CHECK_ERR;
