@@ -1,0 +1,35 @@
+Extrinsic Calibration between Camera and Laser Range Scanner
+
+1. This contains:
+	
+ - Implementation of the method proposed in:
+
+   F. Vasconcelos, J.P. Barreto, and U. Nunes, "A Minimal Solution for the
+   Extrinsic Calibration of a Camera and a Laser-Rangefinder", IEEE TPAMI,
+   2012
+
+ - Implementation of a robust version of Zhang & Pless method, proposed in:
+   
+   Qilong Zhang; Pless, R.; , "Extrinsic calibration of a camera and laser
+   range finder (improves camera calibration)," IROS, 2004
+
+ - Demonstration script: ./demo.m  
+
+
+2. Required data:
+
+ - Set of calibration plane poses in the camera reference frame, this can 
+   be obtained, for example, using 
+     Bouguet toolbox (http://www.vision.caltech.edu/bouguetj/calib_doc/)
+     EasyCamCalib (http://arthronav.isr.uc.pt/easycamcalib/)
+
+ - A set of 2D point laser measurements of the calibration plane, for 
+   each pose.
+   NOTE: usualy, laser scanners output depth measurements, hence it
+   is required to compute the cartesian 2D coordinates of each point.
+
+
+3. Instructions:
+
+ - Define this as the current working directory of MATLAB.
+ - Open and run ./demo.m for understanding input & output data. 
