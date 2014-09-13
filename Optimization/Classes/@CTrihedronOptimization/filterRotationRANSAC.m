@@ -5,7 +5,7 @@ mask_exist = obj.mask_LRF_V;
 idxs_exist = find( mask_exist );
 
 corresps = [ obj.cam_N ; obj.LRF_V ];
-feedback = true;
+feedback = obj.debug_level;
 [R0, inliers] = ransacFitTransNormals(corresps, obj.RANSAC_Rotation_threshold, feedback);
 % R0 can be used as initial estimate for optimization process
 obj.R0 = R0;

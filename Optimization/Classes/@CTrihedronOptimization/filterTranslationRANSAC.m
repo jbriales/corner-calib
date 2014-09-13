@@ -16,7 +16,7 @@ fittingfn = @computeTranslationLinear;
 distfn    = @correspdist;
 degenfn   = @isdegenerate;
 
-[t0, inliers] = ransac(corresps, fittingfn, distfn, degenfn, s, obj.RANSAC_Translation_threshold, feedback);
+[t0, inliers] = ransac(corresps, fittingfn, distfn, degenfn, s, obj.RANSAC_Translation_threshold, obj.debug_level);
    
 % R0 can be used as initial estimate for optimization process
 obj.t0 = t0;

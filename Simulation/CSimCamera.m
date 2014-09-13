@@ -24,6 +24,10 @@ classdef CSimCamera < CBaseCamera
             % Transform points to camera space and project them
             p3D = obj.T \ makehomogeneous(pattern.p3D); % TODO: Prod or division?
             p3D(end,:) = [];
+            
+            % Normalize points to f=1 distance
+            p3D = hnormalise( p3D );
+            
             uv_pixels = makeinhomogeneous( obj.K * p3D );
             
             % Apply gaussian noise to pixels
@@ -31,6 +35,12 @@ classdef CSimCamera < CBaseCamera
             
             % Update canonical projection space with noise
             uv_proj   = obj.K \ makehomogeneous( uv_pixels );
+        end
+        
+        % Take points inside image when projected out of image
+        function projectInside( obj, pts2D )
+            % TODO: Check if point is contained in FOV and if not, take
+            % intersection point in image border
         end
         
         % Plotting functions
