@@ -39,7 +39,8 @@ clear optimOpts
 triOptim = CTrihedronOptimization( K,...
     RANSAC_Rotation_threshold,...
     RANSAC_Translation_threshold,...
-    debug_level, maxIters );
+    debug_level, maxIters,...
+    minParamChange, minErrorChange);
 for i=1:Nsamples
     % Update reference (Camera) pose in Rig
     Rig.updatePose( R_w_c{i}, t_w_c{i} );
@@ -124,13 +125,13 @@ triOptim.plotTranslation_3D_CostFunction( Rig.R_c_s, Rig.t_c_s );
 
 
 % ------------- Kwak -------------------
- R0 = [ 0 -1  0
-     0  0 -1
-     1  0  0 ];
-x0 = [R0 [0.15 0 0]'];
-x_knw  = corner.optim(corner_corresp,x0,0,Rig);
-x_kw   = corner.optim(corner_corresp,x0,1,Rig);
-x_gt = [Rig.R_c_s Rig.t_c_s];
+%  R0 = [ 0 -1  0
+%      0  0 -1
+%      1  0  0 ];
+% x0 = [R0 [0.15 0 0]'];
+% x_knw  = corner.optim(corner_corresp,x0,0,Rig);
+% x_kw   = corner.optim(corner_corresp,x0,1,Rig);
+% x_gt = [Rig.R_c_s Rig.t_c_s];
 
 % % ---------- Vasconcelos -------------------------
 % [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
@@ -156,9 +157,9 @@ fprintf('Trihedron (    weighted, 3D) translation error (cm): \t %f \n',...
 fprintf('Trihedron (non-weighted, 2D) translation error (cm): \t %f \n',...
     norm(t_3D_nw-Rig.t_c_s)*100 );
 
-fprintf('Kwak translation error (m): \t\t\t\t %f \n', norm(x_kw(:,4) - x_gt(:,4)) );
+% fprintf('Kwak translation error (m): \t\t\t\t %f \n', norm(x_kw(:,4) - x_gt(:,4)) );
 % fprintf('Kwak (non-weighted) rotation error (deg): \t \t %f \n', angularDistance(x_knw(1:3,1:3),x_gt(1:3,1:3)) );
-fprintf('Kwak (weighted) rotation error (deg): \t \t \t %f \n', angularDistance(x_kw(1:3,1:3),x_gt(1:3,1:3)) );
+% fprintf('Kwak (weighted) rotation error (deg): \t \t \t %f \n', angularDistance(x_kw(1:3,1:3),x_gt(1:3,1:3)) );
 
 % fprintf('Vasconcelos translation error (cm): \t %f \n', 100 * norm(x_v(1:3,4) - x_gt(1:3,4)) );
 % fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );

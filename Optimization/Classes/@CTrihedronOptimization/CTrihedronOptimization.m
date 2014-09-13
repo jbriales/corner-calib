@@ -14,6 +14,8 @@ classdef CTrihedronOptimization < handle
         debug_level % Verbose level when optimizing
         
         maxIters    % Max number of iterations in LM optimization
+        minParamChange   % Minimum change in param (norm2) to stop
+        minErrorChange  % Minimum change in cost function to stop
     end
     
     properties (SetAccess=private)
@@ -43,7 +45,8 @@ classdef CTrihedronOptimization < handle
     
     methods
         %% Constructor
-        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold, debug_level, maxIters )
+        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold, debug_level,...
+                maxIters, minParamChange, minErrorChange )
             obj.obs = CTrihedronObservation.empty(1,0);
             
             if ~exist('RANSAC_Rotation_threshold','var')
@@ -65,6 +68,16 @@ classdef CTrihedronOptimization < handle
                 maxIters = 50;
             end
             obj.maxIters = maxIters;
+            
+            if ~exist('minParamChange','var')
+                minParamChange = 1e-8;
+            end
+            obj.minParamChange = minParamChange;
+            
+            if ~exist('minErrorChange','var')
+                minErrorChange = 1e-8;
+            end
+            obj.minErrorChange = minErrorChange;
             
             obj.K = K;
             
