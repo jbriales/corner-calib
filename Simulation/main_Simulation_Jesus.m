@@ -96,7 +96,7 @@ R_c_s_dw = triOptim.optimizeRotation_DiagWeighted;
 R_c_s_w  = triOptim.optimizeRotation_Weighted;
 
 % Plot rotation cost function near GT
-triOptim.plotRotationCostFunction( Rig.R_c_s );
+% triOptim.plotRotationCostFunction( Rig.R_c_s );
                            
 % co0 = co;
 % s_FinalOptimization
@@ -121,17 +121,24 @@ t_3D_w
 t_2D_nw
 
 % Plot translation cost function near GT
-triOptim.plotTranslation_3D_CostFunction( Rig.R_c_s, Rig.t_c_s );
+% triOptim.plotTranslation_3D_CostFunction( Rig.R_c_s, Rig.t_c_s );
 
 
 % ------------- Kwak -------------------
-%  R0 = [ 0 -1  0
-%      0  0 -1
-%      1  0  0 ];
-% x0 = [R0 [0.15 0 0]'];
-% x_knw  = corner.optim(corner_corresp,x0,0,Rig);
-% x_kw   = corner.optim(corner_corresp,x0,1,Rig);
-% x_gt = [Rig.R_c_s Rig.t_c_s];
+% Generate random input (near GT)
+R_aux = Rig.R_c_s + randn(3,3)*0.01;
+[U,S,V] = svd(R_aux);
+Rt0 = [ U*V' , Rig.t_c_s + 0.05*randn(3,1) ];
+% Optimize
+Rt_knw  = corner.optim(corner_corresp,Rt0,0,Rig);
+Rt_kw   = corner.optim(corner_corresp,Rt0,1,Rig);
+Rt_gt = [Rig.R_c_s Rig.t_c_s];
+% Check distance between optimization and initial point
+fprintf('Kwak (NW): Change in rotation = %f\n',angularDistance(Rt_knw(1:3,1:3),Rt0(1:3,1:3)));
+fprintf('Kwak ( W): Change in rotation = %f\n',angularDistance(Rt_kw(1:3,1:3),Rt0(1:3,1:3)));
+fprintf('Kwak (NW): Change in translation = %f\n',norm(Rt_knw(1:3,1:3) - Rt0(1:3,1:3)));
+fprintf('Kwak ( W): Change in translation = %f\n',norm(Rt_kw(1:3,1:3)  - Rt0(1:3,1:3)));
+fprintf('\n\n')
 
 % % ---------- Vasconcelos -------------------------
 % [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
@@ -157,9 +164,10 @@ fprintf('Trihedron (    weighted, 3D) translation error (cm): \t %f \n',...
 fprintf('Trihedron (non-weighted, 2D) translation error (cm): \t %f \n',...
     norm(t_3D_nw-Rig.t_c_s)*100 );
 
-% fprintf('Kwak translation error (m): \t\t\t\t %f \n', norm(x_kw(:,4) - x_gt(:,4)) );
-% fprintf('Kwak (non-weighted) rotation error (deg): \t \t %f \n', angularDistance(x_knw(1:3,1:3),x_gt(1:3,1:3)) );
-% fprintf('Kwak (weighted) rotation error (deg): \t \t \t %f \n', angularDistance(x_kw(1:3,1:3),x_gt(1:3,1:3)) );
+fprintf('Kwak (weighted) rotation error (deg): \t \t \t %f \n', angularDistance(Rt_kw(1:3,1:3),Rt_gt(1:3,1:3)) );
+fprintf('Kwak (non-weighted) rotation error (deg): \t \t %f \n', angularDistance(Rt_knw(1:3,1:3),Rt_gt(1:3,1:3)) );
+fprintf('Kwak (weighted) translation error (cm): \t\t %f \n', 100*norm(Rt_kw(:,4) - Rt_gt(:,4)) );
+fprintf('Kwak (non-weighted) translation error (cm): \t\t %f \n', 100*norm(Rt_knw(:,4) - Rt_gt(:,4)) );
 
 % fprintf('Vasconcelos translation error (cm): \t %f \n', 100 * norm(x_v(1:3,4) - x_gt(1:3,4)) );
 % fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );

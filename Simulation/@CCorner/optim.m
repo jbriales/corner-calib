@@ -1,4 +1,4 @@
-function [ x, err, errNorm, W ] = optim( obj, corresp, x0, weighted, Rig )
+function [ x, err, errNorm, W ] = optim( obj, corresp, Rt0, weighted, Rig )
 
 % :: Inputs
 %
@@ -12,23 +12,12 @@ function [ x, err, errNorm, W ] = optim( obj, corresp, x0, weighted, Rig )
 K = Rig.Camera.K;
 theta = Rig.Lidar.FOVd / Rig.Lidar.N ;
 
-% R0 = [ 0 -1  0
-%        0  0 -1
-%        1  0  0 ];
-% x0 = [R0 zeros(3,1)];
-x0 = [Rig.R_c_s Rig.t_c_s];
-% x0 = [Rig.R_c_s [0.16 0.001 -0.001]'];
- 
-R_aux = Rig.R_c_s + randn(3,3)*0.01;
-[U,S,V] = svd(R_aux);
-x0 = [U*V' [0.15 0 0]'];
-
 if ~weighted
     Lev_Fun = @(x) Fun( corresp, x, K );
-    [ x, err, errNorm, W ] = LM_Man_optim(Lev_Fun,x0,'space','SE(3)','debug',0, 'maxIters', 200);
+    [ x, err, errNorm, W ] = LM_Man_optim(Lev_Fun,Rt0,'space','SE(3)','debug',2, 'maxIters', 200);
 else
     Lev_Fun = @(x) FunW( corresp, x, K, theta );
-    [ x, err, errNorm, W ] = LM_Man_optim(Lev_Fun,x0,'space','SE(3)','weighted',true,'debug',0, 'maxIters', 200);   
+    [ x, err, errNorm, W ] = LM_Man_optim(Lev_Fun,Rt0,'space','SE(3)','weighted',true,'debug',2, 'maxIters', 200);   
 end
 
 end
