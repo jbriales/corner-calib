@@ -36,14 +36,18 @@ for i=1:N_obs
     A_V = diag(cell2mat(A_V));
     
     obsSize  = size( N, 2 );
-    RL = mat2cell( R12*V, 3, ones(1,obsSize) );
-    JN = blkdiag( RL{:} )'; % Derivative of e_XYZ wrt N_XYZ
-    Ja = diag( dot( N, R12*ort*V ) );
-    A_i = JN * A_N * JN' + Ja * A_V * Ja';
-    if any(A_i(:))
-        W{i} = pinv( A_i );
+    if obsSize > 0
+        RL = mat2cell( R12*V, 3, ones(1,obsSize) );
+        JN = blkdiag( RL{:} )'; % Derivative of e_XYZ wrt N_XYZ
+        Ja = diag( dot( N, R12*ort*V ) );
+        A_i = JN * A_N * JN' + Ja * A_V * Ja';
+        if any(A_i(:))
+            W{i} = pinv( A_i );
+        else
+            W{i} = eye(length(A_i))
+        end
     else
-        W{i} = eye(length(A_i))
+        W{i} = []; % Observation does not appear
     end
 end
 weights = blkdiag( W{:} );
