@@ -20,7 +20,7 @@ classdef CComparisonNoise < handle
             obj.KwakComp        = CKwakComp(N_sim, cam_sd_N, scan_sd_N);          %(TODO)
             obj.ZhangComp       = CZhangComp(N_sim, cam_sd_N, scan_sd_N);         %(TODO)
             obj.VasconcelosComp = CVasconcelosComp(N_sim, cam_sd_N, scan_sd_N);   %(TODO)
-            obj.N_samples       = N_samples
+            obj.N_samples       = N_samples;
             
         end
         
