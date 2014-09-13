@@ -64,6 +64,8 @@ classdef (Abstract) CPattern < CPose3D
             end
         end
         
+        h = plotScanFeatures( obj, SimLidar )
+        
         % Plot projected points from pattern
 %         function h = plotImage( obj, SimLidar )
 %             h = zeros(obj.NF,1);
@@ -88,6 +90,7 @@ classdef (Abstract) CPattern < CPose3D
                         color = 'g';
                         sensor.plotFrame('S',color);
                         obj.plotScan( sensor, color );
+                        obj.plotScanFeatures( sensor );
                     case 'CSimCamera'
                         color = 'r';
                         sensor.plotFrame('C',color);
