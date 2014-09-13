@@ -43,8 +43,16 @@ classdef CTrihedronObservation
             obj.cam_reprN = cam_l ./ repmat( norms, 3,1 ); % Normalize vectors as plane normals
             % TODO: Check if it is valid using norms as constant in this
             % case (changing representation of vector)
-            J_n_l = diag( kron( 1./norms, ones(1,3) ) );
-            obj.cam_A_reprN = J_n_l * cam_A_l * J_n_l';
+            if 0 % Using norm as a constant
+                J_n_l = diag( kron( 1./norms, ones(1,3) ) );
+                obj.cam_A_reprN = J_n_l * cam_A_l * J_n_l';
+            else % Taking into account jacobian of normalization to propagate
+                J_snormalize = @(x) 1/norm(x) * (eye(3) - x*x'/norm(x)^2);
+                J_N_L = blkdiag( J_snormalize( J_snormalize(cam_l(:,1)) ),...
+                    J_snormalize( J_snormalize(cam_l(:,2)) ),...
+                    J_snormalize( J_snormalize(cam_l(:,3)) ) );
+                obj.cam_A_reprN = J_N_L * cam_A_l * J_N_L';
+            end
             
             obj.LRF_v = LRF_v;
             obj.LRF_A_v = LRF_A_v;
