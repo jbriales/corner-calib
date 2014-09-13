@@ -1,4 +1,4 @@
-classdef CTrihedronOptimization < handle
+classdef CTrihedronOptimization < handle & CBaseOptimization
     %CTrihedronOptimization Class to store observations and later process
     %and optimize them
     %   Detailed explanation goes here
@@ -11,11 +11,6 @@ classdef CTrihedronOptimization < handle
         
         RANSAC_Rotation_threshold % Threshold for rotation error function
         RANSAC_Translation_threshold % Threshold for translation error function
-        debug_level % Verbose level when optimizing
-        
-        maxIters    % Max number of iterations in LM optimization
-        minParamChange   % Minimum change in param (norm2) to stop
-        minErrorChange  % Minimum change in cost function to stop
     end
     
     properties (SetAccess=private)
@@ -45,8 +40,11 @@ classdef CTrihedronOptimization < handle
     
     methods
         %% Constructor
-        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold, debug_level,...
-                maxIters, minParamChange, minErrorChange )
+        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold,...
+                debug_level,maxIters, minParamChange, minErrorChange ) % COptimization inputs
+            % Set optimization parameters through parent class
+            obj = obj@CBaseOptimization( debug_level, maxIters, minParamChange, minErrorChange );
+
             obj.obs = CTrihedronObservation.empty(1,0);
             
             if ~exist('RANSAC_Rotation_threshold','var')
@@ -58,27 +56,7 @@ classdef CTrihedronOptimization < handle
                 RANSAC_Translation_threshold = 1e-3;
             end
             obj.RANSAC_Translation_threshold = RANSAC_Translation_threshold;
-            
-            if ~exist('debug_level','var')
-                debug_level = 2;
-            end
-            obj.debug_level = debug_level;
-            
-            if ~exist('maxIters','var')
-                maxIters = 50;
-            end
-            obj.maxIters = maxIters;
-            
-            if ~exist('minParamChange','var')
-                minParamChange = 1e-8;
-            end
-            obj.minParamChange = minParamChange;
-            
-            if ~exist('minErrorChange','var')
-                minErrorChange = 1e-8;
-            end
-            obj.minErrorChange = minErrorChange;
-            
+                        
             obj.K = K;
             
             % Commented because is dependent now
