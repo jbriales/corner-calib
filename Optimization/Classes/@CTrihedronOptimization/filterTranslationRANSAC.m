@@ -1,4 +1,4 @@
-function obj = filterTranslationRANSAC( obj )
+function obj = filterTranslationRANSAC( obj, R )
 
 % Mask of existing correspondences
 mask_exist = obj.mask_LRF_Q;
@@ -8,11 +8,11 @@ idxs_exist = find( mask_exist );
 N = obj.cam_L;
 N = N ./ repmat( sqrt(sum(N.^2,1)) , 3,1);
 corresps = [ N ; obj.LRF_Q ];
-feedback = true;
 
 s = 3;  % Minimum No of points needed to define rotation.
         
-fittingfn = @computeTranslationLinear;
+% fittingfn = @computeTranslationLinear;
+fittingfn = @computeTranslation_3D;
 distfn    = @correspdist;
 degenfn   = @isdegenerate;
 
@@ -41,9 +41,24 @@ function t = computeTranslationLinear( X )
 L = X(1:3,:);
 Q = X(4:5,:);
 
-b = - dot( L, obj.R(:,1:2) * Q, 1 )';
+b = - dot( L, R(:,1:2) * Q, 1 )';
 A = L';
 t = A \ b;
+end
+
+function t = computeTranslation_3D( X )
+N = X(1:3,:);
+Q = X(4:5,:);
+
+Lev_Fun = @(t) Fun( t, R, N, Q );
+[ t, err, errNorm, W ] = LM_Man_optim(Lev_Fun,[0 0 0]',...
+    'space','Rn','debug',0, 'maxIters', 200);
+    
+end
+
+function [residual,J] = Fun( t, R, N, Q )
+residual = dot( N, R(:,1:2)*Q + repmat(t,1,3), 1)';
+J = N';
 end
 
 function [inliers, t] = correspdist(t, X, thres)
@@ -52,7 +67,7 @@ function [inliers, t] = correspdist(t, X, thres)
     all_q = X(4:5,:);
     Ncorresps = size(X,2);
     
-    d = dot( all_n, obj.R(:,1:2)*all_q + repmat(t,1,Ncorresps) );
+    d = dot( all_n, R(:,1:2)*all_q + repmat(t,1,Ncorresps) );
     
     inliers = find(abs(d) < thres);
 end
