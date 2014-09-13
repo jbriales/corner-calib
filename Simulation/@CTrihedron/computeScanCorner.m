@@ -76,24 +76,54 @@ for i=1:3
         % Nomenclature below:
         % q  - 2D intersection point
         % qh - P2 intersection point
+        % qs - spherical representation of qh
         % qr - reduced linked to S2 representation of P2 (see Forstner)
-        qh = cross( lin{idx(1)}, lin{idx(2)} );
 
-        % Compute corner points (q) uncertainty
-        J_qh_l1l2 = [-skew(lin{idx(2)}) skew(lin{idx(1)})];
-        A_l1l2 = [A_lin{idx(2)} zeros(3,3);
-                  zeros(3,3) A_lin{idx(1)}];
-        J_qr_qh = null( qh' )';
-        J_qh_qh  = J_qr_qh' * J_qr_qh;
-        % J_qr_q is needed to drop extra rank of A_q (there is no
-        % uncertainty in q direction)
-        A_qh = J_qh_qh * J_qh_l1l2 * A_l1l2 * J_qh_l1l2' * J_qh_qh';
-        
-        % Make inhomogeneous
-        q{i} = makeinhomogeneous( qh );
-        J_q_qh = 1/qh(3)^2 * [ qh(3)     0 -qh(1) 
-                               0     qh(3) -qh(2) ];
-        A_q{i} = J_q_qh * A_qh * J_q_qh';
+        if 1 % Without using qs
+            % Compute homogeneous corner points (qh) and uncertainty
+            qh = cross( lin{idx(1)}, lin{idx(2)} );
+            J_qh_l1l2 = [-skew(lin{idx(2)}) skew(lin{idx(1)})];
+            A_l1l2 = [A_lin{idx(1)} zeros(3,3);
+                      zeros(3,3) A_lin{idx(2)}];
+            J_qr_qh = null( qh' )';
+            J_qh_qh  = J_qr_qh' * J_qr_qh;
+            % J_qr_q is needed to drop extra rank of A_q (there is no
+            % uncertainty in q direction)
+            A_qh = J_qh_qh * J_qh_l1l2 * A_l1l2 * J_qh_l1l2' * J_qh_qh';
+            
+            % Make inhomogeneous
+            q{i} = makeinhomogeneous( qh );
+            J_q_qh = 1/qh(3)^2 * [ qh(3)     0 -qh(1)
+                0     qh(3) -qh(2) ];
+            A_q{i} = J_q_qh * A_qh * J_q_qh';
+        else % Using qs (seems equivalent, so the other is used)
+            % KEEP FOR FUTURE
+            % Compute homogeneous corner points (qh) and uncertainty
+            qh = cross( lin{idx(1)}, lin{idx(2)} );
+            J_qh_l1l2 = [-skew(lin{idx(2)}) skew(lin{idx(1)})];
+            A_l1l2 = [A_lin{idx(1)} zeros(3,3);
+                      zeros(3,3) A_lin{idx(2)}]; % TOFIX
+            A_qh = J_qh_l1l2 * A_l1l2 * J_qh_l1l2';
+            
+            % Get spherical representation and uncertainty
+            qs = qh / norm(qh);
+            J_qs_qh = 1/norm(qh) * (eye(3) - qs*qs');
+            A_qs = J_qs_qh * A_qh * J_qs_qh';
+            
+            % Drop extra rank
+            J_qr_qs = null( qs' )';
+            J_qs_qs = J_qr_qs' * J_qr_qs;
+            
+            % J_qr_qs is needed to drop extra rank of A_qs (there is no
+            % uncertainty in qs direction)
+            A_qs = J_qs_qs * A_qs * J_qs_qs';
+            
+            % Make inhomogeneous
+            q{i} = makeinhomogeneous( qs );
+            J_q_qs = 1/qs(3)^2 * [ qs(3)     0 -qs(1)
+                                   0     qs(3) -qs(2) ];
+            A_q{i} = J_q_qs * A_qs * J_q_qs';
+        end
     else
         q{i} = [];
         A_q{i} = [];
