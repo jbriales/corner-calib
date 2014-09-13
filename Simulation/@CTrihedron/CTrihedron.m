@@ -48,16 +48,16 @@ classdef CTrihedron < CPattern
         % Get 4x3 cell array with correspondences (lines and points)
         function co = getCorrespondence( obj, Rig )
             % Camera data
-            [N_im, c, A_co, L_P2] = obj.getCalibratedCornerData( Rig.Camera );
+            [N_im, c, A_co, L_P2, A_L_P2] = obj.getCalibratedCornerData( Rig.Camera );
             R0 = Rig.Camera.R'; % Initial estimate for R_c_w
             [R_c_w, A_R_c_w, A_eps_c_w] = obj.getWorldNormals( R0, N_im, c, A_co );
             
             % Lidar data            
-            [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = ...
+            [l,A_l,p,A_p,q,A_q, lin,seg] = ...
                 obj.computeScanCorner( Rig.Lidar, 0 ); % Debug = 0
             if 1
-                co = CTrihedronObservation( R_c_w, A_R_c_w, L_P2, [],...
-                    l, A_l, [], A_lh, q, A_q );
+                co = CTrihedronObservation( R_c_w, A_R_c_w, L_P2, A_L_P2,...
+                    l, A_l, [], [], q, A_q );
             else
                 thereis_line   = cellfun(@(x)~isempty(x), l);
                 thereis_corner = cellfun(@(x)~isempty(x), q);
@@ -94,7 +94,7 @@ classdef CTrihedron < CPattern
         
         % Get calibrated data from corner (line normals, center and
         % covariance)
-        [N, c, A_co, L_P2] = getCalibratedCornerData( obj, Camera )
+        [N, c, A_co, L_P2, A_L_P2] = getCalibratedCornerData( obj, Camera )
         
         % Get world plane normals from Calibrated Corner Data (needs
         % initialization)
