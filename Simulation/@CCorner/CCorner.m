@@ -70,7 +70,7 @@ classdef CCorner < CPattern
             lines = obj.getImageFeatures( Rig.Camera );
             
             % Create the output cell array
-            corresp = [ lines ; pts ];
+            corresp = CCornerObservation( lines, pts );
         end
         
         function pts = getScanFeatures(obj, SimLRF)

@@ -41,34 +41,26 @@ triOptim = CTrihedronOptimization( K,...
     RANSAC_Translation_threshold,...
     debug_level, maxIters,...
     minParamChange, minErrorChange);
+cornerOptim = CCornerOptimization( K,...
+    debug_level, maxIters,...
+    minParamChange, minErrorChange);
+
 for i=1:Nsamples
     % Update reference (Camera) pose in Rig
     Rig.updatePose( R_w_c{i}, t_w_c{i} );
-    
-%     if 1 % For plotting
-% %         trihedron.getCornerData( Rig.Camera );
-% %         trihedron.plotScene( Rig.Lidar, Rig.Camera );
-%         corner.plotScene( Rig.Lidar, Rig.Camera );
-% %         checkerboard.plotScene( Rig.Lidar, Rig.Camera );
-%         set(gcf,'units','normalized','position',[0 0 1 1]);
-% %         pause( )
-% %         close
-%     else % For computation only
-%         tic
-%         for j=1:3
-%             pattern{j}.getProjection( Rig.Camera );
-%             pattern{j}.getScan( Rig.Lidar );
-%         end
-%         toc
-%     end
-    
+        
     % Correspondences for Kwak's algorithm
     corr_ = corner.getCorrespondence(Rig); 
+    cornerOptim.stackObservation( corr_ );
     for j = 1:2
         for k = 1:3
             corner_corresp{j,k,i} = corr_{j,k};
         end
-    end   
+    end
+%     figure
+%     corner.plotScene(Rig.Camera, Rig.Lidar);
+%     set(gcf,'units','normalized','position',[0 0 1 1]);
+%     close;
     
     % Correspondences for Vasconcelos and Zhang's algorithm
     check_corresp{1,i} = checkerboard.p2D; 
