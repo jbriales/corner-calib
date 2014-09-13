@@ -19,14 +19,17 @@ classdef CTrihedronOptimization < handle
     properties (SetAccess=private)
         % Optimized variables
         R0
-        R
+        % R % R is not a property to avoid confusion with results of
+        % different methods
         t0
-        t
+        % t % t is not a property to avoid confusion with results of
+        % different methods
     end
     
     properties (Dependent) % Array values collected from set of observations
         cam_N
         cam_L
+        cam_reprN
         
         LRF_V
         LRF_L
@@ -80,7 +83,7 @@ classdef CTrihedronOptimization < handle
         
         %% Filter correspondences with RANSAC
         obj = filterRotationRANSAC( obj )
-        obj = filterTranslationRANSAC( obj )
+        obj = filterTranslationRANSAC( obj, R )
         % Functions to set all outlier masks to false
         function obj = resetRotationRANSAC( obj )
             Nobs = length( obj.obs );
@@ -130,56 +133,7 @@ classdef CTrihedronOptimization < handle
             v_LRF = obj.LRF_V;
             jacobian = cross( R(1:3,1:2) * v_LRF, n_cam, 1 )';
         end
-        function weights = FWeights_Orthogonality( obj, R )
-            % Compute covariance matrix of error vector for observations
-            % data and certain R and invert it for using as weight matrix W
-            N_obs = length(obj.obs);
-            W = cell(1, N_obs);
-            
-            ort = [ 0 -1
-                    1  0 ];
-            
-            R12 = R(1:3,1:2); % Only 2 columns are used
-            
-            for i=1:N_obs
-                % Take observation elements which exist and are not
-                % outliers
-                mask_N = obj.obs(i).thereis_LRF_v & (~obj.obs(i).is_R_outlier);
-                
-                % Normals to planes
-                N = obj.obs(i).cam_R_c_w( :, mask_N );
-                    
-                % Correlated covariance of normals to planes
-                A_N = obj.obs(i).cam_A_R_c_w;
-                A_N = mat2cell(A_N,[3 3 3],[3 3 3]);
-                A_N = A_N(mask_N,mask_N);
-                A_N = cell2mat(A_N);
-                
-                mask_V = obj.obs(i).thereis_LRF_v & (~obj.obs(i).is_R_outlier);
-                V = obj.obs(i).LRF_v;
-                V( ~mask_V ) = [];
-                V = cell2mat( V );
-                
-                % Could be used non-minimal covariance
-                % Input LRF_A_v is a 1x3 cell array (diagonal elements)
-                A_V = obj.obs(i).LRF_A_v;
-                % Remove outlier of existing part of A:V
-                A_V(~mask_V) = [];
-                A_V = diag(cell2mat(A_V));
-                
-                obsSize  = size( N, 2 );
-                RL = mat2cell( R12*V, 3, ones(1,obsSize) );
-                JN = blkdiag( RL{:} )'; % Derivative of e_XYZ wrt N_XYZ
-                Ja = diag( dot( N, R12*ort*V ) ); 
-                A_i = JN * A_N * JN' + Ja * A_V * Ja';
-                if any(A_i(:))
-                    W{i} = pinv( A_i );
-                else
-                    W{i} = eye(length(A_i))
-                end
-            end
-            weights = blkdiag( W{:} );
-        end
+        weights = FWeights_Orthogonality( obj, R )
         
         R = optimizeRotation_NonWeighted( obj )
         R = optimizeRotation_Weighted( obj )
@@ -188,11 +142,39 @@ classdef CTrihedronOptimization < handle
         
         % TODO: Implement optimizeRotation_Covariance from optimRotation.m
         
+        h = plotRotationCostFunction( obj, R )
+        
         plot( obj )
         
         % For Translation
-        t = optimizeTranslation_2D_NonWeighted( obj )
-        t = optimizeTranslation_2D_Weighted( obj )
+        function residual = FErr_3D_PlaneDistance( obj, R, t )
+            % Compute error vector for observations data, R and t
+            % N - (3x...) 3D normals to reprojection planes from camera center
+            % through image lines
+            % Q - (2x...) 2D LRF intersection points
+            L = obj.cam_L;
+            N = L ./ repmat( sqrt(sum(L.^2,1)), 3,1 ); % Normalize vectors as plane normals
+            Q = obj.LRF_Q;
+            
+            s = size(N,2); % Number of correspondences
+            
+            residual = dot( N, R(:,1:2)*Q + repmat(t,1,s), 1)';
+        end
+        function jacobian = FJac_3D_PlaneDistance( obj, R, t )
+            % Compute jacobian of error vector wrt R for observations data and certain R
+            L = obj.cam_L;
+            N = L ./ repmat( sqrt(sum(L.^2,1)), 3,1 ); % Normalize vectors as plane normals
+            
+            jacobian = N';
+        end
+        weights = FWeights_3D_PlaneDistance( obj, R, t )
+        
+        t = optimizeTranslation_2D_NonWeighted( obj, R )
+        t = optimizeTranslation_2D_Weighted( obj, R )
+        t = optimizeTranslation_3D_NonWeighted( obj, R )
+        t = optimizeTranslation_3D_Weighted( obj, R )
+        
+        h = plotTranslation_3D_CostFunction( obj, R, t )
         
         
         %% Get-functions
@@ -222,6 +204,13 @@ classdef CTrihedronOptimization < handle
             cam_L = cam_L(:, mask_valid);
         end
         
+        function cam_reprN = get.cam_reprN( obj )
+            cam_reprN = [obj.obs.cam_reprN];
+            % Mask with existing measures and not-inliers
+            mask_valid = obj.mask_LRF_Q & (~obj.mask_RANSAC_t_outliers);
+            cam_reprN = cam_reprN(:, mask_valid);
+        end
+        
         function LRF_Q = get.LRF_Q( obj )
             LRF_Q = [obj.obs.LRF_q];
             % Remove non-observed data: Not necessary really (already empty)
@@ -243,6 +232,20 @@ classdef CTrihedronOptimization < handle
         end
         function mask_RANSAC_t_outliers = get.mask_RANSAC_t_outliers( obj )
             mask_RANSAC_t_outliers = [obj.obs.is_t_outlier];
+        end
+        
+        % More functions
+        function disp_N_R_inliers( obj )
+            mask_valid = obj.mask_LRF_V & (~obj.mask_RANSAC_R_outliers);
+            N = sum( mask_valid );
+            Ncorresp = sum( obj.mask_LRF_V );
+            fprintf('The number of R inliers is %d of %d\n',N,Ncorresp);
+        end
+        function disp_N_t_inliers( obj )
+            mask_valid = obj.mask_LRF_Q & (~obj.mask_RANSAC_t_outliers);
+            N = sum( mask_valid );
+            Ncorresp = sum( obj.mask_LRF_Q );
+            fprintf('The number of t inliers is %d of %d\n',N,Ncorresp);
         end
     end
     

@@ -1,4 +1,4 @@
-function [N, c, A_co, L_P2] = getCalibratedCornerData( obj, Camera )
+function [N, c, A_co, L_P2, A_L_P2] = getCalibratedCornerData( obj, Camera )
 % [N, c, A_co] = getCalibratedCornerData( obj, Camera )
 % Input:
 %   Camera  - CSimCamera object grabbing the pattern
@@ -84,14 +84,33 @@ J_cn_c  = [1/c_n(3) 0 -c_n(1)/c_n(3)^2;
 c = makeinhomogeneous( c_n );
 
 %% Output data
-% Calibrated homogeneous lines
-L_P2 = cell2mat( l );
-
-% Minimal data for rotation
-N = L_P2(1:2,:);
-
 % Set uncertainty:
 J    = [J_cn_c zeros(2,3); zeros(3,2) J_an_a];
 % J    = [J_an_a zeros(3,2); zeros(2,3) J_cn_c];
 A_co = J * A_x * J';
+
+% Calibrated homogeneous lines
+L_P2 = cell2mat( l );
+J_L_CO = Jacobian_L_CO( c, l{1}(1:2), l{2}(1:2), l{3}(1:2) );
+A_L_P2 = J_L_CO * A_co * J_L_CO';
+
+% TODO: Compute homogeneous lines uncertainty (and also for reprojection
+% planes normals)
+
+% Minimal data for rotation
+N = L_P2(1:2,:);
+
+end
+
+function [ J_L_CO ] = Jacobian_L_CO ( c, n1, n2, n3 )
+
+Jc = @(n) [ zeros(2,2) ; -n' ];
+Jn = [ eye(2) ; -c' ];
+J_L_cN = [ [Jc(n1); Jc(n2); Jc(n3)] , blkdiag(Jn,Jn,Jn) ];
+
+T = [0 -1 ; 1 0];
+J_cN_co = blkdiag( eye(2), T*n1, T*n2, T*n3 );
+
+J_L_CO = J_L_cN * J_cN_co;
+
 end

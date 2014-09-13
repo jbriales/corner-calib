@@ -8,7 +8,9 @@ classdef CTrihedronObservation
         cam_R_c_w   % 3(3x1) normals to World planes
         cam_A_R_c_w % 9x9 (rank 3) covariance matrix of R_c_w elements, groupable in 3x3 cell array
         cam_l       % 3(3x1) homogeneous lines in image (coincident with direction of normals to reprojection planes from camera center after normalization)
-        cam_A_l     % TODO
+        cam_A_l     % TODO: In process in getCalibratedCornerData
+        cam_reprN   % 3(3x1) vectors normal to reprojection planes from camera center
+        cam_A_reprN % 9x9 (rank ?) Uncertainty matrix of correlated 3 normals
         
         % LRF properties
         LRF_v       % 3(2x1) direction of scan segments
@@ -36,6 +38,14 @@ classdef CTrihedronObservation
             obj.cam_A_R_c_w = cam_A_R_c_w;
             obj.cam_l = cam_l;
             obj.cam_A_l = cam_A_l;
+            
+            norms = sqrt(sum(cam_l.^2,1));
+            obj.cam_reprN = cam_l ./ repmat( norms, 3,1 ); % Normalize vectors as plane normals
+            % TODO: Check if it is valid using norms as constant in this
+            % case (changing representation of vector)
+            J_n_l = diag( kron( 1./norms, ones(1,3) ) );
+            obj.cam_A_reprN = J_n_l * cam_A_l * J_n_l';
+            
             obj.LRF_v = LRF_v;
             obj.LRF_A_v = LRF_A_v;
             obj.LRF_l = LRF_l;
@@ -52,6 +62,7 @@ classdef CTrihedronObservation
             
             % TODO: Add tracking information?
         end
+        
     end
     
 end
