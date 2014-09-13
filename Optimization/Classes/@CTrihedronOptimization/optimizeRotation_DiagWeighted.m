@@ -4,8 +4,6 @@ function R = optimizeRotation_DiagWeighted( obj )
 R0 = obj.R0;
 [ R, err, errNorm, W ] = LM_Man_optim(@LM_Fun,R0,...
             'space','SO(3)','weighted',true,'debug',obj.debug_level, 'maxIters', obj.maxIters);
-
-obj.R = R;
         
     function [residual, jacobian, weights] = LM_Fun( R )
         residual = obj.FErr_Orthogonality( R );
