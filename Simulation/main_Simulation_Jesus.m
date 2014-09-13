@@ -89,12 +89,13 @@ triOptim.setInitialRotation( [ 0 -1  0
                                0  0 -1
                                1  0  0 ] ); % Updated in RANSAC
 triOptim.filterRotationRANSAC;
+triOptim.disp_N_R_inliers;
 R_c_s_nw = triOptim.optimizeRotation_NonWeighted;
 R_c_s_dw = triOptim.optimizeRotation_DiagWeighted;
 R_c_s_w  = triOptim.optimizeRotation_Weighted;
 
 % Plot rotation cost function near GT
-triOptim.plotRotationCostFunction( Rig.R_c_s )
+triOptim.plotRotationCostFunction( Rig.R_c_s );
                            
 % co0 = co;
 % s_FinalOptimization
@@ -108,10 +109,18 @@ R_c_s_nw
 angularDistance( R_c_s, R_c_s_w )
 angularDistance( R_c_s, R_c_s_dw )
 
-triOptim.filterTranslationRANSAC;
-triOptim.setInitialTranslation( [0.15 0 0]' + 0.1*randn(3,1) );
-t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted;
+triOptim.filterTranslationRANSAC( Rig.R_c_s ); % Should receive some estimated rotation
+triOptim.disp_N_t_inliers;
+triOptim.setInitialTranslation( Rig.t_c_s + 0.1*randn(3,1) );
+t_3D_nw = triOptim.optimizeTranslation_3D_NonWeighted( Rig.R_c_s );
+t_3D_w  = triOptim.optimizeTranslation_3D_Weighted( Rig.R_c_s );
+t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted( Rig.R_c_s );
+t_3D_nw
+t_3D_w
 t_2D_nw
+
+% Plot translation cost function near GT
+triOptim.plotTranslation_3D_CostFunction( Rig.R_c_s, Rig.t_c_s );
 
 
 % ------------- Kwak -------------------
@@ -124,10 +133,10 @@ x_kw   = corner.optim(corner_corresp,x0,1,Rig);
 x_gt = [Rig.R_c_s Rig.t_c_s];
 
 % % ---------- Vasconcelos -------------------------
-[T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
-[T, ~,~,~,~] = lccMinSol(T_planes,lidar_points);
+% [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
+% [T, ~,~,~,~] = lccMinSol(T_planes,lidar_points);
 % [T_z, ~,~,~,~] = lccZhang(T_planes, lidar_points);
-x_v = pose_inverse(T); x_v(1:3,4) = x_v(1:3,4)/1000;
+% x_v = pose_inverse(T); x_v(1:3,4) = x_v(1:3,4)/1000;
 % x_z = pose_inverse(T_z); x_z(1:3,4) = x_z(1:3,4)/1000;
 
 % ---------- Display the errors -------------------------
@@ -136,19 +145,23 @@ x_v = pose_inverse(T); x_v(1:3,4) = x_v(1:3,4)/1000;
 %fprintf('Kwak translation error (m): \t %f \n', norm(x_w(:,4) - x_gt(:,4)) );
 fprintf('Trihedron (weighted) rotation error (deg): \t \t %f \n',...
     angularDistance(R_c_s_w,Rig.R_c_s) );
-% fprintf('Trihedron (diag-weighted) rotation error (deg): \t %f \n',...
-%     angularDistance(R_c_s_dw,Rig.R_c_s) );
-% fprintf('Trihedron (non-weighted) rotation error (deg): \t \t %f \n',...
-%     angularDistance(R_c_s_nw,Rig.R_c_s) );
-fprintf('Trihedron (non-weighted) translation error (cm): \t %f \n',...
-    norm(t_2D_nw-Rig.t_c_s)*100 );
+fprintf('Trihedron (diag-weighted) rotation error (deg): \t %f \n',...
+    angularDistance(R_c_s_dw,Rig.R_c_s) );
+fprintf('Trihedron (non-weighted) rotation error (deg): \t \t %f \n',...
+    angularDistance(R_c_s_nw,Rig.R_c_s) );
+fprintf('Trihedron (non-weighted, 3D) translation error (cm): \t %f \n',...
+    norm(t_3D_nw-Rig.t_c_s)*100 );
+fprintf('Trihedron (    weighted, 3D) translation error (cm): \t %f \n',...
+    norm(t_3D_w-Rig.t_c_s)*100 );
+fprintf('Trihedron (non-weighted, 2D) translation error (cm): \t %f \n',...
+    norm(t_3D_nw-Rig.t_c_s)*100 );
 
-fprintf('Kwak translation error (m): \t %f \n', norm(x_kw(:,4) - x_gt(:,4)) );
+fprintf('Kwak translation error (m): \t\t\t\t %f \n', norm(x_kw(:,4) - x_gt(:,4)) );
 % fprintf('Kwak (non-weighted) rotation error (deg): \t \t %f \n', angularDistance(x_knw(1:3,1:3),x_gt(1:3,1:3)) );
 fprintf('Kwak (weighted) rotation error (deg): \t \t \t %f \n', angularDistance(x_kw(1:3,1:3),x_gt(1:3,1:3)) );
 
-fprintf('Vasconcelos translation error (cm): \t %f \n', 100 * norm(x_v(1:3,4) - x_gt(1:3,4)) );
-fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );
+% fprintf('Vasconcelos translation error (cm): \t %f \n', 100 * norm(x_v(1:3,4) - x_gt(1:3,4)) );
+% fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );
 
 % fprintf('Zhang translation error (cm): \t %f \n', 100 * norm(x_z(1:3,4) - x_gt(1:3,4)) );
 % fprintf('Zhang rotation error (deg): \t %f \n', angularDistance(x_z(1:3,1:3),x_gt(1:3,1:3)) );
