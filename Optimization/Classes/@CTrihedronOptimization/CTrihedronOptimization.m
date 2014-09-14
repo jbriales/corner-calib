@@ -125,6 +125,12 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             jacobian = cross( R(1:3,1:2) * v_LRF, n_cam, 1 )';
         end
         weights = FWeights_Orthogonality( obj, R )
+        function H = FHes_Orthogonality( obj, R )
+            % Linear approximation to hessian in LM method
+            jacobian = obj.FJac_Orthogonality( R );
+            weights  = obj.FWeights_Orthogonality( R );
+            H = jacobian' * weights * jacobian;
+        end
         
         R = optimizeRotation_NonWeighted( obj )
         R = optimizeRotation_Weighted( obj )
@@ -165,6 +171,12 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             jacobian = N';
         end
         weights = FWeights_3D_PlaneDistance( obj, R, t )
+        function H = FHes_3D_PlaneDistance( obj, R, t )
+            % Linear approximation to hessian in LM method
+            jacobian = obj.FJac_3D_PlaneDistance( R, t );
+            weights  = obj.FWeights_3D_PlaneDistance( R, t );
+            H = jacobian' * weights * jacobian;
+        end
         
         function h = plotTranslation_3D_CostFunction( obj, R, t )
             gv  = obj.get_plot_gv( obj.plot_dist_t );
@@ -215,6 +227,12 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             end
         end
         weights = FWeights_2D_LineDistance( obj, R, t )
+        function H = FHes_2D_LineDistance( obj, R, t )
+            % Linear approximation to hessian in LM method
+            jacobian = obj.FJac_2D_LineDistance( R, t );
+            weights  = obj.FWeights_2D_LineDistance( R, t );
+            H = jacobian' * weights * jacobian;
+        end
         
         function h = plotTranslation_2D_CostFunction( obj, R, t )
             gv  = obj.get_plot_gv( obj.plot_dist_t );

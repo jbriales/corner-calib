@@ -18,11 +18,18 @@ classdef CCornerOptimization < handle & CBaseOptimization
     end
     
     properties (Dependent) % Array values collected from set of observations
+        % Arrays with central and virtual correspondences
         cam_L
-        
         LRF_Q
         
+        % Get arrays with central correspondences only
+        cam_C_L
+        LRF_C_Q
+        
         Rt0
+        
+        Ncorresp
+        Ncorresp_C
     end
     
     methods
@@ -52,7 +59,8 @@ classdef CCornerOptimization < handle & CBaseOptimization
         end
         
         %% Optimization functions and methods
-        % For Rotation and translation together
+        % For coupled rotation and translation
+        % Functions with central and virtual correspondences
         function residual = FErr_2D_LineDistance( obj, Rt )
             % Compute error vector for observations data and certain Rt
             L = obj.cam_L;
@@ -95,6 +103,12 @@ classdef CCornerOptimization < handle & CBaseOptimization
             N = size(residual,2);
             weights  = dot( residual, residual, 2 ) / N;
             weights  = kron( eye(N), diag(1./weights) );
+        end
+        function H = FHes_2D_LineDistance( obj, Rt )
+            % Linear approximation to hessian in LM method
+            jacobian = obj.FJac_2D_LineDistance( Rt );
+            weights  = obj.FWeights_2D_LineDistance( Rt );
+            H = jacobian' * weights * jacobian;
         end
         
         function [R,t] = optimizeRt_NonWeighted( obj )
@@ -155,30 +169,117 @@ classdef CCornerOptimization < handle & CBaseOptimization
             h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
         end
         
-        plot( obj )
+        % Functions with central correspondences only
+        function residual = FErr_C_2D_LineDistance( obj, Rt )
+            % Compute error vector for observations data and certain Rt
+            L = obj.cam_C_L;
+            Q = obj.LRF_C_Q;
+            % Check normalized
+            R = Rt(1:3,1:3);
+            t = Rt(1:3,4);
+            Ncorr = size( Q,2 );
+            P = hnormalise( obj.K * ( R(:,1:2) * Q + repmat( t,1,Ncorr ) ) );
+            residual = dot( L, P, 1 )';
+        end
+        function jacobian = FJac_C_2D_LineDistance( obj, Rt )
+            % Compute jacobian of error vector wrt R for observations data and certain R
+            L = obj.cam_C_L;
+            Q = obj.LRF_C_Q;
+            
+            R = Rt(1:3,1:3);
+            t = Rt(1:3,4);
+                  
+            Ncorr = size( Q,2 );
+            jacobian = zeros(Ncorr,6);
+            for i=1:Ncorr
+                % Homogeneous 3D points in camera frame (pixel units)
+                %             Ph = obj.K * ( R(:,1:2) * Q + repmat( t,1,Ncorr ) );
+                
+                l = L(:,i);
+                q = Q(:,i);
+                ph = obj.K * ( R(:,1:2) * q + t );
+                J_hnormalise = 1/ph(3)^2 * [ ph(3) 0 -ph(1)
+                                             0 ph(3) -ph(2)
+                                               zeros(1,3)   ];
+                J_ph_Rt = obj.K * [ -skew(R(:,1:2)*q) , eye(3) ];
+                
+                jacobian(i,:) = l' * J_hnormalise * J_ph_Rt;
+            end
+        end
+%         function weights  = FWeights_C_2D_LineDistance( obj, Rt )
+%             residual = obj.FErr_C_2D_LineDistance( Rt );
+%             residual = reshape( residual, 3, [] );
+%             N = size(residual,2);
+%             weights  = dot( residual, residual, 2 ) / N;
+%             weights  = kron( eye(N), diag(1./weights) );
+%         end
+        function H = FHes_C_2D_LineDistance( obj, Rt )
+            % Linear approximation to hessian in LM method
+            jacobian = obj.FJac_C_2D_LineDistance( Rt );
+            weights  = eye( obj.Ncorresp_C );
+            H = jacobian' * weights * jacobian;
+        end
         
-        h = plotTranslation_3D_CostFunction( obj, R, t )
+        function [R,t] = optimizeRt_C_NonWeighted( obj )
+            Fun = @(Rt) deal( obj.FErr_C_2D_LineDistance( Rt ) , obj.FJac_C_2D_LineDistance( Rt ) );
+            Rt = obj.optimize( Fun, obj.Rt0, 'SE(3)', false );
+            R = Rt(1:3,1:3);
+            t = Rt(1:3,4);
+        end
+%         function [R,t] = optimizeRt_C_Weighted( obj )
+%             Fun = @(Rt) deal( obj.FErr_2D_LineDistance( Rt ) ,...
+%                               obj.FJac_2D_LineDistance( Rt ) ,...
+%                               obj.FWeights_2D_LineDistance( Rt ) );
+%             Rt = obj.optimize( Fun, obj.Rt0, 'SE(3)', true );
+%             R = Rt(1:3,1:3);
+%             t = Rt(1:3,4);
+%         end
+%         function [R,t] = optimizeRt_C_ConstWeighted( obj )
+%             [R,t] = obj.optimizeRt_NonWeighted;
+%             Rt0 = [R,t];
+%             weights = obj.FWeights_2D_LineDistance( Rt0 );
+%             
+%             Fun = @(Rt) deal( obj.FErr_2D_LineDistance( Rt ) ,...
+%                               obj.FJac_2D_LineDistance( Rt ) ,...
+%                               weights );
+%             Rt = obj.optimize( Fun, Rt0, 'SE(3)', true );
+%             R = Rt(1:3,1:3);
+%             t = Rt(1:3,4);
+%         end
+%         function [R,t] = optimizeRt_C_PreWeighted( obj )
+%             [R,t] = obj.optimizeRt_NonWeighted;
+%             Rt0 = [R,t];
+%             
+%             Fun = @(Rt) deal( obj.FErr_2D_LineDistance( Rt ) ,...
+%                               obj.FJac_2D_LineDistance( Rt ) ,...
+%                               obj.FWeights_2D_LineDistance( Rt ) );
+%             Rt = obj.optimize( Fun, Rt0, 'SE(3)', true );
+%             R = Rt(1:3,1:3);
+%             t = Rt(1:3,4);
+%         end
+        
+        function h = plotRotation_C_CostFunction( obj, R, t )
+            gv  = obj.get_plot_gv( obj.plot_dist_R );
+            
+            FE = @(R)obj.FErr_C_2D_LineDistance( [R,t] );
+            W  = eye( obj.Ncorresp_C );
+            Fx = @(R,inc) expmap( inc ) * R;
+            x0 = R;
+            h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
+        end
+        
+        function h = plotTranslation_C_CostFunction( obj, R, t )
+            gv  = obj.get_plot_gv( obj.plot_dist_t );
+            
+            FE = @(t)obj.FErr_C_2D_LineDistance( [R,t] );
+            W  = eye( obj.Ncorresp_C );
+            Fx = @(t,inc) t + inc;
+            x0 = t;
+            h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
+        end
         
         
         %% Get-functions
-%         % For rotation
-%         function cam_N = get.cam_N( obj )
-%             cam_N = [obj.obs.cam_R_c_w];
-%             % Mask with existing measures and not-inliers
-%             mask_valid = obj.mask_LRF_V & (~obj.mask_RANSAC_R_outliers);
-%             cam_N = cam_N(:, mask_valid);
-%         end
-%         
-%         function LRF_V = get.LRF_V( obj )
-%             LRF_V = [obj.obs.LRF_v];
-%             % Remove non-observed data: Not necessary really (already empty)
-%             % Remove outliers: Set as empty observations
-%             mask_valid = obj.mask_LRF_V & (~obj.mask_RANSAC_R_outliers);
-%             LRF_V( ~mask_valid ) = [];
-%             % Convert from cell with empty elements to dense matrix
-%             LRF_V = cell2mat( LRF_V );
-%         end
-%         
         % For translation
         function cam_L = get.cam_L( obj )
             cam_L = [obj.obs.cam_l];
@@ -187,14 +288,7 @@ classdef CCornerOptimization < handle & CBaseOptimization
 %             cam_L = cam_L(:, mask_valid);
             cam_L = cell2mat( cam_L );
         end
-%         
-%         function cam_reprN = get.cam_reprN( obj )
-%             cam_reprN = [obj.obs.cam_reprN];
-%             % Mask with existing measures and not-inliers
-%             mask_valid = obj.mask_LRF_Q & (~obj.mask_RANSAC_t_outliers);
-%             cam_reprN = cam_reprN(:, mask_valid);
-%         end
-%         
+        
         function LRF_Q = get.LRF_Q( obj )
             LRF_Q = [obj.obs.LRF_q];
             % Remove non-observed data: Not necessary really (already empty)
@@ -205,17 +299,25 @@ classdef CCornerOptimization < handle & CBaseOptimization
             LRF_Q = cell2mat( LRF_Q );
         end
         
-%         function mask_LRF_V = get.mask_LRF_V( obj )
-%             mask_LRF_V = [obj.obs.thereis_LRF_v];
-%         end
-%         function mask_LRF_Q = get.mask_LRF_Q( obj )
-%             mask_LRF_Q = [obj.obs.thereis_LRF_q];
-%         end
+        function cam_C_L = get.cam_C_L( obj )
+            cam_C_L = reshape([obj.obs.cam_l],3,[]);
+            cam_C_L = cell2mat( cam_C_L(1,:) );
+        end
+        
+        function LRF_C_Q = get.LRF_C_Q( obj )
+            LRF_C_Q = reshape([obj.obs.LRF_q],3,[]);
+            LRF_C_Q = cell2mat( LRF_C_Q(1,:) );
+        end
 
         function Rt0 = get.Rt0( obj )
             Rt0 = [ obj.R0, obj.t0 ];
         end
-
+        function Ncorresp = get.Ncorresp( obj )
+            Ncorresp = 3 * length(obj.obs);
+        end
+        function Ncorresp_C = get.Ncorresp_C( obj )
+            Ncorresp_C = length(obj.obs);
+        end
     end
     
 end
