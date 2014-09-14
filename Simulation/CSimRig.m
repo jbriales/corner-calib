@@ -16,6 +16,10 @@ classdef CSimRig < handle
         t_c_s   % Relative translation of Lidar seen from Camera
     end
     
+    properties (Dependent)
+        Rt_c_s
+    end
+    
     methods
         % Constructor
         function obj = ...
@@ -42,6 +46,11 @@ classdef CSimRig < handle
             t_w_c = t_w_s - R_w_c * obj.t_c_s;
             obj.Camera.R = R_w_c;
             obj.Camera.t = t_w_c;
+        end
+        
+        % Get-function
+        function Rt_c_s = get.Rt_c_s( obj )
+            Rt_c_s = [ obj.R_c_s obj.t_c_s ];
         end
     end
     
