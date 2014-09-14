@@ -24,6 +24,8 @@ classdef CConfigLidar
     
     properties (SetAccess = protected, Dependent)
         FOVr
+        resolution_d
+        resolution_r
         d_min
         d_max
     end
@@ -52,6 +54,12 @@ classdef CConfigLidar
         % Get methods
         function FOVr = get.FOVr(obj)
             FOVr  = deg2rad( obj.FOVd );
+        end
+        function resolution_d = get.resolution_d(obj)
+            resolution_d = obj.FOVd / obj.N ;
+        end
+        function resolution_r = get.resolution_r(obj)
+            resolution_r = obj.FOVr / obj.N ;
         end
         function d_min = get.d_min(obj)
             d_min = obj.d_range(1);
