@@ -70,10 +70,27 @@ classdef CCorner < CPattern
             lines = obj.getImageFeatures( Rig.Camera );
             
             % Create the output cell array
-            corresp = [ lines ; pts ];
+            corresp = CCornerObservation( lines, pts );
+            
+            % DEBUG:
+%             figure, hold on
+%             plot(uv_pixels(1,:),uv_pixels(2,:),'*k');
+%             for i=1:3
+%                 p = hnormalise( Rig.Camera.K * ( Rig.R_c_s(:,1:2) * pts{i} + Rig.t_c_s ) );
+%                 plot( p(1,:),p(2,:), '.c' );
+%                 plotHomLineWin( lines{i}, 'y' );
+%                 lines{i}' * p
+%             end
+%             keyboard
+%             close
         end
         
         function pts = getScanFeatures(obj, SimLRF)
+            % Points are stored in a 1x3 cell array in the order:
+            % 1 - Central line (intersection of lines)
+            % 2 - Left line (on 'Y' plane) (interpolated)
+            % 3 - Right line (on 'X' plane) (interpolated)
+            
             % Initialize output
             pts = cell(1,3);
             
@@ -88,7 +105,7 @@ classdef CCorner < CPattern
             % The middle point is the intersection of the two lines (Z = 0)
             M   = [lin_s_l'; lin_s_r'];
             P_c = - M(1:2,1:2) \ M(1:2,3);
-            pts{1} = [P_c; 0]; % Transform to 3D (Z = 0)
+            pts{1} = P_c; % Transform to 3D (Z = 0)
 
             % Extract the two boundary points in the scan (polar coordinates)
             P_l_j = xy{2}(:,end);
@@ -98,7 +115,7 @@ classdef CCorner < CPattern
             lin_aux_l = [-p_1(2)/p_1(1) 1 0]';
             M   = [lin_s_l'; lin_aux_l'];
             P_l = - M(1:2,1:2) \ M(1:2,3);
-            pts{2} = [P_l; 0]; % Transform to 3D (Z = 0)
+            pts{2} = P_l; % Transform to 3D (Z = 0)
 
             P_r_j = xy{1}(:,1);
             r     = norm(P_r_j);
@@ -107,16 +124,21 @@ classdef CCorner < CPattern
             lin_aux_r = [-p_2(2)/p_2(1) 1 0]';
             M   = [lin_s_r'; lin_aux_r'];
             P_r = - M(1:2,1:2) \ M(1:2,3);
-            pts{3} = [P_r; 0]; % Transform to 3D (Z = 0)
+            pts{3} = P_r; % Transform to 3D (Z = 0)
         end
         
         function lines = getImageFeatures(obj, SimCam)
+            % Lines are stored in a 1x3 cell array in the order:
+            % 1 - Central line
+            % 2 - Left line (on 'Y' plane)
+            % 3 - Right line (on 'X' plane)
+            
             % Initialize output
             lines = cell(1,3);
             
-            % Get the data and the parameters from the Lidar & Camera                        
-            [uv_proj, uv_pixels]      = obj.getProjection( SimCam );
-            K       = SimCam.K;
+            % Get the data and the parameters from the Camera                        
+            [uv_proj, uv_pixels] = obj.getProjection( SimCam );
+            K = SimCam.K;
             % Transform and assign the image lines to the output cell array
             for i = 1:3                
                 s_p = makehomogeneous(uv_pixels(1:2,2*i-1));

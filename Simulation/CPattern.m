@@ -90,7 +90,7 @@ classdef (Abstract) CPattern < CPose3D
                         color = 'g';
                         sensor.plotFrame('S',color);
                         obj.plotScan( sensor, color );
-                        obj.plotScanFeatures( sensor );
+%                         obj.plotScanFeatures( sensor );
                     case 'CSimCamera'
                         color = 'r';
                         sensor.plotFrame('C',color);

@@ -50,7 +50,7 @@ for i=1:N_obs
         if any(A_i(:))
             W{i} = pinv( A_i );
         else
-            W{i} = eye(length(A_i))
+            W{i} = eye(length(A_i));
         end
     else
         W{i} = []; % Observation does not appear
