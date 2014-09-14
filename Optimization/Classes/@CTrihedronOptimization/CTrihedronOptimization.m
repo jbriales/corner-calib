@@ -132,19 +132,27 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         J = FJac_optimizeRotation_NonWeighted( obj, R )
         
         % TODO: Implement optimizeRotation_Covariance from optimRotation.m
-        
-        h = plotRotationCostFunction( obj, R )
+        function h = plotRotationCostFunction( obj, R )
+            gv  = obj.get_plot_gv( obj.plot_dist_R );
+            
+            FE = @(R)obj.FErr_Orthogonality( R );
+            W  = obj.FWeights_Orthogonality( R );
+            Fx = @(R,inc) expmap( inc ) * R;
+            x0 = R;
+            h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
+        end
+%         h = plotRotationCostFunction( obj, R )
         
         plot( obj )
         
         % For Translation
+        % 3D error functions
         function residual = FErr_3D_PlaneDistance( obj, R, t )
             % Compute error vector for observations data, R and t
             % N - (3x...) 3D normals to reprojection planes from camera center
             % through image lines
             % Q - (2x...) 2D LRF intersection points
-            L = obj.cam_L;
-            N = L ./ repmat( sqrt(sum(L.^2,1)), 3,1 ); % Normalize vectors as plane normals
+            N = obj.cam_reprN;
             Q = obj.LRF_Q;
             
             s = size(N,2); % Number of correspondences
@@ -153,19 +161,86 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         end
         function jacobian = FJac_3D_PlaneDistance( obj, R, t )
             % Compute jacobian of error vector wrt R for observations data and certain R
-            L = obj.cam_L;
-            N = L ./ repmat( sqrt(sum(L.^2,1)), 3,1 ); % Normalize vectors as plane normals
-            
+            N = obj.cam_reprN;
             jacobian = N';
         end
         weights = FWeights_3D_PlaneDistance( obj, R, t )
         
-        t = optimizeTranslation_2D_NonWeighted( obj, R )
-        t = optimizeTranslation_2D_Weighted( obj, R )
+        function h = plotTranslation_3D_CostFunction( obj, R, t )
+            gv  = obj.get_plot_gv( obj.plot_dist_t );
+            
+            FE = @(t)obj.FErr_3D_PlaneDistance( R, t );
+            W  = obj.FWeights_3D_PlaneDistance( R, t );
+            Fx = @(t,inc) t + inc;
+            x0 = t;
+            h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
+        end
+        
+        % 2D error functions
+        function residual = FErr_2D_LineDistance( obj, R, t )
+            % Compute error vector for observations data and certain Rt
+            L = obj.cam_L;
+            Q = obj.LRF_Q;
+            
+            % Convert L to pixel space and normalize line:
+            L = obj.K' \ L;
+            L = L ./ repmat( sqrt(sum(L(1:2,:).^2,1)), 3,1 );
+
+            Ncorr = size( Q,2 );
+            P = hnormalise( obj.K * ( R(:,1:2) * Q + repmat( t,1,Ncorr ) ) );
+            residual = dot( L, P, 1 )';
+        end
+        function jacobian = FJac_2D_LineDistance( obj, R, t )
+            % Compute jacobian of error vector wrt R for observations data and certain R
+            L = obj.cam_L;
+            Q = obj.LRF_Q;
+            
+            % Convert L to pixel space and normalize line:
+            L = obj.K' \ L;
+            L = L ./ repmat( sqrt(sum(L(1:2,:).^2,1)), 3,1 );
+                              
+            Ncorr = size( Q,2 );
+            jacobian = zeros(Ncorr,3);
+            for i=1:Ncorr
+                % Homogeneous 3D points in camera frame (pixel units)
+                l = L(:,i);
+                q = Q(:,i);
+                ph = obj.K * ( R(:,1:2) * q + t );
+                J_hnormalise = 1/ph(3)^2 * [ ph(3) 0 -ph(1)
+                                             0 ph(3) -ph(2)
+                                               zeros(1,3)   ];
+                J_ph_t = obj.K;
+                
+                jacobian(i,:) = l' * J_hnormalise * J_ph_t;
+            end
+        end
+        weights = FWeights_2D_LineDistance( obj, R, t )
+        
+        function h = plotTranslation_2D_CostFunction( obj, R, t )
+            gv  = obj.get_plot_gv( obj.plot_dist_t );
+            
+            FE = @(t)obj.FErr_2D_LineDistance( R, t );
+            W  = obj.FWeights_2D_LineDistance( R, t );
+            Fx = @(t,inc) t + inc;
+            x0 = t;
+            h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
+        end
+        
+        function t = optimizeTranslation_2D_NonWeighted( obj, R )
+            Fun = @(t) deal( obj.FErr_2D_LineDistance(R,t) , obj.FJac_2D_LineDistance(R,t) );
+            t = obj.optimize( Fun, obj.t0, 'Rn', false );
+        end
+        function t = optimizeTranslation_2D_Weighted( obj, R )
+            Fun = @(t) deal( obj.FErr_2D_LineDistance(R,t) ,...
+                             obj.FJac_2D_LineDistance(R,t) ,...
+                             obj.FWeights_2D_LineDistance(R,t) );
+            t = obj.optimize( Fun, obj.t0, 'Rn', true );
+        end
+
+%         t = optimizeTranslation_2D_NonWeighted( obj, R )
+%         t = optimizeTranslation_2D_Weighted( obj, R )
         t = optimizeTranslation_3D_NonWeighted( obj, R )
         t = optimizeTranslation_3D_Weighted( obj, R )
-        
-        h = plotTranslation_3D_CostFunction( obj, R, t )
         
         
         %% Get-functions
