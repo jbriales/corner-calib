@@ -45,14 +45,20 @@ classdef CTrihedron < CPattern
             obj.p3D = makeinhomogeneous( obj.T * makehomogeneous( obj.p3D ) );
         end
         
+        % Get array of projection of interest points in pattern
+        function [uv_proj, uv_pixels] = getProjection( obj, SimCamera )
+            if 0 % Project extreme points of pattern (irreal results)
+                [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
+            else % Simulate projection of pattern lines (as in reality)
+                [uv_proj, uv_pixels] = SimCamera.projectPatternInf( obj );
+            end
+        end
+        
         % Get 4x3 cell array with correspondences (lines and points)
         function co = getCorrespondence( obj, Rig )
             % Camera data
-            if 0 % Project points of finite pattern
-                [~, img_pts] = obj.getProjection( Rig.Camera );
-            else % Project intersection with lines of infinite pattern
-                [~, img_pts] = Rig.Camera.projectPatternInf( obj );
-            end
+            [~, img_pts] = obj.getProjection( Rig.Camera );
+
             [N_im, c, A_co, L_P2, A_L_P2] = obj.getCalibratedCornerData( img_pts, Rig.Camera );
             R0 = Rig.Camera.R'; % Initial estimate for R_c_w
             [R_c_w, A_R_c_w, A_eps_c_w] = obj.getWorldNormals( R0, N_im, c, A_co );

@@ -63,6 +63,11 @@ classdef CCheckerboard < CPattern & CPlane3D
             p2D = [ X(:), Y(:) ]'; % Give p2D points X-line by line (up-down)
         end
         
+        % Get array of projection of interest points in pattern
+        function [uv_proj, uv_pixels] = getProjection( obj, SimCamera )
+            [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
+        end
+        
         % Pattern 3D representation
         function h = plot3( obj ) % Plot checkerboard in 3D space
             obj.face{1}.plot3;

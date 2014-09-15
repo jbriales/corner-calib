@@ -32,13 +32,7 @@ classdef (Abstract) CPattern < CPose3D
                     SimLidar.scanPolygon( obj.face{i} );
             end
         end
-        
-        % Get array of projection of interest points in pattern
-        function [uv_proj, uv_pixels] = getProjection( obj, SimCamera )
-            % The order of the output is Center - Right - Left
-            [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
-        end
-        
+                
         % Get 1x3 cell array with correspondences (lines and points)
 %         function corresp = getCorrespondence( obj, Rig )
 %             [xy, range, angles, idxs] = obj.getScan( Rig.Lidar );
@@ -104,6 +98,9 @@ classdef (Abstract) CPattern < CPose3D
     end
     
     methods (Abstract)
+        % Get array of projection of interest points in pattern
+        [uv_proj, uv_pixels] = getProjection( obj, SimCamera )
+        
         % 3D representation
         h = plot3( obj ) % Plot pattern in 3D space
         

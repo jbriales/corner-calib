@@ -122,11 +122,12 @@ classdef CSimCamera < CBaseCamera
             if ~exist('color','var')
                 color = 'k';
             end
-            if isa(pattern,'CTrihedron')
-                [uv_proj, ~] = projectPatternInf( obj, pattern );
-            else
-                [uv_proj, ~] = projectPattern( obj, pattern );
-            end
+%             if isa(pattern,'CTrihedron')
+%                 [uv_proj, ~] = projectPatternInf( obj, pattern );
+%             else
+%                 [uv_proj, ~] = projectPattern( obj, pattern );
+%             end
+            [uv_proj, ~] = pattern.getProjection( obj );
             % Transform projection vectors with focal length f to lie on
             % plane to f distance
             uv_proj = obj.f * uv_proj;
