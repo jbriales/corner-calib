@@ -38,7 +38,7 @@ classdef CSimRig < handle
         end
         
         % Update poses
-        function obj = updatePose( obj, R_w_s, t_w_s )
+        function obj = updateLRFPose( obj, R_w_s, t_w_s )
             obj.Lidar.R = R_w_s;
             obj.Lidar.t = t_w_s;
             
@@ -46,6 +46,17 @@ classdef CSimRig < handle
             t_w_c = t_w_s - R_w_c * obj.t_c_s;
             obj.Camera.R = R_w_c;
             obj.Camera.t = t_w_c;
+        end
+        
+        function obj = updateCamPose( obj, R_w_c, t_w_c )
+            obj.Camera.R = R_w_c;
+            obj.Camera.t = t_w_c;
+            
+            R_w_s = R_w_c * obj.R_c_s;
+            t_w_s = t_w_c + R_w_c * obj.t_c_s;
+            
+            obj.Lidar.R = R_w_s;
+            obj.Lidar.t = t_w_s;
         end
         
         % Get-function
