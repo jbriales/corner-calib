@@ -47,6 +47,12 @@ classdef CTrihedron < CPattern
         
         % Get 4x3 cell array with correspondences (lines and points)
         function co = getCorrespondence( obj, Rig )
+            % co = CTrihedron.getCorrespondence( Rig )
+            % Input:    Rig (Camera + LRF)
+            % Output:   A CTrihedronObservation object with all features
+            % derived from data processing
+            % See also: CTrihedronObservation
+            
             % Camera data
             if 0 % Project points of finite pattern
                 [~, img_pts] = obj.getProjection( Rig.Camera );
