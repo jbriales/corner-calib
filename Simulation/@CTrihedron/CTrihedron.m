@@ -48,7 +48,12 @@ classdef CTrihedron < CPattern
         % Get 4x3 cell array with correspondences (lines and points)
         function co = getCorrespondence( obj, Rig )
             % Camera data
-            [N_im, c, A_co, L_P2, A_L_P2] = obj.getCalibratedCornerData( Rig.Camera );
+            if 0 % Project points of finite pattern
+                [~, img_pts] = obj.getProjection( Rig.Camera );
+            else % Project intersection with lines of infinite pattern
+                [~, img_pts] = Rig.Camera.projectPatternInf( obj );
+            end
+            [N_im, c, A_co, L_P2, A_L_P2] = obj.getCalibratedCornerData( img_pts, Rig.Camera );
             R0 = Rig.Camera.R'; % Initial estimate for R_c_w
             [R_c_w, A_R_c_w, A_eps_c_w] = obj.getWorldNormals( R0, N_im, c, A_co );
             
@@ -94,7 +99,7 @@ classdef CTrihedron < CPattern
         
         % Get calibrated data from corner (line normals, center and
         % covariance)
-        [N, c, A_co, L_P2, A_L_P2] = getCalibratedCornerData( obj, Camera )
+        [N, c, A_co, L_P2, A_L_P2] = getCalibratedCornerData( obj, img_pts, Camera )
         
         % Get world plane normals from Calibrated Corner Data (needs
         % initialization)

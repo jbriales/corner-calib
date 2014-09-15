@@ -1,4 +1,4 @@
-function [N, c, A_co, L_P2, A_L_P2] = getCalibratedCornerData( obj, Camera )
+function [N, c, A_co, L_P2, A_L_P2] = getCalibratedCornerData( obj, img_pts, Camera )
 % [N, c, A_co] = getCalibratedCornerData( obj, Camera )
 % Input:
 %   Camera  - CSimCamera object grabbing the pattern
@@ -10,8 +10,6 @@ function [N, c, A_co, L_P2, A_L_P2] = getCalibratedCornerData( obj, Camera )
 
 % Control variables
 sigma = Camera.sd; % TODO: Square? sigma = sd^2?
-
-[~, img_pts] = obj.getProjection( Camera );
 
 % Define the x and A_x structures
 x   = zeros(5,1);

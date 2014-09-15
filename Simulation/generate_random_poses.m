@@ -1,5 +1,5 @@
-function [R, t, rand_ang_z, rand_ang_x] = generate_random_poses( config_file )
-% [R, t, rand_ang_z, rand_ang_x] = generate_random_poses( config_file )
+function [R_Cam, R_LRF, t, rand_ang_z, rand_ang_x] = generate_random_poses( config_file, Rig )
+% [R_Cam, R_LRF, t, rand_ang_z, rand_ang_x] = generate_random_poses( config_file )
 % Main input:
 % config_file - path to .ini file with configuration parameters
 % 
@@ -11,6 +11,9 @@ function [R, t, rand_ang_z, rand_ang_x] = generate_random_poses( config_file )
 % placed
 % ang_z_max - max rotation wrt Z axis of camera pointing to origin
 % ang_x_max - max rotation wrt X axis of camera pointint to origin
+
+% Rig object is added to optimize generation of poses according to physical
+% disposition of Rig elements
 
 % N = 1000;
 % min_d = 2;
@@ -61,21 +64,30 @@ R_y = cross(R_z,R_x,1);
 % Add random rotation on Cam X and Z axis
 rand_ang_z = ang_z_max * (-1 + 2*rand(1,N)); % ang_z_max typically pi
 rand_ang_x = ang_x_max * (-1 + 2*rand(1,N)); % ang_x_max typically FOV
+rand_ang_y = ang_y_max * (-1 + 2*rand(1,N));
 R = reshape( [R_x;R_y;R_z], 3,3,N );
+R_LRF = R;
 for i=1:N
     % Check premultiplication and good order
 %     R(:,:,i) = R(:,:,i) * RotationX(ang_x(i)) * RotationZ(ang_z(i));
-    R(:,:,i) = R(:,:,i) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i));
+%     R(:,:,i) = R(:,:,i) * RotationX(rand_ang_x1(i)) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i));
+%     R(:,:,i) = R(:,:,i) * RotationY(rand_ang_x1(i)) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i));
+    R(:,:,i) = R(:,:,i) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i)) * RotationY(rand_ang_y(i)) ;
     switch device
         case 'Lidar'
-            R(:,:,i) = R(:,:,i) * R_c_s;
+            R_LRF(:,:,i) = R(:,:,i) * R_c_s;
         % Case camera is default does not need any change
     end
 end
+R_Cam = R;
 
 % Transform output to cell arrays:
 t = mat2cell( t, 3, ones(1,N) );
-R = mat2cell( R, 3, 3, ones(1,N) );
-R = permute( R, [1 3 2] );
+% Camera
+R_Cam = mat2cell( R_Cam, 3, 3, ones(1,N) );
+R_Cam = permute( R_Cam, [1 3 2] );
+% LRF
+R_LRF = mat2cell( R_LRF, 3, 3, ones(1,N) );
+R_LRF = permute( R_LRF, [1 3 2] );
 
 end

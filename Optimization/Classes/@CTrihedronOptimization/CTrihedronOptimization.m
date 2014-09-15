@@ -1,4 +1,4 @@
-classdef CTrihedronOptimization < handle
+classdef CTrihedronOptimization < handle & CBaseOptimization
     %CTrihedronOptimization Class to store observations and later process
     %and optimize them
     %   Detailed explanation goes here
@@ -11,11 +11,6 @@ classdef CTrihedronOptimization < handle
         
         RANSAC_Rotation_threshold % Threshold for rotation error function
         RANSAC_Translation_threshold % Threshold for translation error function
-        debug_level % Verbose level when optimizing
-        
-        maxIters    % Max number of iterations in LM optimization
-        minParamChange   % Minimum change in param (norm2) to stop
-        minErrorChange  % Minimum change in cost function to stop
     end
     
     properties (SetAccess=private)
@@ -45,8 +40,11 @@ classdef CTrihedronOptimization < handle
     
     methods
         %% Constructor
-        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold, debug_level,...
-                maxIters, minParamChange, minErrorChange )
+        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold,...
+                debug_level,maxIters, minParamChange, minErrorChange ) % COptimization inputs
+            % Set optimization parameters through parent class
+            obj = obj@CBaseOptimization( debug_level, maxIters, minParamChange, minErrorChange );
+
             obj.obs = CTrihedronObservation.empty(1,0);
             
             if ~exist('RANSAC_Rotation_threshold','var')
@@ -58,27 +56,7 @@ classdef CTrihedronOptimization < handle
                 RANSAC_Translation_threshold = 1e-3;
             end
             obj.RANSAC_Translation_threshold = RANSAC_Translation_threshold;
-            
-            if ~exist('debug_level','var')
-                debug_level = 2;
-            end
-            obj.debug_level = debug_level;
-            
-            if ~exist('maxIters','var')
-                maxIters = 50;
-            end
-            obj.maxIters = maxIters;
-            
-            if ~exist('minParamChange','var')
-                minParamChange = 1e-8;
-            end
-            obj.minParamChange = minParamChange;
-            
-            if ~exist('minErrorChange','var')
-                minErrorChange = 1e-8;
-            end
-            obj.minErrorChange = minErrorChange;
-            
+                        
             obj.K = K;
             
             % Commented because is dependent now
@@ -147,6 +125,12 @@ classdef CTrihedronOptimization < handle
             jacobian = cross( R(1:3,1:2) * v_LRF, n_cam, 1 )';
         end
         weights = FWeights_Orthogonality( obj, R )
+        function H = FHes_Orthogonality( obj, R )
+            % Linear approximation to hessian in LM method
+            jacobian = obj.FJac_Orthogonality( R );
+            weights  = obj.FWeights_Orthogonality( R );
+            H = jacobian' * weights * jacobian;
+        end
         
         R = optimizeRotation_NonWeighted( obj )
         R = optimizeRotation_Weighted( obj )
@@ -154,19 +138,27 @@ classdef CTrihedronOptimization < handle
         J = FJac_optimizeRotation_NonWeighted( obj, R )
         
         % TODO: Implement optimizeRotation_Covariance from optimRotation.m
-        
-        h = plotRotationCostFunction( obj, R )
+        function h = plotRotationCostFunction( obj, R )
+            gv  = obj.get_plot_gv( obj.plot_dist_R );
+            
+            FE = @(R)obj.FErr_Orthogonality( R );
+            W  = obj.FWeights_Orthogonality( R );
+            Fx = @(R,inc) expmap( inc ) * R;
+            x0 = R;
+            h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
+        end
+%         h = plotRotationCostFunction( obj, R )
         
         plot( obj )
         
         % For Translation
+        % 3D error functions
         function residual = FErr_3D_PlaneDistance( obj, R, t )
             % Compute error vector for observations data, R and t
             % N - (3x...) 3D normals to reprojection planes from camera center
             % through image lines
             % Q - (2x...) 2D LRF intersection points
-            L = obj.cam_L;
-            N = L ./ repmat( sqrt(sum(L.^2,1)), 3,1 ); % Normalize vectors as plane normals
+            N = obj.cam_reprN;
             Q = obj.LRF_Q;
             
             s = size(N,2); % Number of correspondences
@@ -175,19 +167,163 @@ classdef CTrihedronOptimization < handle
         end
         function jacobian = FJac_3D_PlaneDistance( obj, R, t )
             % Compute jacobian of error vector wrt R for observations data and certain R
-            L = obj.cam_L;
-            N = L ./ repmat( sqrt(sum(L.^2,1)), 3,1 ); % Normalize vectors as plane normals
-            
+            N = obj.cam_reprN;
             jacobian = N';
         end
         weights = FWeights_3D_PlaneDistance( obj, R, t )
+        function H = FHes_3D_PlaneDistance( obj, R, t )
+            % Linear approximation to hessian in LM method
+            jacobian = obj.FJac_3D_PlaneDistance( R, t );
+            weights  = obj.FWeights_3D_PlaneDistance( R, t );
+            H = jacobian' * weights * jacobian;
+        end
         
-        t = optimizeTranslation_2D_NonWeighted( obj, R )
-        t = optimizeTranslation_2D_Weighted( obj, R )
+        function h = plotTranslation_3D_CostFunction( obj, R, t )
+            gv  = obj.get_plot_gv( obj.plot_dist_t );
+            
+            FE = @(t)obj.FErr_3D_PlaneDistance( R, t );
+            W  = obj.FWeights_3D_PlaneDistance( R, t );
+            Fx = @(t,inc) t + inc;
+            x0 = t;
+            h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
+        end
+        
+        % 2D error functions
+        function residual = FErr_2D_LineDistance( obj, R, t )
+            % Compute error vector for observations data and certain Rt
+            L = obj.cam_L;
+            Q = obj.LRF_Q;
+            
+            % Convert L to pixel space and normalize line:
+            L = obj.K' \ L;
+            L = L ./ repmat( sqrt(sum(L(1:2,:).^2,1)), 3,1 );
+
+            Ncorr = size( Q,2 );
+            P = hnormalise( obj.K * ( R(:,1:2) * Q + repmat( t,1,Ncorr ) ) );
+            residual = dot( L, P, 1 )';
+        end
+        function jacobian = FJac_2D_LineDistance( obj, R, t )
+            % Compute jacobian of error vector wrt R for observations data and certain R
+            L = obj.cam_L;
+            Q = obj.LRF_Q;
+            
+            % Convert L to pixel space and normalize line:
+            L = obj.K' \ L;
+            L = L ./ repmat( sqrt(sum(L(1:2,:).^2,1)), 3,1 );
+                              
+            Ncorr = size( Q,2 );
+            jacobian = zeros(Ncorr,3);
+            for i=1:Ncorr
+                % Homogeneous 3D points in camera frame (pixel units)
+                l = L(:,i);
+                q = Q(:,i);
+                ph = obj.K * ( R(:,1:2) * q + t );
+                J_hnormalise = 1/ph(3)^2 * [ ph(3) 0 -ph(1)
+                                             0 ph(3) -ph(2)
+                                               zeros(1,3)   ];
+                J_ph_t = obj.K;
+                
+                jacobian(i,:) = l' * J_hnormalise * J_ph_t;
+            end
+        end
+        weights = FWeights_2D_LineDistance( obj, R, t )
+        function H = FHes_2D_LineDistance( obj, R, t )
+            % Linear approximation to hessian in LM method
+            jacobian = obj.FJac_2D_LineDistance( R, t );
+            weights  = obj.FWeights_2D_LineDistance( R, t );
+            H = jacobian' * weights * jacobian;
+        end
+        
+        function h = plotTranslation_2D_CostFunction( obj, R, t )
+            gv  = obj.get_plot_gv( obj.plot_dist_t );
+            
+            FE = @(t)obj.FErr_2D_LineDistance( R, t );
+            W  = obj.FWeights_2D_LineDistance( R, t );
+            Fx = @(t,inc) t + inc;
+            x0 = t;
+            h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
+        end
+        
+        function t = optimizeTranslation_2D_NonWeighted( obj, R )
+            Fun = @(t) deal( obj.FErr_2D_LineDistance(R,t) , obj.FJac_2D_LineDistance(R,t) );
+            t = obj.optimize( Fun, obj.t0, 'Rn', false );
+        end
+        function t = optimizeTranslation_2D_Weighted( obj, R )
+            Fun = @(t) deal( obj.FErr_2D_LineDistance(R,t) ,...
+                             obj.FJac_2D_LineDistance(R,t) ,...
+                             obj.FWeights_2D_LineDistance(R,t) );
+            t = obj.optimize( Fun, obj.t0, 'Rn', true );
+        end
+
+        % For global optimization (R+t)
+        % Orthogonality and 3D error functions
+        function residual = FErr_Global_Ort_3D( obj, R, t )
+            % Compute error vector for observations data, R and t
+            % N - (3x...) 3D normals to reprojection planes from camera center
+            % through image lines
+            % Q - (2x...) 2D LRF intersection points
+            res_ort = obj.FErr_Orthogonality( R );
+            res_3D  = obj.FErr_3D_PlaneDistance( R, t );
+            residual = [ res_ort ; res_3D ];
+        end
+        function jacobian = FJac_Global_Ort_3D( obj, R, t )
+            % Compute jacobian of error vector wrt R for observations data and certain R
+            % Jac e_ort wrt R and t
+            jac_ort_R = obj.FJac_Orthogonality( R );
+            jac_ort_t = zeros( size(jac_ort_R,1), 3 );
+            % Jac e_3D wrt R and t
+            N = obj.cam_reprN;
+            Q = obj.LRF_Q;
+            jac_3D_R = cross( R(1:3,1:2) * Q, N, 1 )';
+            jac_3D_t = N';
+            jacobian = [ jac_ort_R , jac_ort_t ;
+                         jac_3D_R  , jac_3D_t  ];
+        end
+        function weights = FWeights_Global_Ort_3D( obj, R, t )
+            W_ort = obj.FWeights_Orthogonality( R );
+            W_3D  = obj.FWeights_3D_PlaneDistance( R, t );
+            weights = blkdiag( W_ort, W_3D );
+        end
+        function H = FHes_Global_Ort_3D( obj, R, t )
+            % Linear approximation to hessian in LM method
+            jacobian = obj.FJac_Global_Ort_3D( R, t );
+            weights  = obj.FWeights_Global_Ort_3D( R, t );
+            H = jacobian' * weights * jacobian;
+        end
+        
+        function h = plotTranslation_Global_CostFunction( obj, R, t )
+            gv  = obj.get_plot_gv( obj.plot_dist_t );
+            
+            FE = @(t)obj.FErr_Global_Ort_3D( R, t );
+            W  = obj.FWeights_Global_Ort_3D( R, t );
+            Fx = @(t,inc) t + inc;
+            x0 = t;
+            h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
+        end
+        function h = plotRotation_Global_CostFunction( obj, R, t )
+            gv  = obj.get_plot_gv( obj.plot_dist_R );
+            
+            FE = @(R)obj.FErr_Global_Ort_3D( R, t );
+            W  = obj.FWeights_Global_Ort_3D( R, t );
+            Fx = @(R,inc) expmap( inc ) * R;
+            x0 = R;
+            h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
+        end
+        
+        function [R,t] = optimizeGlobal_Ort_3D( obj, R, t )
+            Fun = @(Rt) deal( obj.FErr_Global_Ort_3D(Rt(1:3,1:3),Rt(1:3,4)) ,...
+                             obj.FJac_Global_Ort_3D(Rt(1:3,1:3),Rt(1:3,4)) ,...
+                             obj.FWeights_Global_Ort_3D(Rt(1:3,1:3),Rt(1:3,4)) );
+%             Rt = obj.optimize( Fun, [obj.R0, obj.t0], 'SE(3)', true );
+            Rt = obj.optimize( Fun, [R, t], 'SE(3)', true );
+            R = Rt(1:3,1:3); t = Rt(1:3,4);
+        end
+        
+        
+%         t = optimizeTranslation_2D_NonWeighted( obj, R )
+%         t = optimizeTranslation_2D_Weighted( obj, R )
         t = optimizeTranslation_3D_NonWeighted( obj, R )
         t = optimizeTranslation_3D_Weighted( obj, R )
-        
-        h = plotTranslation_3D_CostFunction( obj, R, t )
         
         
         %% Get-functions

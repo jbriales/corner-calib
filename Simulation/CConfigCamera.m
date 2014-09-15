@@ -18,8 +18,10 @@ classdef CConfigCamera
         ax      % Min and max values for image axes coordinates
         border  % Homogeneous lines for camera borders
         
-        FOVh    % FOV horizontal (x direction?)
-        FOVv    % FOV vertical (y direction?)
+        FOVh    % FOV horizontal in rads (x direction?)
+        FOVv    % FOV vertical in rads (y direction?)
+        FOVhd   % FOV horizontal in degs (x direction?)
+        FOVvd   % FOV vertical in degs (y direction?)
     end
     
     properties (SetAccess = protected, Dependent)
@@ -42,6 +44,8 @@ classdef CConfigCamera
             % TODO: Check formulae
             obj.FOVh = 2 * atan( K(1,3)/K(1,1) );
             obj.FOVv = 2 * atan( K(2,3)/K(2,2) );
+            obj.FOVhd = rad2deg( obj.FOVh );
+            obj.FOVvd = rad2deg( obj.FOVv );
         end
     end
 end

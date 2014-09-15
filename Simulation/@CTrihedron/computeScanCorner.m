@@ -94,7 +94,7 @@ for i=1:3
             % Make inhomogeneous
             q{i} = makeinhomogeneous( qh );
             J_q_qh = 1/qh(3)^2 * [ qh(3)     0 -qh(1)
-                0     qh(3) -qh(2) ];
+                                   0     qh(3) -qh(2) ];
             A_q{i} = J_q_qh * A_qh * J_q_qh';
         else % Using qs (seems equivalent, so the other is used)
             % KEEP FOR FUTURE

@@ -1,7 +1,7 @@
 function h = plotTranslation_3D_CostFunction( obj, R, t )
 % TODO: Weights
 
-dist  = 0.01;    % Simulation distance (rad)
+dist  = 0.01;    % Simulation distance (m)
 inc   = 0.0005;   % Increments
 
 gv  = -dist:inc:+dist;
