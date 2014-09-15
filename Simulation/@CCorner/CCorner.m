@@ -60,17 +60,24 @@ classdef CCorner < CPattern
             obj.p3D(:,5:6) = obj.face{1}.p3D(:,[2 3]);            
         end
         
+        % Get array of projection of interest points in pattern
+        function [uv_proj, uv_pixels] = getProjection( obj, SimCamera )
+            % The order of the output is Center - Right - Left
+                [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
+        end
+        
         % Get 2x3 cell array with correspondences (lines and points)
-        function corresp = getCorrespondence( obj, Rig )
+        function obs = getCorrespondence( obj, Rig )
             % Get the data and the parameters from the Lidar & Camera                        
-            [xy, range, angles, idxs] = obj.getScan( Rig.Lidar );
-            [uv_proj, uv_pixels]      = obj.getProjection( Rig.Camera );
-
             pts = obj.getScanFeatures( Rig.Lidar );
             lines = obj.getImageFeatures( Rig.Camera );
             
-            % Create the output cell array
-            corresp = CCornerObservation( lines, pts );
+            % Create the output observation object
+            if isempty( pts ) || isempty( lines )
+                obs = [];
+            else
+                obs = CCornerObservation( lines, pts );
+            end
             
             % DEBUG:
 %             figure, hold on
@@ -98,7 +105,13 @@ classdef CCorner < CPattern
             [xy, range, angles, idxs] = obj.getScan( SimLRF );
             theta   = SimLRF.FOVd / SimLRF.N ; 
             
-            % Fit left and right scan line 
+            if any( cellfun(@(x)isempty(x),xy) )
+                warning('SimLRF could not get points on Corner');
+                pts = [];
+                return
+            end
+            
+            % Fit left and right scan line
             [~, ~, ~, ~, lin_s_l] = computeSegmentSVD( xy{2} , 0, 0);
             [~, ~, ~, ~, lin_s_r] = computeSegmentSVD( xy{1} , 0, 0);
             
