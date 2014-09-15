@@ -105,12 +105,13 @@ if WITHTRIHEDRON
     if WITHRANSAC
         triOptim.filterTranslationRANSAC( Rig.R_c_s ); % Should receive some estimated rotation
     end
+    R0_for_t = R_c_s_w;
     triOptim.disp_N_t_inliers;
     triOptim.setInitialTranslation( Rig.t_c_s + 0.05*randn(3,1) );
-    t_3D_nw = triOptim.optimizeTranslation_3D_NonWeighted( Rig.R_c_s );
-    t_3D_w  = triOptim.optimizeTranslation_3D_Weighted( Rig.R_c_s );
-    t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted( Rig.R_c_s );
-    t_2D_w = triOptim.optimizeTranslation_2D_Weighted( Rig.R_c_s );
+    t_3D_nw = triOptim.optimizeTranslation_3D_NonWeighted( R0_for_t );
+    t_3D_w  = triOptim.optimizeTranslation_3D_Weighted( R0_for_t );
+    t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted( R0_for_t );
+    t_2D_w = triOptim.optimizeTranslation_2D_Weighted( R0_for_t );
     % t_3D_nw
     % t_3D_w
     % t_2D_nw
