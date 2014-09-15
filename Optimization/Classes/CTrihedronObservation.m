@@ -1,7 +1,21 @@
 classdef CTrihedronObservation
     %CTrihedronObservation Class for storage of Camera and LRF data in a
     %frame
-    %   Detailed explanation goes here
+    %Stored properties are:
+    % For Camera:
+%     cam_R_c_w   % 3(3x1) normals to World planes
+%     cam_A_R_c_w % 9x9 (rank 3) covariance matrix of R_c_w elements, groupable in 3x3 cell array
+%     cam_l       % 3(3x1) homogeneous lines in image (coincident with direction of normals to reprojection planes from camera center after normalization)
+%     cam_A_l     % TODO: In process in getCalibratedCornerData
+%     cam_reprN   % 3(3x1) vectors normal to reprojection planes from camera center
+%     cam_A_reprN % 9x9 (rank ?) Uncertainty matrix of correlated 3 normals
+    % For LRF:
+%     LRF_v       % 3(2x1) direction of scan segments
+%     LRF_A_v     % 3x3 (rank 3) minimal covariance matrix of v elements (covariance of angles)
+%     LRF_l       % 3(3x1) homogeneous lines in scan plane
+%     LRF_A_l     % TODO
+%     LRF_q       % 3(2x1) 2D intersection points of scan lines
+%     LRF_A_q     % TODO
     
     properties
         % Camera properties

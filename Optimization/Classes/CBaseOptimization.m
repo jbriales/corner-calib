@@ -17,6 +17,7 @@ classdef CBaseOptimization < handle % handle for compatibility with C...Optimiza
     
     methods
         function obj = CBaseOptimization( debug_level, maxIters, minParamChange, minErrorChange, plot_dist_R, plot_dist_t )
+            % TODO: Remove this (it is in inherited class)
             if ~exist('debug_level','var')
                 debug_level = 2;
             end

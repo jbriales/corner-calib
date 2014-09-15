@@ -43,6 +43,18 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold,...
                 debug_level,maxIters, minParamChange, minErrorChange ) % COptimization inputs
             % Set optimization parameters through parent class
+            if ~exist('debug_level','var')
+                debug_level = 2;
+            end
+            if ~exist('maxIters','var')
+                maxIters = 50;
+            end
+            if ~exist('minParamChange','var')
+                minParamChange = 1e-8;
+            end
+            if ~exist('minErrorChange','var')
+                minErrorChange = 1e-8;
+            end
             obj = obj@CBaseOptimization( debug_level, maxIters, minParamChange, minErrorChange );
 
             obj.obs = CTrihedronObservation.empty(1,0);
@@ -396,6 +408,51 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             Ncorresp = sum( obj.mask_LRF_Q );
             fprintf('The number of t inliers is %d of %d\n',N,Ncorresp);
         end
+        
+        % Experimental methods
+        function H = FHes_Update_Orthogonality( obj, Trihedron, Rig, R, t )
+            % Linear approximation to hessian in LM method
+            jac_0 = obj.FJac_Orthogonality( R );
+            weights_0  = obj.FWeights_Orthogonality( R );
+            
+            % Generate and add new data (dependent on R and t)
+            auxTriOptim = CTrihedronOptimization( obj.K, 1e-3, 1e-3, 2, 50, 1e-6, 1e-6 );
+            Rig.updateCamPose( R, t );
+            co = Trihedron.getCorrespondence( Rig );
+            auxTriOptim.stackObservation( co );
+            res_k = auxTriOptim.FErr_Orthogonality( Rig.R_c_s );
+            jac_k = auxTriOptim.FJac_Orthogonality( Rig.R_c_s );
+            weights_k = auxTriOptim.FWeights_Orthogonality( Rig.R_c_s );
+            
+            jacobian = [jac_0 ; jac_k];
+            weights  = blkdiag( weights_0, weights_k );
+            
+            H0 = jac_0' * weights_0 * jac_0;
+            H  = jacobian' * weights * jacobian;
+        end
+                
+        function Rt = optimize_new_obs( obj, Trihedron, Rig, R_w_0, t_w_0 )
+            fun = @(Rt) cond( obj.FHes_Update_Orthogonality( Trihedron, Rig, Rt(1:3,1:3), Rt(1:3,4) ) );
+            Fun = @(Rt) deal( fun(Rt), ...
+                jacobianest( @(x)fun([expmap(x(1:3))*Rt(1:3,1:3),Rt(1:3,4)+x(4:6)]), zeros(6,1), deg2rad(0.5)) );
+            
+            Rt = obj.optimize( Fun, [R_w_0,t_w_0], 'SE(3)', false );
+        end
+        
+        function [R,t, condNum] = optimize_new_obs_BF( obj, Trihedron, Rig )
+            gen_config_file = fullfile( pwd, 'pose_gen.ini' );
+            [R_w_Cam, R_w_LRF, t_w_Rig, rand_ang_z, rand_ang_x] = generate_random_poses( gen_config_file, Rig ); % For debug purposes only
+            fun = @(R,t) cond( obj.FHes_Update_Orthogonality( Trihedron, Rig, R, t) );
+            
+            c = zeros(length(R_w_Cam), 1);
+            for i=1:length(R_w_Cam)
+                c(i) = fun( R_w_Cam{i}, t_w_Rig{i} );
+            end
+            [condNum,idx] = min(c);
+            R = R_w_Cam{idx};
+            t = t_w_Rig{idx};
+        end
+        
     end
     
 end
