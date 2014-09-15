@@ -13,10 +13,10 @@ classdef CComparisonNoise < handle
     
     methods
                
-        % Constructor 
+        % Constructor TODO: add propertie GTComp if the GT change every it
         function obj = CComparisonNoise( N_sim, cam_sd_N, scan_sd_N, N_samples )
         
-            obj.TrihedronComp   = CTrihedronComp(N_sim, cam_sd_N, scan_sd_N);     %(TODO)
+            obj.TrihedronComp   = CTrihedronComp(N_sim, cam_sd_N, scan_sd_N);     
             obj.KwakComp        = CKwakComp(N_sim, cam_sd_N, scan_sd_N);          %(TODO)
             obj.ZhangComp       = CZhangComp(N_sim, cam_sd_N, scan_sd_N);         %(TODO)
             obj.VasconcelosComp = CVasconcelosComp(N_sim, cam_sd_N, scan_sd_N);   %(TODO)

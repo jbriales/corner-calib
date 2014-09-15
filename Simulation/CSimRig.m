@@ -7,7 +7,7 @@ classdef CSimRig < handle
     %                  N, FOVd, scan_sd, d_range,... % Lidar options
     %                  K, res, f, cam_sd ); % Camera options
     %   Important: The given absolute pose is for Lidar from World
-    % See also: CSimLidar, CCamLidar.
+    % See also: CSimLidar, CSimCamera.
     
     properties
         Camera  % Simulated Camera object
@@ -43,6 +43,7 @@ classdef CSimRig < handle
             obj.Camera.R = R_w_c;
             obj.Camera.t = t_w_c;
         end
+        
     end
     
 end

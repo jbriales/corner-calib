@@ -96,8 +96,6 @@ triOptim.setInitialRotation( [ 0 -1  0
                                1  0  0 ] ); % Updated in RANSAC
 comp.TrihedronComp.optim( triOptim, m, j, k );
 
-
-
 end
 end
 end
