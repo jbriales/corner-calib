@@ -126,6 +126,23 @@ if WITHTRIHEDRON
     
 end
 
+[newR, newt, condNum] = triOptim.optimize_new_obs_BF( trihedron, Rig );
+% triOptim.optimize_new_obs( trihedron, Rig, R_w_Cam{1}, t_w_Rig{1} )
+% Correspondences for trihedron
+% Update reference (Camera) pose in Rig for Trihedron
+Rig.updateCamPose( newR, newt );
+co = trihedron.getCorrespondence( Rig );
+triOptim.stackObservation( co );
+
+if WITHPLOTSCENE
+    % Need to update Rig poses for plotting
+    figure
+    Rig.updateCamPose( newR, newt );
+    trihedron.plotScene(Rig.Camera, Rig.Lidar);
+    set(gcf,'units','normalized','position',[0 0 1 1]);
+    keyboard
+    close
+end
 % ------------- Kwak -------------------
 if WITHCORNER
     % Generate random input (near GT)
