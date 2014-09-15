@@ -61,11 +61,14 @@ R_y = cross(R_z,R_x,1);
 % Add random rotation on Cam X and Z axis
 rand_ang_z = ang_z_max * (-1 + 2*rand(1,N)); % ang_z_max typically pi
 rand_ang_x = ang_x_max * (-1 + 2*rand(1,N)); % ang_x_max typically FOV
+rand_ang_y = ang_y_max * (-1 + 2*rand(1,N));
 R = reshape( [R_x;R_y;R_z], 3,3,N );
 for i=1:N
     % Check premultiplication and good order
 %     R(:,:,i) = R(:,:,i) * RotationX(ang_x(i)) * RotationZ(ang_z(i));
-    R(:,:,i) = R(:,:,i) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i));
+%     R(:,:,i) = R(:,:,i) * RotationX(rand_ang_x1(i)) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i));
+%     R(:,:,i) = R(:,:,i) * RotationY(rand_ang_x1(i)) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i));
+    R(:,:,i) = R(:,:,i) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i)) * RotationY(rand_ang_y(i)) ;
     switch device
         case 'Lidar'
             R(:,:,i) = R(:,:,i) * R_c_s;
