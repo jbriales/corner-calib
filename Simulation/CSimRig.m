@@ -16,6 +16,10 @@ classdef CSimRig < handle
         t_c_s   % Relative translation of Lidar seen from Camera
     end
     
+    properties (Dependent)
+        Rt_c_s
+    end
+    
     methods
         % Constructor
         function obj = ...
@@ -34,7 +38,7 @@ classdef CSimRig < handle
         end
         
         % Update poses
-        function obj = updatePose( obj, R_w_s, t_w_s )
+        function obj = updateLRFPose( obj, R_w_s, t_w_s )
             obj.Lidar.R = R_w_s;
             obj.Lidar.t = t_w_s;
             
@@ -44,6 +48,24 @@ classdef CSimRig < handle
             obj.Camera.t = t_w_c;
         end
         
+<<<<<<< HEAD
+=======
+        function obj = updateCamPose( obj, R_w_c, t_w_c )
+            obj.Camera.R = R_w_c;
+            obj.Camera.t = t_w_c;
+            
+            R_w_s = R_w_c * obj.R_c_s;
+            t_w_s = t_w_c + R_w_c * obj.t_c_s;
+            
+            obj.Lidar.R = R_w_s;
+            obj.Lidar.t = t_w_s;
+        end
+        
+        % Get-function
+        function Rt_c_s = get.Rt_c_s( obj )
+            Rt_c_s = [ obj.R_c_s obj.t_c_s ];
+        end
+>>>>>>> 255ab62fdbb00193a53da0f6b3dae422b005e61b
     end
     
 end
