@@ -102,9 +102,6 @@ if WITHTRIHEDRON
     % R_c_s_dw
     % R_c_s_nw
     
-    % Plot rotation cost function near GT
-    % triOptim.plotRotationCostFunction( Rig.R_c_s );
-    
     if WITHRANSAC
         triOptim.filterTranslationRANSAC( Rig.R_c_s ); % Should receive some estimated rotation
     end
@@ -118,8 +115,8 @@ if WITHTRIHEDRON
     % t_3D_w
     % t_2D_nw
     
-    % Plot translation cost function near GT
-    % triOptim.plotTranslation_3D_CostFunction( Rig.R_c_s, Rig.t_c_s );
+    [R_global, t_global] = triOptim.optimizeGlobal_Ort_3D( R_c_s_w, t_3D_w );
+    
 end
 
 % ------------- Kwak -------------------
@@ -163,6 +160,7 @@ if WITHTRIHEDRON
     H_R = triOptim.FHes_Orthogonality( R_c_s_w );
     H_t_3D = triOptim.FHes_3D_PlaneDistance( Rig.R_c_s, t_3D_w );
     H_t_2D = triOptim.FHes_2D_LineDistance( Rig.R_c_s, t_2D_w );
+    H_Rt = triOptim.FHes_Global_Ort_3D( R_global, t_global );
 end
 if WITHCORNER
     H_Rt_k = cornerOptim.FHes_2D_LineDistance( [R_k_cw, t_k_cw] );
@@ -184,6 +182,10 @@ if WITHPLOTHESSIAN
         eigv = eig(H_t_2D); m = min(eigv);
         title(sprintf('Tri:t:2D:W\n%i:%i:%i',round(eigv(1)/m),round(eigv(2)/m),round(eigv(3)/m)));
         plotcov3( zeros(3,1), H_t_2D ); shading interp;
+        subplot(f1,f2,index), hold on, index = index + 1;
+        eigv = eig(H_Rt(1:3,1:3)); m = min(eigv);
+        title(sprintf('Tri:Rt:Global:W\n%i:%i:%i',round(eigv(1)/m),round(eigv(2)/m),round(eigv(3)/m)));
+        plotcov3( zeros(3,1), H_Rt(1:3,1:3) ); shading interp;
     end
     if WITHCORNER
         index = f2 + 1; % New row
@@ -212,6 +214,10 @@ if WITHPLOTCOST
     title('Trihedron Rotation: Orthogonality cost function');
     triOptim.plotRotationCostFunction( Rig.R_c_s );
     
+    figure('Name','Trihedron Rotation: Global cost function');
+    title('Trihedron Rotation: Global cost function');
+    triOptim.plotRotation_Global_CostFunction( Rig.R_c_s, Rig.t_c_s );
+    
     if WITHCORNER
         figure('Name','Corner Rotation: 2D distance cost function');
         title('Corner Rotation: 2D distance cost function');
@@ -229,6 +235,10 @@ if WITHPLOTCOST
     figure('Name','Trihedron Translation: 2D distance cost function');
     title('Trihedron Translation: 2D distance cost function');
     triOptim.plotTranslation_2D_CostFunction( Rig.R_c_s, Rig.t_c_s );
+    
+    figure('Name','Trihedron Translation: Global cost function');
+    title('Trihedron Translation: Global cost function');
+    triOptim.plotTranslation_Global_CostFunction( Rig.R_c_s, Rig.t_c_s );
     
     if WITHCORNER
         figure('Name','Corner Translation: 2D distance cost function');
@@ -252,6 +262,8 @@ if WITHTRIHEDRON
         angularDistance(R_c_s_dw,Rig.R_c_s) );
     fprintf('(*) Trihedron (weighted) rotation error (deg): \t \t %f \n',...
         angularDistance(R_c_s_w,Rig.R_c_s) );
+    fprintf('Trihedron (global W, 3D) rotation error (deg): \t \t %f \n',...
+        angularDistance(R_global,Rig.R_c_s) );
     fprintf('=============================================================\n');
     fprintf('Trihedron (non-weighted, 3D) translation error (cm): \t %f \n',...
         norm(t_3D_nw-Rig.t_c_s)*100 );
@@ -261,6 +273,8 @@ if WITHTRIHEDRON
         norm(t_2D_nw-Rig.t_c_s)*100 );
     fprintf('Trihedron (    weighted, 2D) translation error (cm): \t %f \n',...
         norm(t_2D_w-Rig.t_c_s)*100 );
+    fprintf('Trihedron (    global W, 3D) translation error (cm): \t %f \n',...
+        norm(t_global-Rig.t_c_s)*100 );
 end
 
 if WITHCORNER
