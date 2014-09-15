@@ -65,10 +65,12 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         
         %% Load new observation
         function obj = stackObservation( obj, obs )
-            if isa( obs, 'CTrihedronObservation' )
-                obj.obs(end+1) = obs;
-            else
-                error('The loaded observation is not of class ''CTrihedronObservation''');
+            if ~isempty( obs )
+                if isa( obs, 'CTrihedronObservation' )
+                    obj.obs(end+1) = obs;
+                else
+                    error('The loaded observation is not of class ''CTrihedronObservation''');
+                end
             end
         end
         

@@ -46,7 +46,9 @@ classdef CCornerOptimization < handle & CBaseOptimization
         
         %% Load new observation
         function obj = stackObservation( obj, obs )
-            obj.obs(end+1) = obs;
+            if ~isempty( obs )
+                obj.obs(end+1) = obs;
+            end
         end
                 
         %% Compute initial estimate
