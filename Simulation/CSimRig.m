@@ -48,11 +48,6 @@ classdef CSimRig < handle
             obj.Camera.t = t_w_c;
         end
         
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> zhang
         function obj = updateCamPose( obj, R_w_c, t_w_c )
             obj.Camera.R = R_w_c;
             obj.Camera.t = t_w_c;
@@ -68,10 +63,7 @@ classdef CSimRig < handle
         function Rt_c_s = get.Rt_c_s( obj )
             Rt_c_s = [ obj.R_c_s obj.t_c_s ];
         end
-<<<<<<< HEAD
->>>>>>> 255ab62fdbb00193a53da0f6b3dae422b005e61b
-=======
->>>>>>> zhang
+        
     end
     
 end
