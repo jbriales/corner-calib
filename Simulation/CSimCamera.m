@@ -48,7 +48,9 @@ classdef CSimCamera < CBaseCamera
             if abs(p_center(1)) > tan(obj.FOVh/2) || ...
                     abs(p_center(2)) > tan(obj.FOVv/2)
                 warning('Center out of Camera FOV');
-                keyboard
+%                 keyboard
+%                 uv_proj   = NaN;
+%                 uv_pixels = NaN;
             end
             center_pixels = makeinhomogeneous( obj.K * p_center );
             
