@@ -1,7 +1,7 @@
 function weights = FWeights_3D_PlaneDistance( obj, R, t )
 % Compute covariance matrix of error vector for observations
 % data and certain R and t and invert it for using as weight matrix W
-N_obs = length(obj.obs);
+N_obs = obj.Nobs;
 W = cell(1, N_obs);
 
 ort = [ 0 -1

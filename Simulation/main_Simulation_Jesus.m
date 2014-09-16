@@ -96,6 +96,8 @@ for i=1:Nobs
 end
 
 % ------------- Trihedron ----------------
+% Set number of observations to use
+triOptim.setNobs(10);
 if WITHTRIHEDRON
     triOptim.setInitialRotation( [ 0 -1  0
                                    0  0 -1
@@ -135,6 +137,7 @@ if WITHTRIHEDRON
 end
 
 % ------------- Kwak -------------------
+cornerOptim.setNobs(10);
 if WITHCORNER
     if WITHVERBOSE
         cornerOptim.disp_N_obs;
