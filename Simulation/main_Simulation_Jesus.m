@@ -23,19 +23,23 @@ Rig = CSimRig( eye(3), zeros(3,1), R_c_s, t_c_s,... % Extrinsic options
 
 % trihedron = CTrihedron( LPattern );
 % trihedron = CTrihedron( LPattern, eye(3), 3*[-1 -1 0]' );
-trihedron = CTrihedron( LPattern, eye(3), 0*[0 0 -1]' );
-corner = CCorner( expmap( [-1 +1 0], deg2rad(-45) ) );
-checkerboard = CCheckerboard( RotationZ(deg2rad(45))*RotationY(deg2rad(45)) );
+trihedron = CTrihedron( LTrihedron, eye(3), 0*[0 0 -1]' );
+corner = CCorner( LCorner, expmap( [-1 +1 0], deg2rad(-45) ) );
+checkerboard = CCheckerboard( LCheckerboard, RotationZ(deg2rad(45))*RotationY(deg2rad(45)) );
 pattern = { trihedron, corner, checkerboard };
 
-% Generate Rig (Camera) poses
-% [R_w_c, t_w_c] = generate_random_poses( );
-gen_config_file = fullfile( pwd, 'pose_gen.ini' );
-[R_w_Cam, R_w_LRF, t_w_Rig, rand_ang_z, rand_ang_x] = generate_random_poses( gen_config_file, Rig ); % For debug purposes only
-rand_ang_x = rad2deg( rand_ang_x );
-rand_ang_z = rad2deg( rand_ang_z );
-Nsamples = length(t_w_Rig);
-corresp  = cell(2,3,Nsamples);
+% Generate Rig (Camera) poses for different patterns
+% Trihedron
+gen_config_file = fullfile( pwd, 'pose_gen_trihedron.ini' );
+[R_w_Cam_Trihedron, R_w_LRF_Trihedron, t_w_Rig_Trihedron, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
+
+% Corner
+gen_config_file = fullfile( pwd, 'pose_gen_corner.ini' );
+[R_w_Cam_Corner, R_w_LRF_Corner, t_w_Rig_Corner, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
+
+% Checkerboard
+gen_config_file = fullfile( pwd, 'pose_gen_checkerboard.ini' );
+[R_w_Cam_Checkerboard, R_w_LRF_Checkerboard, t_w_Rig_Checkerboard, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
 
 tic
 optim_config_file = fullfile( pwd, 'optim_config.ini' );
@@ -51,25 +55,25 @@ cornerOptim = CCornerOptimization( K,...
     debug_level, maxIters,...
     minParamChange, minErrorChange);
 
-for i=1:Nsamples      
+for i=1:Nobs
     % Correspondences for Kwak's algorithm
     if WITHCORNER
         % Update reference (LRF) pose in Rig for Corner
-        Rig.updateLRFPose( R_w_LRF{i}, t_w_Rig{i} );
+        Rig.updateLRFPose( R_w_LRF_Corner{i}, t_w_Rig_Corner{i} );
         corr_ = corner.getCorrespondence(Rig);
         cornerOptim.stackObservation( corr_ );
     end
     
     % Correspondences for Vasconcelos and Zhang's algorithm
     % Update reference (LRF) pose in Rig for Checkerboard
-    Rig.updateLRFPose( R_w_LRF{i}, t_w_Rig{i} );
+    Rig.updateLRFPose( R_w_LRF_Checkerboard{i}, t_w_Rig_Checkerboard{i} );
     check_corresp{1,i} = checkerboard.p2D; 
     check_corresp{2,i} = checkerboard.getProjection( Rig.Camera );    
     check_corresp{3,i} = 1000 * cell2mat(checkerboard.getScan( Rig.Lidar ));
     
     % Correspondences for trihedron
     % Update reference (Camera) pose in Rig for Trihedron
-    Rig.updateCamPose( R_w_Cam{i}, t_w_Rig{i} );
+    Rig.updateCamPose( R_w_Cam_Trihedron{i}, t_w_Rig_Trihedron{i} );
     co_ = trihedron.getCorrespondence( Rig );
     triOptim.stackObservation( co_ );
     
@@ -77,13 +81,13 @@ for i=1:Nsamples
         % Need to update Rig poses for plotting
         figure
         subplot(131)
-        Rig.updateCamPose( R_w_Cam{i}, t_w_Rig{i} );
+        Rig.updateCamPose( R_w_Cam_Trihedron{i}, t_w_Rig_Trihedron{i} );
         trihedron.plotScene(Rig.Camera, Rig.Lidar);
         subplot(132)
-        Rig.updateLRFPose( R_w_LRF{i}, t_w_Rig{i} );
+        Rig.updateLRFPose( R_w_LRF_Corner{i}, t_w_Rig_Corner{i} );
         corner.plotScene(Rig.Camera, Rig.Lidar);
         subplot(133)
-        Rig.updateLRFPose( R_w_LRF{i}, t_w_Rig{i} );
+        Rig.updateLRFPose( R_w_LRF_Checkerboard{i}, t_w_Rig_Checkerboard{i} );
         checkerboard.plotScene(Rig.Camera, Rig.Lidar);
         set(gcf,'units','normalized','position',[0 0 1 1]);
         keyboard
@@ -128,6 +132,7 @@ end
 
 % ------------- Kwak -------------------
 if WITHCORNER
+    cornerOptim.disp_N_obs;
     % Generate random input (near GT)
     R_aux = Rig.R_c_s + randn(3,3)*0.08;
     [U,S,V] = svd(R_aux);
