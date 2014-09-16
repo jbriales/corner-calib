@@ -27,17 +27,17 @@ classdef CTrihedronComp < handle
             
             if WITHRANSAC
                 triOptim.filterRotationRANSAC;
-            end
-            triOptim.disp_N_R_inliers;
+                triOptim.disp_N_R_inliers;
+            end            
             %R_c_s_dw = triOptim.optimizeRotation_DiagWeighted;
             R_c_s_nw = triOptim.optimizeRotation_NonWeighted;            
             R_c_s_w  = triOptim.optimizeRotation_Weighted;
             
             if WITHRANSAC
                 triOptim.filterTranslationRANSAC( R_c_s_w ); % Should receive some estimated rotation
+                triOptim.disp_N_t_inliers;
             end
             R0_for_t = R_c_s_w;
-            triOptim.disp_N_t_inliers;
             triOptim.setInitialTranslation( Rig.t_c_s + 0.05*randn(3,1) );
             
             t_3D_nw = triOptim.optimizeTranslation_3D_NonWeighted( R0_for_t );
@@ -53,7 +53,12 @@ classdef CTrihedronComp < handle
             obj.Weighted3D(cam_sd_N_it, scan_sd_N_it, Nsim_it)     = {[ R_c_s_w  t_3D_w]};            
             obj.NonWeighted2D(cam_sd_N_it, scan_sd_N_it, Nsim_it)  = {[ R_c_s_nw t_2D_nw]};            
             obj.Weighted2D(cam_sd_N_it, scan_sd_N_it, Nsim_it)     = {[ R_c_s_w  t_2D_w]};            
-            obj.Global(cam_sd_N_it, scan_sd_N_it, Nsim_it)         = {[ R_global t_global]};            
+            obj.Global(cam_sd_N_it, scan_sd_N_it, Nsim_it)         = {[ R_global t_global]};     
+            
+            if WITHRANSAC
+                triOptim.resetRotationRANSAC();
+                triOptim.resetTranslationRANSAC();
+            end
             
         end
         
