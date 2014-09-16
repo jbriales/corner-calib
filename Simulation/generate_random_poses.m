@@ -1,4 +1,4 @@
-function [R_Cam, R_LRF, t, rand_ang_z, rand_ang_x] = generate_random_poses( config_file, Rig )
+function [R_Cam, R_LRF, t, rand_ang_z, rand_ang_x] = generate_random_poses( N, config_file, Rig )
 % [R_Cam, R_LRF, t, rand_ang_z, rand_ang_x] = generate_random_poses( config_file )
 % Main input:
 % config_file - path to .ini file with configuration parameters

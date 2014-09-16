@@ -320,6 +320,11 @@ classdef CCornerOptimization < handle & CBaseOptimization
         function Ncorresp_C = get.Ncorresp_C( obj )
             Ncorresp_C = length(obj.obs);
         end
+        % More functions
+        function disp_N_obs( obj )
+            Nobs = length(obj.obs);
+            fprintf('The number of Corner complete observations is %d\n',Nobs);
+        end
     end
     
 end
