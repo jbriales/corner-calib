@@ -27,11 +27,25 @@ classdef CComparisonNoise < handle
             
         end
         
-        function obj = plotCameraNoise( obj, WITHTRIHEDRON, WITHCORNER, WITHZHANG )
-            %TODO            
+        function obj = plotCameraNoise( obj, x_GT )
+            
+            % Plot options
+            plot_sim_file = fullfile( pwd, 'plotCameraNoise.ini' );
+            plotOpts = readConfigFile( plot_sim_file );
+            extractStructFields( plotOpts );
+            clear plotOpts;
+            
+            % Check if the scan_sd value is correct
+            if scan_sd_it > obj.scan_sd_N
+                error('Value of "scan_sd_it" out of range (max = %i)',scan_sd_N);
+            end
+            
+            
+
+            
         end
         
-        function obj = plotLidarNoise( obj, WITHTRIHEDRON, WITHCORNER, WITHZHANG )
+        function obj = plotLidarNoise( obj, x_GT )
             %TODO            
         end
         
