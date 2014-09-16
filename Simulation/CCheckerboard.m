@@ -68,6 +68,26 @@ classdef CCheckerboard < CPattern & CPlane3D
             [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
         end
         
+        function co = getCorrespondence( obj, Rig )
+            % Get Checkerboard grid
+            grid_pts = obj.p2D;
+            
+            % Camera data
+            [~, uv_pixels] = obj.getProjection( Rig.Camera );
+
+            % Lidar data (in mm)
+            LRF_pts = 1000 * cell2mat( obj.getScan( Rig.Lidar ) );
+            
+            % Robust simulation
+            if size(uv_pixels,2)<size(grid_pts,2) || size(LRF_pts,2)<=1
+                warning('Checkerboard: Out of FOV')
+                co = [];
+            else
+                T_plane = obj.getCalibPlane( grid_pts, uv_pixels, Rig.Camera.K );
+                co = CCheckerboardObservation( T_plane, LRF_pts);
+            end
+        end
+        
         % Pattern 3D representation
         function h = plot3( obj ) % Plot checkerboard in 3D space
             obj.face{1}.plot3;
@@ -77,10 +97,10 @@ classdef CCheckerboard < CPattern & CPlane3D
         end
         
         % Project the 3D points to the image and estimate the plane eq.
-        function [T_plane, points] = getCalibPlanes( obj, Rig, corresp )
+        function T_plane = getCalibPlane( obj, grid_pts, img_pts, K)
             
             % Set the parameters for the plane equation extraction
-            K        = Rig.Camera.K;
+%             K        = Rig.Camera.K; Direct input
             fc       = [K(1,1); K(2,2)];
             cc       = [K(1,3); K(2,3)];
             kc       = zeros(5,1);
@@ -88,23 +108,45 @@ classdef CCheckerboard < CPattern & CPlane3D
             max_iter = 20;
             th_cond  = 1000000;
             
-            Nsamples = size(corresp,2);
-            Npoints  = size(corresp{1,1},2);
+            Npts = size( grid_pts,2 );
+            % Project the 3D points to the image plane
+            grid_pts = [ grid_pts ; zeros(1,Npts) ];
             
-            for i = 1:Nsamples
-                % Project the 3D points to the image plane
-                pts_ref = [corresp{1,i} ; zeros(1,Npoints)];
-                pts_img = K * corresp{2,i} ;
-                pts_img = makeinhomogeneous( pts_img ./ pts_img(3) );
-
-                [omc,t,R] = compute_extrinsic_init(pts_img,pts_ref,fc,cc,kc,alpha_c);
-                [omc,t,R,JJ_kk] = compute_extrinsic_refine(omc,t,pts_img,pts_ref,fc,cc,kc,alpha_c,max_iter,th_cond);
-
-                T_plane(:,:,i) = [[R t*1000];[0 0 0 1]];       % They work in mm     
-                points{1,i}    = corresp{3,i};
-            end
+            [omc,t,R] = compute_extrinsic_init(img_pts,grid_pts,fc,cc,kc,alpha_c);
+            [omc,t,R,JJ_kk] = compute_extrinsic_refine(omc,t,img_pts,grid_pts,fc,cc,kc,alpha_c,max_iter,th_cond);
             
+            T_plane = [[R t*1000];[0 0 0 1]]; % They work in mm            
         end     
+
+        % DEPRECATED
+        % Project the 3D points to the image and estimate the plane eq.
+%         function [T_plane, points] = getCalibPlanes( obj, Rig, corresp )
+%             
+%             % Set the parameters for the plane equation extraction
+%             K        = Rig.Camera.K;
+%             fc       = [K(1,1); K(2,2)];
+%             cc       = [K(1,3); K(2,3)];
+%             kc       = zeros(5,1);
+%             alpha_c  = 0;
+%             max_iter = 20;
+%             th_cond  = 1000000;
+%             
+%             Nsamples = size(corresp,2);
+%             Npoints  = size(corresp{1,1},2);
+%             
+%             for i = 1:Nsamples
+%                 % Project the 3D points to the image plane
+%                 pts_ref = [corresp{1,i} ; zeros(1,Npoints)];
+%                 pts_img = K * corresp{2,i} ;
+%                 pts_img = makeinhomogeneous( pts_img ./ pts_img(3) );
+% 
+%                 [omc,t,R] = compute_extrinsic_init(pts_img,pts_ref,fc,cc,kc,alpha_c);
+%                 [omc,t,R,JJ_kk] = compute_extrinsic_refine(omc,t,pts_img,pts_ref,fc,cc,kc,alpha_c,max_iter,th_cond);
+% 
+%                 T_plane(:,:,i) = [[R t*1000];[0 0 0 1]]; % They work in mm     
+%                 points{1,i}    = corresp{3,i};
+%             end
+%         end     
         
         
         

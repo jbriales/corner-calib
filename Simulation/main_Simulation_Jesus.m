@@ -23,7 +23,7 @@ Rig = CSimRig( eye(3), zeros(3,1), R_c_s, t_c_s,... % Extrinsic options
 
 % trihedron = CTrihedron( LPattern );
 % trihedron = CTrihedron( LPattern, eye(3), 3*[-1 -1 0]' );
-trihedron = CTrihedron( LTrihedron, eye(3), 0*[0 0 -1]' );
+trihedron = CTrihedron( LTrihedron, eye(3), 0*[0 0 1]' );
 corner = CCorner( LCorner, expmap( [-1 +1 0], deg2rad(-45) ) );
 checkerboard = CCheckerboard( LCheckerboard, RotationZ(deg2rad(45))*RotationY(deg2rad(45)) );
 pattern = { trihedron, corner, checkerboard };
@@ -54,6 +54,9 @@ triOptim = CTrihedronOptimization( K,...
 cornerOptim = CCornerOptimization( K,...
     debug_level, maxIters,...
     minParamChange, minErrorChange);
+checkerOptim = CCheckerboardOptimization( K,...
+    debug_level, maxIters,...
+    minParamChange, minErrorChange);
 
 for i=1:Nobs
     % Correspondences for Kwak's algorithm
@@ -67,9 +70,11 @@ for i=1:Nobs
     % Correspondences for Vasconcelos and Zhang's algorithm
     % Update reference (LRF) pose in Rig for Checkerboard
     Rig.updateLRFPose( R_w_LRF_Checkerboard{i}, t_w_Rig_Checkerboard{i} );
-    check_corresp{1,i} = checkerboard.p2D; 
-    check_corresp{2,i} = checkerboard.getProjection( Rig.Camera );    
-    check_corresp{3,i} = 1000 * cell2mat(checkerboard.getScan( Rig.Lidar ));
+    co = checkerboard.getCorrespondence( Rig );
+    checkerOptim.stackObservation( co );
+%     check_corresp{1,i} = checkerboard.p2D;
+%     check_corresp{2,i} = checkerboard.getProjection( Rig.Camera );    
+%     check_corresp{3,i} = 1000 * cell2mat(checkerboard.getScan( Rig.Lidar ));
     
     % Correspondences for trihedron
     % Update reference (Camera) pose in Rig for Trihedron
@@ -97,7 +102,7 @@ end
 
 % ------------- Trihedron ----------------
 % Set number of observations to use
-triOptim.setNobs(10);
+triOptim.setNobs(Nobs);
 if WITHTRIHEDRON
     triOptim.setInitialRotation( [ 0 -1  0
                                    0  0 -1
@@ -111,11 +116,7 @@ if WITHTRIHEDRON
     R_c_s_nw = triOptim.optimizeRotation_NonWeighted;
     R_c_s_dw = triOptim.optimizeRotation_DiagWeighted;
     R_c_s_w  = triOptim.optimizeRotation_Weighted;
-    % R_c_s
-    % R_c_s_w
-    % R_c_s_dw
-    % R_c_s_nw
-    
+
     if WITHRANSAC
         triOptim.filterTranslationRANSAC( Rig.R_c_s ); % Should receive some estimated rotation
     end
@@ -128,16 +129,13 @@ if WITHTRIHEDRON
     t_3D_w  = triOptim.optimizeTranslation_3D_Weighted( R0_for_t );
     t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted( R0_for_t );
     t_2D_w = triOptim.optimizeTranslation_2D_Weighted( R0_for_t );
-    % t_3D_nw
-    % t_3D_w
-    % t_2D_nw
     
     [R_global, t_global] = triOptim.optimizeGlobal_Ort_3D( R_c_s_w, t_3D_w );
     
 end
 
 % ------------- Kwak -------------------
-cornerOptim.setNobs(10);
+cornerOptim.setNobs(Nobs);
 if WITHCORNER
     if WITHVERBOSE
         cornerOptim.disp_N_obs;
@@ -154,28 +152,17 @@ if WITHCORNER
     [R_k_cw, t_k_cw] = cornerOptim.optimizeRt_ConstWeighted;
     % [R_k_pw, t_k_pw] = cornerOptim.optimizeRt_PreWeighted;
     [R_kC_nw, t_kC_nw] = cornerOptim.optimizeRt_C_NonWeighted;
-    
-    % Check distance between optimization and initial point
-    if WITHVERBOSE
-        fprintf('Kwak (NW): Change in rotation = %f\n',angularDistance(R_k_nw,Rt0(1:3,1:3)));
-        % fprintf('Kwak ( W): Change in rotation = %f\n',angularDistance(R_k_w, Rt0(1:3,1:3)));
-        fprintf('Kwak (CW): Change in rotation = %f\n',angularDistance(R_k_cw, Rt0(1:3,1:3)));
-        fprintf('Kwak-C (NW): Change in rotation = %f\n',angularDistance(R_kC_nw, Rt0(1:3,1:3)));
-        fprintf('Kwak (NW): Change in translation = %f\n',norm(t_k_nw - Rt0(1:3,4)));
-        % fprintf('Kwak ( W): Change in translation = %f\n',norm(t_k_w  - Rt0(1:3,4)));
-        fprintf('Kwak (CW): Change in translation = %f\n',norm(t_k_cw  - Rt0(1:3,4)));
-        fprintf('Kwak-C (NW): Change in translation = %f\n',norm(t_kC_nw  - Rt0(1:3,4)));
-        fprintf('\n\n')
-    end
 end
 
 % % ---------- Vasconcelos -------------------------
 if WITHZHANG
-    [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
-    [T, ~,~,~,~] = lccMinSol(T_planes,lidar_points);
-    [T_z, ~,~,~,~] = lccZhang(T_planes, lidar_points);
-    x_v = pose_inverse(T); x_v(1:3,4) = x_v(1:3,4)/1000;
-    x_z = pose_inverse(T_z); x_z(1:3,4) = x_z(1:3,4)/1000;
+%     [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
+%     [T, ~,~,~,~] = lccMinSol(T_planes,lidar_points);
+%     [T_z, ~,~,~,~] = lccZhang(T_planes, lidar_points);
+    [R_v,t_v] = checkerOptim.optimizeRt_Vasc;
+    [R_z,t_z] = checkerOptim.optimizeRt_Zhang;
+%     x_v = pose_inverse(T); x_v(1:3,4) = x_v(1:3,4)/1000;
+%     x_z = pose_inverse(T_z); x_z(1:3,4) = x_z(1:3,4)/1000;
 end
 
 % Compute hessian in convergence points for different methods
@@ -316,11 +303,13 @@ if WITHVERBOSE
     end
     
     if WITHZHANG
-        % fprintf('Vasconcelos translation error (cm): \t %f \n', 100 * norm(x_v(1:3,4) - x_gt(1:3,4)) );
-        % fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );
-        
-        % fprintf('Zhang translation error (cm): \t %f \n', 100 * norm(x_z(1:3,4) - x_gt(1:3,4)) );
-        % fprintf('Zhang rotation error (deg): \t %f \n', angularDistance(x_z(1:3,1:3),x_gt(1:3,1:3)) );
+        fprintf('=============================================================\n');
+        fprintf('=============================================================\n');
+        fprintf('Vasconcelos rotation error (deg): \t\t\t %f \n', angularDistance(R_v,Rig.R_c_s) );
+        fprintf('Zhang rotation error (deg): \t\t\t\t %f \n', angularDistance(R_z,Rig.R_c_s) );
+        fprintf('=============================================================\n');
+        fprintf('Vasconcelos translation error (cm): \t\t\t %f \n', 100 * norm(t_v - Rig.t_c_s) );
+        fprintf('Zhang translation error (cm): \t\t\t\t %f \n', 100 * norm(t_z - Rig.t_c_s) );
     end
     toc
 end
