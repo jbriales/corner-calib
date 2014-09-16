@@ -134,3 +134,5 @@ end
 end
 
 toc
+
+save('simulation_noise_1.mat');

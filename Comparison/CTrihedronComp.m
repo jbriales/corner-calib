@@ -53,7 +53,10 @@ classdef CTrihedronComp < handle
             obj.Weighted3D(cam_sd_N_it, scan_sd_N_it, Nsim_it)     = {[ R_c_s_w  t_3D_w]};            
             obj.NonWeighted2D(cam_sd_N_it, scan_sd_N_it, Nsim_it)  = {[ R_c_s_nw t_2D_nw]};            
             obj.Weighted2D(cam_sd_N_it, scan_sd_N_it, Nsim_it)     = {[ R_c_s_w  t_2D_w]};            
-            obj.Global(cam_sd_N_it, scan_sd_N_it, Nsim_it)         = {[ R_global t_global]};            
+            obj.Global(cam_sd_N_it, scan_sd_N_it, Nsim_it)         = {[ R_global t_global]};     
+            
+            triOptim.resetRotationRANSAC();
+            triOptim.resetTranslationRANSAC();
             
         end
         
