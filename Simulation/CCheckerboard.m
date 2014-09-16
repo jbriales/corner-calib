@@ -19,7 +19,7 @@ classdef CCheckerboard < CPattern & CPlane3D
     
     methods
         % Constructor
-        function obj = CCheckerboard( R, t, L, Ndiv )
+        function obj = CCheckerboard( L, R, t, Ndiv )
             if ~exist('R','var')
 %                 R = eye(3);
                 R = RotationZ(deg2rad(45))*RotationY(deg2rad(45));
