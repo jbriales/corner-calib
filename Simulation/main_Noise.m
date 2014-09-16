@@ -50,9 +50,10 @@ clear noiseOpts
 
 cam_sd_n  =   logspace(cam_sd_range(1),cam_sd_range(2),cam_sd_N);
 scan_sd_n = 3*logspace(scan_sd_range(1),scan_sd_range(2),scan_sd_N);
+N_co_N    = size(N_co_n,2);
 
 % Create the output structure
-comp = CComparisonNoise( Nsim, cam_sd_N, scan_sd_N, Nsamples );
+comp = CComparisonNoise( Nsim, cam_sd_n, scan_sd_n, N_co_n );
 
 tic
 optim_config_file = fullfile( pwd, 'optim_config.ini' );
@@ -69,9 +70,10 @@ cornerOptim = CCornerOptimization( K,...
     minParamChange, minErrorChange);
 
 % Start the bucle
+N_co_it = 1;
 for j=1:cam_sd_N
 for k=1:scan_sd_N
-    % Updates the rig (TODO: change the GT for each simulation?¿?¿)
+    % Updates the rig 
     Rig = CSimRig( eye(3), zeros(3,1), R_c_s, t_c_s,... % Extrinsic options
                N, FOVd, scan_sd_n(k), d_range,... % Lidar options
                K, res, f, cam_sd_n(j) ); % Camera options   
@@ -79,7 +81,7 @@ for k=1:scan_sd_N
     for m=1:Nsim
 
         % Store the observations
-        for i=1:Nsamples
+        for i=1:N_co_n(N_co_N)
                 % Correspondences for Kwak's algorithm
                 if WITHCORNER
                     % Update reference (LRF) pose in Rig for Corner
@@ -104,42 +106,65 @@ for k=1:scan_sd_N
                     co_ = trihedron.getCorrespondence( Rig );
                     triOptim.stackObservation( co_ );
                 end
-        end
+                
+                % Optimize only if is a valid value of Nsamples
+                % --------------------------------------------------
+                if i == N_co_n(N_co_it) 
+                     
+                    % Trihedron optimization
+                    if WITHTRIHEDRON
+                        triOptim.setInitialRotation( [ 0 -1  0
+                                                       0  0 -1
+                                                       1  0  0 ] ); % Updated in RANSAC
+                        comp.TrihedronComp.optim( triOptim, Rig, j, k, N_co_it, m, WITHRANSAC );        
+                    end
 
-    % Trihedron optimization
-    if WITHTRIHEDRON
-        triOptim.setInitialRotation( [ 0 -1  0
-                                       0  0 -1
-                                       1  0  0 ] ); % Updated in RANSAC
-        comp.TrihedronComp.optim( triOptim, Rig, m, j, k, WITHRANSAC );        
-        % Reset the triOptim object
-        clearvars triOptim;
-        triOptim = CTrihedronOptimization( K,...
-                    RANSAC_Rotation_threshold,...
-                    RANSAC_Translation_threshold,...
-                    debug_level, maxIters,...
-                    minParamChange, minErrorChange);
-    end
-    
-    % Kwak optimization
-    if WITHCORNER
-        % Generate random input (near GT)
-        R_aux = Rig.R_c_s + randn(3,3)*0.08;
-        [U,S,V] = svd(R_aux);
-        Rt0 = [ U*V' , Rig.t_c_s + 0.05*randn(3,1) ];
+                    % Kwak optimization
+                    if WITHCORNER
+                        % Generate random input (near GT)
+                        R_aux = Rig.R_c_s + randn(3,3)*0.08;
+                        [U,S,V] = svd(R_aux);
+                        Rt0 = [ U*V' , Rig.t_c_s + 0.05*randn(3,1) ];
+
+                        cornerOptim.setInitialRotation( Rt0(1:3,1:3) );
+                        cornerOptim.setInitialTranslation( Rt0(1:3,4) );
+
+                        comp.KwakComp.optim( cornerOptim, j, k, N_co_it, m );    
+                    end
+
+                    % Zhang and Vasconcelos optimization
+                    if WITHZHANG
+                        [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
+                        comp.VasconcelosComp.optim( T_planes, lidar_points, j, k, N_co_it, m);
+                        comp.ZhangComp.optim( T_planes, lidar_points, j, k, N_co_it, m);
+                    end
+                    
+                    N_co_it = N_co_it+1;
+                    
+                end
+        end
         
-        cornerOptim.setInitialRotation( Rt0(1:3,1:3) );
-        cornerOptim.setInitialTranslation( Rt0(1:3,4) );
+        % Reset variables
+        N_co_it = 1;
         
-        comp.KwakComp.optim( cornerOptim, m, j, k );    
-    end
-    
-    % Zhang and Vasconcelos optimization
-    if WITHZHANG
-        [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
-        comp.VasconcelosComp.optim( T_planes, lidar_points, m, j, k);
-        comp.ZhangComp.optim( T_planes, lidar_points, m, j, k);
-    end
+        if WITHTRIHEDRON
+            clearvars triOptim;
+            triOptim = CTrihedronOptimization( K,...
+                        RANSAC_Rotation_threshold,...
+                        RANSAC_Translation_threshold,...
+                        debug_level, maxIters,...
+                        minParamChange, minErrorChange);
+        end
+        
+        if WITHCORNER
+            clearvars cornerOptim;
+            cornerOptim = CCornerOptimization( K,...
+                            debug_level, maxIters,...
+                            minParamChange, minErrorChange);
+        end
+       
+
+
     end
 end
 end

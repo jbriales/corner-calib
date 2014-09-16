@@ -13,17 +13,17 @@ classdef CTrihedronComp < handle
     methods
         
         % Constructor
-        function obj = CTrihedronComp (Nsim, cam_sd_N, scan_sd_N)
+        function obj = CTrihedronComp (Nsim, cam_sd_N, scan_sd_N, N_co_N)
             %obj.Linear          = cell(cam_sd_N, scan_sd_N, Nsim);
             %obj.DiagWeighted    = cell(cam_sd_N, scan_sd_N, Nsim);
-            obj.NonWeighted3D    = cell(cam_sd_N, scan_sd_N, Nsim);            
-            obj.Weighted3D       = cell(cam_sd_N, scan_sd_N, Nsim);            
-            obj.NonWeighted2D    = cell(cam_sd_N, scan_sd_N, Nsim);            
-            obj.Weighted2D       = cell(cam_sd_N, scan_sd_N, Nsim);
-            obj.Global           = cell(cam_sd_N, scan_sd_N, Nsim);
+            obj.NonWeighted3D    = cell(cam_sd_N, scan_sd_N, N_co_N, Nsim);            
+            obj.Weighted3D       = cell(cam_sd_N, scan_sd_N, N_co_N, Nsim);            
+            obj.NonWeighted2D    = cell(cam_sd_N, scan_sd_N, N_co_N, Nsim);            
+            obj.Weighted2D       = cell(cam_sd_N, scan_sd_N, N_co_N, Nsim);
+            obj.Global           = cell(cam_sd_N, scan_sd_N, N_co_N, Nsim);
         end
         
-        function optim( obj, triOptim, Rig, Nsim_it, cam_sd_N_it, scan_sd_N_it, WITHRANSAC )
+        function optim( obj, triOptim, Rig, cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it, WITHRANSAC )
             
             if WITHRANSAC
                 triOptim.filterRotationRANSAC;
@@ -49,11 +49,11 @@ classdef CTrihedronComp < handle
             [R_global, t_global] = triOptim.optimizeGlobal_Ort_3D( R_c_s_w, t_3D_w );  
                         
             %obj.DiagWeighted(cam_sd_N_it, scan_sd_N_it, Nsim_it) = {triOptim.optimizeRotation_DiagWeighted};
-            obj.NonWeighted3D(cam_sd_N_it, scan_sd_N_it, Nsim_it)  = {[ R_c_s_nw t_3D_nw]};            
-            obj.Weighted3D(cam_sd_N_it, scan_sd_N_it, Nsim_it)     = {[ R_c_s_w  t_3D_w]};            
-            obj.NonWeighted2D(cam_sd_N_it, scan_sd_N_it, Nsim_it)  = {[ R_c_s_nw t_2D_nw]};            
-            obj.Weighted2D(cam_sd_N_it, scan_sd_N_it, Nsim_it)     = {[ R_c_s_w  t_2D_w]};            
-            obj.Global(cam_sd_N_it, scan_sd_N_it, Nsim_it)         = {[ R_global t_global]};     
+            obj.NonWeighted3D(cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it)  = {[ R_c_s_nw t_3D_nw]};            
+            obj.Weighted3D(cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it)     = {[ R_c_s_w  t_3D_w]};            
+            obj.NonWeighted2D(cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it)  = {[ R_c_s_nw t_2D_nw]};            
+            obj.Weighted2D(cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it)     = {[ R_c_s_w  t_2D_w]};            
+            obj.Global(cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it)         = {[ R_global t_global]};     
             
             if WITHRANSAC
                 triOptim.resetRotationRANSAC();
