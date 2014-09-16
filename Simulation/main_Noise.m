@@ -52,6 +52,7 @@ tic
 Nobs = N_co_n(end); %#ok<COLND>
 counter_loops = 1;
 total_loops   = numel(cam_sd_n) * numel(scan_sd_n) * numel(N_co_n) * Nsim;
+first_time    = toc;
 for idx_cam_sd=1:cam_sd_N
 for idx_scan_sd=1:scan_sd_N
     % Updates the rig
@@ -163,7 +164,11 @@ for idx_scan_sd=1:scan_sd_N
                 checkerOptim.setInitialTranslation( t0 );
                 comp.VasconcelosComp.optim( checkerOptim );
                 comp.ZhangComp.optim( checkerOptim );
-            end            
+            end
+            
+            % Estimate duration of simulation
+            mean_time = (toc-first_time)/counter_loops;
+            fprintf('Mean time: %d\tEstimated left duration: %d\n',mean_time,round((total_loops-counter_loops)*mean_time));
         end
     end
 end
