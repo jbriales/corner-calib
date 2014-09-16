@@ -1,3 +1,4 @@
+function  comparisonObj = main_Noise( )
 % Main script for the synthetic simulations with variable noise
 
 % Simulated data for the Extrinsic Calibration of a 2D Lidar and a
@@ -47,7 +48,10 @@ extractStructFields( optimOpts );
 clear optimOpts
 
 % Start the loop
-Nobs = N_co_n(end);
+tic
+Nobs = N_co_n(end); %#ok<COLND>
+counter_loops = 1;
+total_loops   = numel(cam_sd_n) * numel(scan_sd_n) * numel(N_co_n) * Nsim;
 for idx_cam_sd=1:cam_sd_N
 for idx_scan_sd=1:scan_sd_N
     % Updates the rig
@@ -66,7 +70,7 @@ for idx_scan_sd=1:scan_sd_N
                 minParamChange, minErrorChange);
             
             gen_config_file = fullfile( pwd, 'pose_gen_trihedron.ini' );
-            [R_w_Cam_Trihedron, R_w_LRF_Trihedron, t_w_Rig_Trihedron, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
+            [R_w_Cam_Trihedron, ~, t_w_Rig_Trihedron, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
         end
         
         if WITHCORNER
@@ -75,7 +79,7 @@ for idx_scan_sd=1:scan_sd_N
                 debug_level, maxIters,...
                 minParamChange, minErrorChange);
             gen_config_file = fullfile( pwd, 'pose_gen_corner.ini' );
-            [R_w_Cam_Corner, R_w_LRF_Corner, t_w_Rig_Corner, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
+            [~, R_w_LRF_Corner, t_w_Rig_Corner, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
         end
         
         if WITHZHANG
@@ -84,7 +88,7 @@ for idx_scan_sd=1:scan_sd_N
                 debug_level, maxIters,...
                 minParamChange, minErrorChange);
             gen_config_file = fullfile( pwd, 'pose_gen_checkerboard.ini' );
-            [R_w_Cam_Checkerboard, R_w_LRF_Checkerboard, t_w_Rig_Checkerboard, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
+            [~, R_w_LRF_Checkerboard, t_w_Rig_Checkerboard, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
         end
 
         % Store the observations
@@ -94,6 +98,9 @@ for idx_scan_sd=1:scan_sd_N
                     % Update reference (Camera) pose in Rig for Trihedron
                     Rig.updateCamPose( R_w_Cam_Trihedron{idx_N_co}, t_w_Rig_Trihedron{idx_N_co} );
                     co = trihedron.getCorrespondence( Rig );
+                    if isempty(co)
+                        co = getCorrectCorrespondence( trihedron, Rig );
+                    end
                     triOptim.stackObservation( co );
                     clear co
                 end    
@@ -103,6 +110,9 @@ for idx_scan_sd=1:scan_sd_N
                     % Update reference (LRF) pose in Rig for Corner
                     Rig.updateLRFPose( R_w_LRF_Corner{idx_N_co}, t_w_Rig_Corner{idx_N_co} );
                     co = corner.getCorrespondence(Rig);
+                    if isempty(co)
+                        co = getCorrectCorrespondence( corner, Rig );
+                    end
                     cornerOptim.stackObservation( co );
                     clear co
                 end
@@ -112,6 +122,9 @@ for idx_scan_sd=1:scan_sd_N
                     % Update reference (LRF) pose in Rig for Checkerboard
                     Rig.updateLRFPose( R_w_LRF_Checkerboard{idx_N_co}, t_w_Rig_Checkerboard{idx_N_co} );
                     co = checkerboard.getCorrespondence( Rig );
+                    if isempty(co)
+                        co = getCorrectCorrespondence( checkerboard, Rig );
+                    end
                     checkerOptim.stackObservation( co );
                     clear co
                 end
@@ -123,6 +136,9 @@ for idx_scan_sd=1:scan_sd_N
         t0 = Rig.t_c_s;
         Rt0 = [R0 t0];
         for idx_N_co = 1:length(N_co_n)
+            fprintf('Optimization %d of %d\n',counter_loops,total_loops);
+            counter_loops = counter_loops + 1;
+            
             comp.setIndexes( idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim );
             % Trihedron optimization
             if WITHTRIHEDRON
@@ -154,4 +170,42 @@ end
 end
 
 toc
-save(storeFile);
+% Plot results in boxplots
+comp.plotCameraNoise( Rig.Rt_c_s )
+
+save(storeFile); % For further repetition
+end
+
+function co = getCorrectCorrespondence( pattern, Rig )
+co = [];
+counter = 0;
+
+if isa(pattern,'CTrihedron')
+    gen_config_file = fullfile( pwd, 'pose_gen_trihedron.ini' );
+elseif isa(pattern,'CCorner')
+    gen_config_file = fullfile( pwd, 'pose_gen_corner.ini' );
+elseif isa(pattern,'CCheckerboard')
+    gen_config_file = fullfile( pwd, 'pose_gen_checkerboard.ini' );
+end
+
+while isempty(co) & counter < 500
+
+[R_w_Cam, R_w_LRF, t_w_Rig, ~, ~] = generate_random_poses( 1, gen_config_file, Rig );
+
+% Update reference (LRF or Cam) pose in Rig for Pattern
+if isa(pattern,'CTrihedron')
+    Rig.updateCamPose( R_w_Cam{1}, t_w_Rig{1} );
+elseif isa(pattern,'CCorner')
+    Rig.updateLRFPose( R_w_LRF{1}, t_w_Rig{1} );
+elseif isa(pattern,'CCheckerboard')
+    Rig.updateLRFPose( R_w_LRF{1}, t_w_Rig{1} );
+end
+
+co = pattern.getCorrespondence(Rig);
+end
+if counter >= 500
+    warning('Could not generate a correct observation');
+else
+    cprintf('green', 'Solved empty observation\n')
+end
+end
