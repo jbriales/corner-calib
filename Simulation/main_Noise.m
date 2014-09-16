@@ -42,10 +42,9 @@ noise_config_file = fullfile( pwd, 'sim_noise.ini' );
 noiseOpts = readConfigFile( noise_config_file );
 extractStructFields( noiseOpts );
 clear noiseOpts
-cam_step = (cam_sd_range(2)-cam_sd_range(1))/(cam_sd_N-1);
-cam_sd_n = cam_sd_range(1):cam_step:cam_sd_range(2);
-scan_step = (scan_sd_range(2)-scan_sd_range(1))/(scan_sd_N-1);
-scan_sd_n = scan_sd_range(1):scan_step:scan_sd_range(2);
+
+cam_sd_n  =   logspace(cam_sd_range(1),cam_sd_range(2),cam_sd_N);
+scan_sd_n = 3*logspace(scan_sd_range(1),scan_sd_range(2),scan_sd_N);
 
 % Create the output structure
 comp = CComparisonNoise( Nsim, cam_sd_N, scan_sd_N, Nsamples );
@@ -71,6 +70,7 @@ for k=1:scan_sd_N
     Rig = CSimRig( eye(3), zeros(3,1), R_c_s, t_c_s,... % Extrinsic options
                N, FOVd, scan_sd_n(k), d_range,... % Lidar options
                K, res, f, cam_sd_n(j) ); % Camera options   
+    fprintf('Simulations for cam_sd = %d and scan_sd = %d \n',cam_sd_n(j), scan_sd_n(k));
     for m=1:Nsim
 
         % Store the observations
@@ -106,7 +106,14 @@ for k=1:scan_sd_N
         triOptim.setInitialRotation( [ 0 -1  0
                                        0  0 -1
                                        1  0  0 ] ); % Updated in RANSAC
-        comp.TrihedronComp.optim( triOptim, Rig, m, j, k, WITHRANSAC );
+        comp.TrihedronComp.optim( triOptim, Rig, m, j, k, WITHRANSAC );        
+        % Reset the triOptim object
+        clearvars triOptim;
+        triOptim = CTrihedronOptimization( K,...
+                    RANSAC_Rotation_threshold,...
+                    RANSAC_Translation_threshold,...
+                    debug_level, maxIters,...
+                    minParamChange, minErrorChange);
     end
     
     % Kwak optimization
