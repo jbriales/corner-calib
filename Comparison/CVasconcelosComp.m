@@ -1,4 +1,4 @@
-classdef CVasconcelosComp < handle
+classdef CVasconcelosComp < handle & CBaseComp
         
     properties
         Linear
@@ -8,16 +8,18 @@ classdef CVasconcelosComp < handle
         
         % Constructor
         function obj = CVasconcelosComp (Nsim, cam_sd_N, scan_sd_N, N_co_N)
-            obj.Linear     = cell(cam_sd_N, scan_sd_N, Nsim);
+            obj.Linear     = cell(cam_sd_N, scan_sd_N, N_co_N, Nsim);
         end
         
-        function optim( obj, T_planes, lidar_points, cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it )
-          
-            [T, ~,~,~,~] = lccMinSol(T_planes,lidar_points);
-            x_v = pose_inverse(T); x_v(1:3,4) = x_v(1:3,4)/1000;
+        function optim( obj, checkerOptim )
+            % Set indexes for current optimization
+            cam_sd_N_it = obj.idx_cam_sd;
+            scan_sd_N_it = obj.idx_scan_sd;
+            N_co_N_it = obj.idx_N_co;
+            Nsim_it = obj.idx_Nsim;
             
-            obj.Linear(cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it)  = {x_v};
-           
+            [R_v,t_v] = checkerOptim.optimizeRt_Vasc;
+            obj.Linear(cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it)  = {[R_v t_v]};
         end
         
         

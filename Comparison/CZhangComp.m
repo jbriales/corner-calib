@@ -1,4 +1,4 @@
-classdef CZhangComp < handle
+classdef CZhangComp < handle & CBaseComp
         
     properties
         Linear
@@ -11,13 +11,15 @@ classdef CZhangComp < handle
             obj.Linear     = cell(cam_sd_N, scan_sd_N, N_co_N, Nsim);
         end
         
-        function optim( obj, T_planes, lidar_points, cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it )
-          
-            [T, ~,~,~,~] = lccZhang(T_planes,lidar_points);
-            x_z = pose_inverse(T); x_z(1:3,4) = x_z(1:3,4)/1000;
+        function optim( obj, checkerOptim )
+            % Set indexes for current optimization
+            cam_sd_N_it = obj.idx_cam_sd;
+            scan_sd_N_it = obj.idx_scan_sd;
+            N_co_N_it = obj.idx_N_co;
+            Nsim_it = obj.idx_Nsim;
             
-            obj.Linear(cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it)  = {x_z};
-           
+            [R_z,t_z] = checkerOptim.optimizeRt_Zhang;            
+            obj.Linear(cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it)  = {[R_z t_z]};
         end
         
     end
