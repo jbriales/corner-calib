@@ -156,6 +156,8 @@ end
 
 % % ---------- Vasconcelos -------------------------
 if WITHZHANG
+    checkerOptim.setInitialRotation( Rig.R_c_s );
+    checkerOptim.setInitialTranslation( Rig.t_c_s );
 %     [T_planes,lidar_points] = checkerboard.getCalibPlanes( Rig, check_corresp );
 %     [T, ~,~,~,~] = lccMinSol(T_planes,lidar_points);
 %     [T_z, ~,~,~,~] = lccZhang(T_planes, lidar_points);

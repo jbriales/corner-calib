@@ -9,13 +9,17 @@ classdef CComparisonNoise < handle
         ZhangComp       % Zhang's algorithm
         VasconcelosComp % Vasconcelos' method
         
-        N_sim           % Number of simulations performed
+        N_sim           % Number of simulations performed for each tuple
         
         cam_sd_n        % Camera noise levels
         scan_sd_n       % Lidar noise levels
-        N_co_n          % Number of corr levels
+        N_co_n          % Number of correspondences levels
         
-        
+        % Commond indexes for all possible dimensions
+        idx_cam_sd
+        idx_scan_sd
+        idx_N_co
+        idx_Nsim
     end
     
     methods
@@ -37,12 +41,18 @@ classdef CComparisonNoise < handle
             obj.N_co_n          = N_co_n;
             
             obj.N_sim           = N_sim;
-            
-            
+        end
+        
+        % Function to automatically update indexes of current optimization
+        % in all Comparison objects
+        function obj = setIndexes( obj, idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim )
+            obj.TrihedronComp.setIndexes( idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim );
+            obj.KwakComp.setIndexes( idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim );
+            obj.ZhangComp.setIndexes( idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim );
+            obj.VasconcelosComp.setIndexes( idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim );
         end
         
         function obj = plotCameraNoise( obj, x_gt )
-
             % Plot options
             plot_sim_file = fullfile( pwd, 'plotCameraNoise.ini' );
             plotOpts = readConfigFile( plot_sim_file );
@@ -126,7 +136,6 @@ classdef CComparisonNoise < handle
             a = repmat(cam_sd_vec,1,N_plots);
 %             b = [repmat({'Trihedron'},1,3), repmat({'Kwak'},1,size(obj.cam_sd_n,2))];
             boxplot(R_err,{a,b},'colors', repmat(color,size(obj.cam_sd_n,2),1), 'factorgap',[5 0.05],'plotstyle','compact');
-           
         end
         
         function obj = plotLidarNoise( obj, x_GT )

@@ -1,4 +1,4 @@
-classdef CTrihedronComp < handle
+classdef CTrihedronComp < handle & CBaseComp
     
     properties
         %Linear
@@ -23,7 +23,12 @@ classdef CTrihedronComp < handle
             obj.Global           = cell(cam_sd_N, scan_sd_N, N_co_N, Nsim);
         end
         
-        function optim( obj, triOptim, Rig, cam_sd_N_it, scan_sd_N_it, N_co_N_it, Nsim_it, WITHRANSAC )
+        function optim( obj, triOptim, WITHRANSAC )
+            % Set indexes for current optimization
+            cam_sd_N_it = obj.idx_cam_sd;
+            scan_sd_N_it = obj.idx_scan_sd;
+            N_co_N_it = obj.idx_N_co;
+            Nsim_it = obj.idx_Nsim;
             
             if WITHRANSAC
                 triOptim.filterRotationRANSAC;
@@ -38,7 +43,6 @@ classdef CTrihedronComp < handle
                 triOptim.disp_N_t_inliers;
             end
             R0_for_t = R_c_s_w;
-            triOptim.setInitialTranslation( Rig.t_c_s + 0.05*randn(3,1) );
             
             t_3D_nw = triOptim.optimizeTranslation_3D_NonWeighted( R0_for_t );
             t_3D_w  = triOptim.optimizeTranslation_3D_Weighted( R0_for_t );

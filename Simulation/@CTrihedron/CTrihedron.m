@@ -59,8 +59,10 @@ classdef CTrihedron < CPattern
                 
                 if abs(p_center(1)) > tan(SimCam.FOVh/2) || ...
                         abs(p_center(2)) > tan(SimCam.FOVv/2)
-                    warning('Center out of Camera FOV');
-                    keyboard
+                    warning('Trihedron: Center out of Camera FOV');
+                    uv_proj = [];
+                    uv_pixels = [];
+                    return
                 end
                 center_pixels = makeinhomogeneous( SimCam.K * p_center );
                 
@@ -95,8 +97,15 @@ classdef CTrihedron < CPattern
                     [~, ind_min] = min( intersections(k,ind_pos) );
                     ind = ind_pos( ind_min );
                     P_Cam{k} = hnormalise( makeinhomogeneous( SimCam.T \ makehomogeneous( intersections(:,ind) ) ) );
+                    
+                    if isempty(P_Cam{k})
+                        % Could happen because inf_pt is projected INSIDE FOV
+                        warning('Trihedron: Not all points were projected')
+                        uv_proj = [];
+                        uv_pixels = [];
+                        return
+                    end
                 end
-                
                 frustum_pixels = makeinhomogeneous( SimCam.K * cell2mat(P_Cam) );
                 
                 % Concatenate points
@@ -114,49 +123,21 @@ classdef CTrihedron < CPattern
         function co = getCorrespondence( obj, Rig )
             % Camera data
             [~, img_pts] = obj.getProjection( Rig.Camera );
-
-            [N_im, c, A_co, L_P2, A_L_P2] = obj.getCalibratedCornerData( img_pts, Rig.Camera );
-            R0 = Rig.Camera.R'; % Initial estimate for R_c_w
-            [R_c_w, A_R_c_w, A_eps_c_w] = obj.getWorldNormals( R0, N_im, c, A_co );
+            if ~isempty(img_pts)
+                [N_im, c, A_co, L_P2, A_L_P2] = obj.getCalibratedCornerData( img_pts, Rig.Camera );
+                R0 = Rig.Camera.R'; % Initial estimate for R_c_w
+                [R_c_w, A_R_c_w, ~] = obj.getWorldNormals( R0, N_im, c, A_co );
+            else
+                co = [];
+                return
+            end
             
             % Lidar data            
-            [l,A_l,p,A_p,q,A_q, lin,seg] = ...
+            [l,A_l,~,~,q,A_q, ~,~] = ...
                 obj.computeScanCorner( Rig.Lidar, 0 ); % Debug = 0
-            if 1
-                co = CTrihedronObservation( R_c_w, A_R_c_w, L_P2, A_L_P2,...
-                    l, A_l, [], [], q, A_q );
-            else
-                thereis_line   = cellfun(@(x)~isempty(x), l);
-                thereis_corner = cellfun(@(x)~isempty(x), q);
-                if all(thereis_corner) && all(thereis_line)
-                    CompleteCO = true;
-                else
-                    CompleteCO = false;
-                end
-                
-                %% Store data for final optimisation
-                %tic
-                lab = [1 2 3];
-                co.complete = CompleteCO;
-                co.thereis_line = thereis_line;        % Line - rotation correspondence
-                co.lab_line = lab(thereis_line);
-                co.thereis_corner = thereis_corner;    % Corner - translation correspondence
-                co.lab_corner = lab(thereis_corner);
-                
-                % For rotation optimization
-                co.R_c_w   = R_c_w;     % Normal vectors to world planes (in Camera SR)
-                co.A_R_c_w = A_R_c_w;
-                co.l       = l;          % Direction vector of LIDAR segments (in LIDAR SR)
-                co.A_l     = A_l;
-                co.A_lh    = A_lh;
-                
-                % For translation optimization
-                co.L_P2    = L_P2;
-                % TODO: Compute N_repr = L_P2 / norm(L_P2)
-                %             co.N_repr  = N_repr;                   % Normal vectors to reprojection planes (in Camera SR)
-                co.q       = q;                        % 2D (XY) Corner points (in LIDAR SR)
-                co.A_q     = A_q; 
-            end
+
+            co = CTrihedronObservation( R_c_w, A_R_c_w, L_P2, A_L_P2,...
+                l, A_l, [], [], q, A_q );
         end
         
         % Get calibrated data from corner (line normals, center and
