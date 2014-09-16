@@ -4,6 +4,15 @@ classdef CBaseOptimization < handle % handle for compatibility with C...Optimiza
     %   Detailed explanation goes here
     
     properties
+        obs     % Array of Pattern observations
+        Nobs    % Parameter to control set of used observations (1:Nobs)
+    end
+    
+    properties (Dependent)
+        NallObs % Total number of observations stored in obs
+    end
+    
+    properties
         debug_level % Verbose level when optimizing
         maxIters    % Max number of iterations in LM optimization
         minParamChange   % Minimum change in param (norm2) to stop
@@ -60,6 +69,14 @@ classdef CBaseOptimization < handle % handle for compatibility with C...Optimiza
                 'minErrorChange', obj.minErrorChange);
         end
         
+        % Load new observation
+        function obj = stackObservation( obj, obs )
+            if ~isempty( obs )
+                obj.obs(end+1) = obs;
+                obj.Nobs = obj.NallObs;
+            end
+        end
+        
         function h = plotCostFunction( obj, gv, W, FE, Fx, x0 )
             Ngv = length(gv);
             [w_i,w_j] = meshgrid( gv );
@@ -109,6 +126,30 @@ classdef CBaseOptimization < handle % handle for compatibility with C...Optimiza
              inc = 2*dist/obj.plot_res;
              plot_gv  = -dist:inc:+dist;
         end
+        
+        function setNobs( obj, Nobs )
+            if Nobs > obj.NallObs
+                warning('Nobs = %d bigger than NallObs = %d\nSetting Nobs = %d',Nobs,obj.NallObs,obj.NallObs)
+                obj.Nobs = obj.NallObs;
+            else
+                obj.Nobs = Nobs;
+            end
+        end
+        
+        % Get-methods
+        function NallObs = get.NallObs( obj )
+            NallObs = length( obj.obs );
+        end
+                
+        % Set-methods
+%         function set.Nobs(obj, Nobs)
+%             if Nobs > obj.NallObs
+%                 warning('Nobs = %d bigger than NallObs = %d',Nobs,obj.NallObs)
+%                 obj.Nobs = obj.NallObs;
+%             else
+%                 obj.Nobs = Nobs;
+%             end
+%         end
     end
     
 end

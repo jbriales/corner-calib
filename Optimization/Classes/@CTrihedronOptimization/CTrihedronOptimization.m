@@ -4,8 +4,6 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
     %   Detailed explanation goes here
     
     properties
-        obs     % Array of CTrihedronObservation
-        
         % Auxiliar variables
         K   % Camera intrinsic matrix (for translation optimization)
         
@@ -61,17 +59,6 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             
             % Commented because is dependent now
 %             obj.mask_RANSAC_R_outliers = []; % Initialize as empty
-        end
-        
-        %% Load new observation
-        function obj = stackObservation( obj, obs )
-            if ~isempty( obs )
-                if isa( obs, 'CTrihedronObservation' )
-                    obj.obs(end+1) = obs;
-                else
-                    error('The loaded observation is not of class ''CTrihedronObservation''');
-                end
-            end
         end
         
         %% Filter correspondences with RANSAC
@@ -331,14 +318,14 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         %% Get-functions
         % For rotation
         function cam_N = get.cam_N( obj )
-            cam_N = [obj.obs.cam_R_c_w];
+            cam_N = [obj.obs(1:obj.Nobs).cam_R_c_w];
             % Mask with existing measures and not-inliers
             mask_valid = obj.mask_LRF_V & (~obj.mask_RANSAC_R_outliers);
             cam_N = cam_N(:, mask_valid);
         end
         
         function LRF_V = get.LRF_V( obj )
-            LRF_V = [obj.obs.LRF_v];
+            LRF_V = [obj.obs(1:obj.Nobs).LRF_v];
             % Remove non-observed data: Not necessary really (already empty)
             % Remove outliers: Set as empty observations
             mask_valid = obj.mask_LRF_V & (~obj.mask_RANSAC_R_outliers);
@@ -349,21 +336,21 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         
         % For translation
         function cam_L = get.cam_L( obj )
-            cam_L = [obj.obs.cam_l];
+            cam_L = [obj.obs(1:obj.Nobs).cam_l];
             % Mask with existing measures and not-inliers
             mask_valid = obj.mask_LRF_Q & (~obj.mask_RANSAC_t_outliers);
             cam_L = cam_L(:, mask_valid);
         end
         
         function cam_reprN = get.cam_reprN( obj )
-            cam_reprN = [obj.obs.cam_reprN];
+            cam_reprN = [obj.obs(1:obj.Nobs).cam_reprN];
             % Mask with existing measures and not-inliers
             mask_valid = obj.mask_LRF_Q & (~obj.mask_RANSAC_t_outliers);
             cam_reprN = cam_reprN(:, mask_valid);
         end
         
         function LRF_Q = get.LRF_Q( obj )
-            LRF_Q = [obj.obs.LRF_q];
+            LRF_Q = [obj.obs(1:obj.Nobs).LRF_q];
             % Remove non-observed data: Not necessary really (already empty)
             % Remove outliers: Set as empty observations
             mask_valid = obj.mask_LRF_Q & (~obj.mask_RANSAC_t_outliers);
@@ -373,16 +360,16 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         end
         
         function mask_LRF_V = get.mask_LRF_V( obj )
-            mask_LRF_V = [obj.obs.thereis_LRF_v];
+            mask_LRF_V = [obj.obs(1:obj.Nobs).thereis_LRF_v];
         end
         function mask_LRF_Q = get.mask_LRF_Q( obj )
-            mask_LRF_Q = [obj.obs.thereis_LRF_q];
+            mask_LRF_Q = [obj.obs(1:obj.Nobs).thereis_LRF_q];
         end
         function mask_RANSAC_R_outliers = get.mask_RANSAC_R_outliers( obj )
-            mask_RANSAC_R_outliers = [obj.obs.is_R_outlier];
+            mask_RANSAC_R_outliers = [obj.obs(1:obj.Nobs).is_R_outlier];
         end
         function mask_RANSAC_t_outliers = get.mask_RANSAC_t_outliers( obj )
-            mask_RANSAC_t_outliers = [obj.obs.is_t_outlier];
+            mask_RANSAC_t_outliers = [obj.obs(1:obj.Nobs).is_t_outlier];
         end
         
         % More functions
