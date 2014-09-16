@@ -11,7 +11,7 @@ classdef CConfigCamera
     
     properties (SetAccess = protected ) % Only changeable through constructor
         K       % Intrinsic calibration matrix
-        res     % Image resolution (height x width)
+        res     % Image resolution (width x height)
         f       % Focal length
         sd      % Standard Deviation in image pixels
         
@@ -36,10 +36,10 @@ classdef CConfigCamera
             obj.f  = f;
             obj.sd = sd;
             
-            obj.ax     = [ 1 res(2) 1 res(1) ]; 
+            obj.ax     = [ 1 res(1) 1 res(2) ]; 
             obj.border = [ 1 1 0 0
                            0 0 1 1
-                           obj.ax ];
+                           -obj.ax ];
                        
             % TODO: Check formulae
             obj.FOVh = 2 * atan( K(1,3)/K(1,1) );
