@@ -17,7 +17,7 @@ classdef CCorner < CPattern
     methods
                
         % Constructor
-        function obj = CCorner( R, t, L, betad )
+        function obj = CCorner( L, R, t, betad )
             if ~exist('R','var')
 %                 R = eye(3);
                 R = expmap( [-1 +1 0], deg2rad(-45) );
@@ -60,17 +60,71 @@ classdef CCorner < CPattern
             obj.p3D(:,5:6) = obj.face{1}.p3D(:,[2 3]);            
         end
         
+        % Get array of projection of interest points in pattern
+        function [uv_proj, uv_pixels] = getProjection( obj, SimCam )
+            % The order of the output is Center - Right - Left
+            if 0 % Project extreme points of pattern (irreal results)
+                [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
+            else % Simulate projection of pattern lines (as in reality)
+                % Project couples of points
+                P_Cam = makeinhomogeneous( SimCam.T \ makehomogeneous(obj.p3D) );
+                % Check all points are in front of camera
+                if any( P_Cam(3,:)<=0 )
+                    warning('Corner: Point behind camera')
+                    uv_proj = [];
+                    uv_pixels = [];
+                    return
+                end
+                P_Img = makeinhomogeneous( SimCam.K * P_Cam );
+                P_Lin = mat2cell( P_Img, 2, [2 2 2] );
+                uv_pixels = cell(1,3);
+                for k=1:3 % Center, Left, Right
+                    mask_inside = SimCam.isInside(P_Lin{k});
+                    p = { P_Lin{k}(:,1), P_Lin{k}(:,2) };
+                    if ~all(mask_inside)
+                        lin = cross( makehomogeneous(p{1}), makehomogeneous(p{2}) );
+                        inter_pts = makeinhomogeneous( skew(lin) * SimCam.border );
+                        inter_pts = inter_pts(:,SimCam.isInside(inter_pts));
+                        
+                        % All intersection points could lie outside
+                        if isempty(inter_pts)
+                            warning('Corner: There is a line out of FOV')
+                            uv_proj = [];
+                            uv_pixels = [];
+                            return
+                        end
+                        
+                        for idx=1:2
+                            if ~mask_inside(idx)
+                                [~,ind_min] = min( sum((inter_pts - repmat(p{idx},1,2)).^2,1) );
+                                p{idx} = inter_pts(:,ind_min);
+                            end
+                        end
+                    end
+                    uv_pixels{k} = cell2mat( p );
+                end
+                uv_pixels = cell2mat( uv_pixels );
+                
+                % Apply gaussian noise to pixels
+                uv_pixels = uv_pixels + SimCam.sd * randn(2,size(uv_pixels,2));
+                
+                % Update canonical projection space with noise
+                uv_proj   = SimCam.K \ makehomogeneous( uv_pixels );
+            end
+        end
+        
         % Get 2x3 cell array with correspondences (lines and points)
-        function corresp = getCorrespondence( obj, Rig )
+        function obs = getCorrespondence( obj, Rig )
             % Get the data and the parameters from the Lidar & Camera                        
-            [xy, range, angles, idxs] = obj.getScan( Rig.Lidar );
-            [uv_proj, uv_pixels]      = obj.getProjection( Rig.Camera );
-
             pts = obj.getScanFeatures( Rig.Lidar );
             lines = obj.getImageFeatures( Rig.Camera );
             
-            % Create the output cell array
-            corresp = CCornerObservation( lines, pts );
+            % Create the output observation object
+            if isempty( pts ) || isempty( lines )
+                obs = [];
+            else
+                obs = CCornerObservation( lines, pts );
+            end
             
             % DEBUG:
 %             figure, hold on
@@ -98,7 +152,18 @@ classdef CCorner < CPattern
             [xy, range, angles, idxs] = obj.getScan( SimLRF );
             theta   = SimLRF.FOVd / SimLRF.N ; 
             
-            % Fit left and right scan line 
+            for i=1:length(xy)
+                if size(xy{i},2)<=1
+                    xy{i} = [];
+                end
+            end
+            if any( cellfun(@(x)isempty(x),xy) )
+                warning('SimLRF could not get points on Corner');
+                pts = [];
+                return
+            end
+            
+            % Fit left and right scan line
             [~, ~, ~, ~, lin_s_l] = computeSegmentSVD( xy{2} , 0, 0);
             [~, ~, ~, ~, lin_s_r] = computeSegmentSVD( xy{1} , 0, 0);
             
@@ -138,6 +203,10 @@ classdef CCorner < CPattern
             
             % Get the data and the parameters from the Camera                        
             [uv_proj, uv_pixels] = obj.getProjection( SimCam );
+            if isempty(uv_proj)
+                lines = [];
+                return
+            end
             K = SimCam.K;
             % Transform and assign the image lines to the output cell array
             for i = 1:3                
@@ -147,9 +216,6 @@ classdef CCorner < CPattern
                 lines{i} = l;         
             end         
         end
-        
-        % Call to the optim method in an extern file
-        obj = optim(obj, corresp, x0, weighted, Rig);
         
         % Plot features
         function h = plotScanFeatures( obj, SimLRF )

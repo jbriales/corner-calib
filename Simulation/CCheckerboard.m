@@ -19,7 +19,7 @@ classdef CCheckerboard < CPattern & CPlane3D
     
     methods
         % Constructor
-        function obj = CCheckerboard( R, t, L, Ndiv )
+        function obj = CCheckerboard( L, R, t, Ndiv )
             if ~exist('R','var')
 %                 R = eye(3);
                 R = RotationZ(deg2rad(45))*RotationY(deg2rad(45));
@@ -61,6 +61,11 @@ classdef CCheckerboard < CPattern & CPlane3D
             [X,Y] = meshgrid( lower(1):obj.h:upper(1),...
                             lower(2):obj.h:upper(2) );
             p2D = [ X(:), Y(:) ]'; % Give p2D points X-line by line (up-down)
+        end
+        
+        % Get array of projection of interest points in pattern
+        function [uv_proj, uv_pixels] = getProjection( obj, SimCamera )
+            [uv_proj, uv_pixels] = SimCamera.projectPattern( obj );
         end
         
         % Pattern 3D representation

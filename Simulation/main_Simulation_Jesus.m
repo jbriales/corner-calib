@@ -23,19 +23,23 @@ Rig = CSimRig( eye(3), zeros(3,1), R_c_s, t_c_s,... % Extrinsic options
 
 % trihedron = CTrihedron( LPattern );
 % trihedron = CTrihedron( LPattern, eye(3), 3*[-1 -1 0]' );
-trihedron = CTrihedron( LPattern, eye(3), 0*[0 0 -1]' );
-corner = CCorner( expmap( [-1 +1 0], deg2rad(-45) ) );
-checkerboard = CCheckerboard( RotationZ(deg2rad(45))*RotationY(deg2rad(45)) );
+trihedron = CTrihedron( LTrihedron, eye(3), 0*[0 0 -1]' );
+corner = CCorner( LCorner, expmap( [-1 +1 0], deg2rad(-45) ) );
+checkerboard = CCheckerboard( LCheckerboard, RotationZ(deg2rad(45))*RotationY(deg2rad(45)) );
 pattern = { trihedron, corner, checkerboard };
 
-% Generate Rig (Camera) poses
-% [R_w_c, t_w_c] = generate_random_poses( );
-gen_config_file = fullfile( pwd, 'pose_gen.ini' );
-[R_w_Cam, R_w_LRF, t_w_Rig, rand_ang_z, rand_ang_x] = generate_random_poses( gen_config_file, Rig ); % For debug purposes only
-rand_ang_x = rad2deg( rand_ang_x );
-rand_ang_z = rad2deg( rand_ang_z );
-Nsamples = length(t_w_Rig);
-corresp  = cell(2,3,Nsamples);
+% Generate Rig (Camera) poses for different patterns
+% Trihedron
+gen_config_file = fullfile( pwd, 'pose_gen_trihedron.ini' );
+[R_w_Cam_Trihedron, R_w_LRF_Trihedron, t_w_Rig_Trihedron, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
+
+% Corner
+gen_config_file = fullfile( pwd, 'pose_gen_corner.ini' );
+[R_w_Cam_Corner, R_w_LRF_Corner, t_w_Rig_Corner, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
+
+% Checkerboard
+gen_config_file = fullfile( pwd, 'pose_gen_checkerboard.ini' );
+[R_w_Cam_Checkerboard, R_w_LRF_Checkerboard, t_w_Rig_Checkerboard, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
 
 tic
 optim_config_file = fullfile( pwd, 'optim_config.ini' );
@@ -51,25 +55,25 @@ cornerOptim = CCornerOptimization( K,...
     debug_level, maxIters,...
     minParamChange, minErrorChange);
 
-for i=1:Nsamples      
+for i=1:Nobs
     % Correspondences for Kwak's algorithm
     if WITHCORNER
         % Update reference (LRF) pose in Rig for Corner
-        Rig.updateLRFPose( R_w_LRF{i}, t_w_Rig{i} );
+        Rig.updateLRFPose( R_w_LRF_Corner{i}, t_w_Rig_Corner{i} );
         corr_ = corner.getCorrespondence(Rig);
         cornerOptim.stackObservation( corr_ );
     end
     
     % Correspondences for Vasconcelos and Zhang's algorithm
     % Update reference (LRF) pose in Rig for Checkerboard
-    Rig.updateLRFPose( R_w_LRF{i}, t_w_Rig{i} );
+    Rig.updateLRFPose( R_w_LRF_Checkerboard{i}, t_w_Rig_Checkerboard{i} );
     check_corresp{1,i} = checkerboard.p2D; 
     check_corresp{2,i} = checkerboard.getProjection( Rig.Camera );    
     check_corresp{3,i} = 1000 * cell2mat(checkerboard.getScan( Rig.Lidar ));
     
     % Correspondences for trihedron
     % Update reference (Camera) pose in Rig for Trihedron
-    Rig.updateCamPose( R_w_Cam{i}, t_w_Rig{i} );
+    Rig.updateCamPose( R_w_Cam_Trihedron{i}, t_w_Rig_Trihedron{i} );
     co_ = trihedron.getCorrespondence( Rig );
     triOptim.stackObservation( co_ );
     
@@ -77,13 +81,13 @@ for i=1:Nsamples
         % Need to update Rig poses for plotting
         figure
         subplot(131)
-        Rig.updateCamPose( R_w_Cam{i}, t_w_Rig{i} );
+        Rig.updateCamPose( R_w_Cam_Trihedron{i}, t_w_Rig_Trihedron{i} );
         trihedron.plotScene(Rig.Camera, Rig.Lidar);
         subplot(132)
-        Rig.updateLRFPose( R_w_LRF{i}, t_w_Rig{i} );
+        Rig.updateLRFPose( R_w_LRF_Corner{i}, t_w_Rig_Corner{i} );
         corner.plotScene(Rig.Camera, Rig.Lidar);
         subplot(133)
-        Rig.updateLRFPose( R_w_LRF{i}, t_w_Rig{i} );
+        Rig.updateLRFPose( R_w_LRF_Checkerboard{i}, t_w_Rig_Checkerboard{i} );
         checkerboard.plotScene(Rig.Camera, Rig.Lidar);
         set(gcf,'units','normalized','position',[0 0 1 1]);
         keyboard
@@ -92,6 +96,8 @@ for i=1:Nsamples
 end
 
 % ------------- Trihedron ----------------
+% Set number of observations to use
+triOptim.setNobs(10);
 if WITHTRIHEDRON
     triOptim.setInitialRotation( [ 0 -1  0
                                    0  0 -1
@@ -99,7 +105,9 @@ if WITHTRIHEDRON
     if WITHRANSAC
         triOptim.filterRotationRANSAC;
     end
-    triOptim.disp_N_R_inliers;
+    if WITHVERBOSE
+        triOptim.disp_N_R_inliers;
+    end
     R_c_s_nw = triOptim.optimizeRotation_NonWeighted;
     R_c_s_dw = triOptim.optimizeRotation_DiagWeighted;
     R_c_s_w  = triOptim.optimizeRotation_Weighted;
@@ -111,8 +119,10 @@ if WITHTRIHEDRON
     if WITHRANSAC
         triOptim.filterTranslationRANSAC( Rig.R_c_s ); % Should receive some estimated rotation
     end
-    R0_for_t = R_c_s_w;
+    if WITHVERBOSE
     triOptim.disp_N_t_inliers;
+    end
+    R0_for_t = R_c_s_w;
     triOptim.setInitialTranslation( Rig.t_c_s + 0.05*randn(3,1) );
     t_3D_nw = triOptim.optimizeTranslation_3D_NonWeighted( R0_for_t );
     t_3D_w  = triOptim.optimizeTranslation_3D_Weighted( R0_for_t );
@@ -127,7 +137,11 @@ if WITHTRIHEDRON
 end
 
 % ------------- Kwak -------------------
+cornerOptim.setNobs(10);
 if WITHCORNER
+    if WITHVERBOSE
+        cornerOptim.disp_N_obs;
+    end
     % Generate random input (near GT)
     R_aux = Rig.R_c_s + randn(3,3)*0.08;
     [U,S,V] = svd(R_aux);
@@ -142,15 +156,17 @@ if WITHCORNER
     [R_kC_nw, t_kC_nw] = cornerOptim.optimizeRt_C_NonWeighted;
     
     % Check distance between optimization and initial point
-    fprintf('Kwak (NW): Change in rotation = %f\n',angularDistance(R_k_nw,Rt0(1:3,1:3)));
-    % fprintf('Kwak ( W): Change in rotation = %f\n',angularDistance(R_k_w, Rt0(1:3,1:3)));
-    fprintf('Kwak (CW): Change in rotation = %f\n',angularDistance(R_k_cw, Rt0(1:3,1:3)));
-    fprintf('Kwak-C (NW): Change in rotation = %f\n',angularDistance(R_kC_nw, Rt0(1:3,1:3)));
-    fprintf('Kwak (NW): Change in translation = %f\n',norm(t_k_nw - Rt0(1:3,4)));
-    % fprintf('Kwak ( W): Change in translation = %f\n',norm(t_k_w  - Rt0(1:3,4)));
-    fprintf('Kwak (CW): Change in translation = %f\n',norm(t_k_cw  - Rt0(1:3,4)));
-    fprintf('Kwak-C (NW): Change in translation = %f\n',norm(t_kC_nw  - Rt0(1:3,4)));
-    fprintf('\n\n')
+    if WITHVERBOSE
+        fprintf('Kwak (NW): Change in rotation = %f\n',angularDistance(R_k_nw,Rt0(1:3,1:3)));
+        % fprintf('Kwak ( W): Change in rotation = %f\n',angularDistance(R_k_w, Rt0(1:3,1:3)));
+        fprintf('Kwak (CW): Change in rotation = %f\n',angularDistance(R_k_cw, Rt0(1:3,1:3)));
+        fprintf('Kwak-C (NW): Change in rotation = %f\n',angularDistance(R_kC_nw, Rt0(1:3,1:3)));
+        fprintf('Kwak (NW): Change in translation = %f\n',norm(t_k_nw - Rt0(1:3,4)));
+        % fprintf('Kwak ( W): Change in translation = %f\n',norm(t_k_w  - Rt0(1:3,4)));
+        fprintf('Kwak (CW): Change in translation = %f\n',norm(t_k_cw  - Rt0(1:3,4)));
+        fprintf('Kwak-C (NW): Change in translation = %f\n',norm(t_kC_nw  - Rt0(1:3,4)));
+        fprintf('\n\n')
+    end
 end
 
 % % ---------- Vasconcelos -------------------------
@@ -259,49 +275,52 @@ if WITHPLOTCOST
 end
 
 % ---------- Display the errors -------------------------
-fprintf('(*) -> best current method\n');
-
-if WITHTRIHEDRON
-    fprintf('=============================================================\n');
-    fprintf('Trihedron (non-weighted) rotation error (deg): \t \t %f \n',...
-        angularDistance(R_c_s_nw,Rig.R_c_s) );
-    fprintf('Trihedron (diag-weighted) rotation error (deg): \t %f \n',...
-        angularDistance(R_c_s_dw,Rig.R_c_s) );
-    fprintf('(*) Trihedron (weighted) rotation error (deg): \t \t %f \n',...
-        angularDistance(R_c_s_w,Rig.R_c_s) );
-    fprintf('Trihedron (global W, 3D) rotation error (deg): \t \t %f \n',...
-        angularDistance(R_global,Rig.R_c_s) );
-    fprintf('=============================================================\n');
-    fprintf('Trihedron (non-weighted, 3D) translation error (cm): \t %f \n',...
-        norm(t_3D_nw-Rig.t_c_s)*100 );
-    fprintf('Trihedron (    weighted, 3D) translation error (cm): \t %f \n',...
-        norm(t_3D_w-Rig.t_c_s)*100 );
-    fprintf('Trihedron (non-weighted, 2D) translation error (cm): \t %f \n',...
-        norm(t_2D_nw-Rig.t_c_s)*100 );
-    fprintf('Trihedron (    weighted, 2D) translation error (cm): \t %f \n',...
-        norm(t_2D_w-Rig.t_c_s)*100 );
-    fprintf('Trihedron (    global W, 3D) translation error (cm): \t %f \n',...
-        norm(t_global-Rig.t_c_s)*100 );
+if WITHVERBOSE
+    fprintf('(*) -> best current method\n');
+    
+    if WITHTRIHEDRON
+        fprintf('=============================================================\n');
+        fprintf('Trihedron (non-weighted) rotation error (deg): \t \t %f \n',...
+            angularDistance(R_c_s_nw,Rig.R_c_s) );
+        fprintf('Trihedron (diag-weighted) rotation error (deg): \t %f \n',...
+            angularDistance(R_c_s_dw,Rig.R_c_s) );
+        fprintf('(*) Trihedron (weighted) rotation error (deg): \t \t %f \n',...
+            angularDistance(R_c_s_w,Rig.R_c_s) );
+        fprintf('Trihedron (global W, 3D) rotation error (deg): \t \t %f \n',...
+            angularDistance(R_global,Rig.R_c_s) );
+        fprintf('=============================================================\n');
+        fprintf('Trihedron (non-weighted, 3D) translation error (cm): \t %f \n',...
+            norm(t_3D_nw-Rig.t_c_s)*100 );
+        fprintf('Trihedron (    weighted, 3D) translation error (cm): \t %f \n',...
+            norm(t_3D_w-Rig.t_c_s)*100 );
+        fprintf('Trihedron (non-weighted, 2D) translation error (cm): \t %f \n',...
+            norm(t_2D_nw-Rig.t_c_s)*100 );
+        fprintf('Trihedron (    weighted, 2D) translation error (cm): \t %f \n',...
+            norm(t_2D_w-Rig.t_c_s)*100 );
+        fprintf('Trihedron (    global W, 3D) translation error (cm): \t %f \n',...
+            norm(t_global-Rig.t_c_s)*100 );
+    end
+    
+    if WITHCORNER
+        fprintf('=============================================================\n');
+        fprintf('=============================================================\n');
+        % fprintf('    Kwak (      weighted) rotation error (deg): \t %f \n',   angularDistance(R_k_w, Rig.R_c_s) );
+        fprintf('    Kwak (  non-weighted) rotation error (deg): \t %f \n',   angularDistance(R_k_nw,Rig.R_c_s ));
+        fprintf('(*) Kwak (const-weighted) rotation error (deg): \t %f \n',   angularDistance(R_k_cw,Rig.R_c_s ));
+        fprintf('    Kwak-C (  non-weighted) rotation error (deg): \t %f \n',   angularDistance(R_kC_nw,Rig.R_c_s ));
+        fprintf('=============================================================\n');
+        % fprintf('    Kwak (      weighted) translation error (cm): \t %f \n', 100*norm(t_k_w  - Rig.t_c_s) );
+        fprintf('    Kwak (  non-weighted) translation error (cm): \t %f \n', 100*norm(t_k_nw - Rig.t_c_s) );
+        fprintf('(*) Kwak (const-weighted) translation error (cm): \t %f \n', 100*norm(t_k_cw - Rig.t_c_s) );
+        fprintf('    Kwak-C (  non-weighted) translation error (cm): \t %f \n', 100*norm(t_kC_nw - Rig.t_c_s) );
+    end
+    
+    if WITHZHANG
+        % fprintf('Vasconcelos translation error (cm): \t %f \n', 100 * norm(x_v(1:3,4) - x_gt(1:3,4)) );
+        % fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );
+        
+        % fprintf('Zhang translation error (cm): \t %f \n', 100 * norm(x_z(1:3,4) - x_gt(1:3,4)) );
+        % fprintf('Zhang rotation error (deg): \t %f \n', angularDistance(x_z(1:3,1:3),x_gt(1:3,1:3)) );
+    end
+    toc
 end
-
-if WITHCORNER
-    fprintf('=============================================================\n');
-    fprintf('=============================================================\n');
-    % fprintf('    Kwak (      weighted) rotation error (deg): \t %f \n',   angularDistance(R_k_w, Rig.R_c_s) );
-    fprintf('    Kwak (  non-weighted) rotation error (deg): \t %f \n',   angularDistance(R_k_nw,Rig.R_c_s ));
-    fprintf('(*) Kwak (const-weighted) rotation error (deg): \t %f \n',   angularDistance(R_k_cw,Rig.R_c_s ));
-    fprintf('    Kwak-C (  non-weighted) rotation error (deg): \t %f \n',   angularDistance(R_kC_nw,Rig.R_c_s ));
-    fprintf('=============================================================\n');
-    % fprintf('    Kwak (      weighted) translation error (cm): \t %f \n', 100*norm(t_k_w  - Rig.t_c_s) );
-    fprintf('    Kwak (  non-weighted) translation error (cm): \t %f \n', 100*norm(t_k_nw - Rig.t_c_s) );
-    fprintf('(*) Kwak (const-weighted) translation error (cm): \t %f \n', 100*norm(t_k_cw - Rig.t_c_s) );
-    fprintf('    Kwak-C (  non-weighted) translation error (cm): \t %f \n', 100*norm(t_kC_nw - Rig.t_c_s) );
-end
-
-% fprintf('Vasconcelos translation error (cm): \t %f \n', 100 * norm(x_v(1:3,4) - x_gt(1:3,4)) );
-% fprintf('Vasconcelos rotation error (deg): \t %f \n', angularDistance(x_v(1:3,1:3),x_gt(1:3,1:3)) );
-
-% fprintf('Zhang translation error (cm): \t %f \n', 100 * norm(x_z(1:3,4) - x_gt(1:3,4)) );
-% fprintf('Zhang rotation error (deg): \t %f \n', angularDistance(x_z(1:3,1:3),x_gt(1:3,1:3)) );
-
-toc

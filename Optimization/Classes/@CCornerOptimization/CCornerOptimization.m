@@ -3,12 +3,9 @@ classdef CCornerOptimization < handle & CBaseOptimization
     %and optimize them
     %   Detailed explanation goes here
     
-    properties
-        obs     % Array of CCornerObservation
-        
+    properties       
         % Auxiliar variables
         K   % Camera intrinsic matrix (for translation optimization)
-        
     end
     
     properties (SetAccess=private)
@@ -43,12 +40,7 @@ classdef CCornerOptimization < handle & CBaseOptimization
             
             obj.K = K;
         end
-        
-        %% Load new observation
-        function obj = stackObservation( obj, obs )
-            obj.obs(end+1) = obs;
-        end
-                
+                        
         %% Compute initial estimate
         function obj = setInitialRotation( obj, R0 )
             obj.R0 = R0;
@@ -226,37 +218,6 @@ classdef CCornerOptimization < handle & CBaseOptimization
             R = Rt(1:3,1:3);
             t = Rt(1:3,4);
         end
-%         function [R,t] = optimizeRt_C_Weighted( obj )
-%             Fun = @(Rt) deal( obj.FErr_2D_LineDistance( Rt ) ,...
-%                               obj.FJac_2D_LineDistance( Rt ) ,...
-%                               obj.FWeights_2D_LineDistance( Rt ) );
-%             Rt = obj.optimize( Fun, obj.Rt0, 'SE(3)', true );
-%             R = Rt(1:3,1:3);
-%             t = Rt(1:3,4);
-%         end
-%         function [R,t] = optimizeRt_C_ConstWeighted( obj )
-%             [R,t] = obj.optimizeRt_NonWeighted;
-%             Rt0 = [R,t];
-%             weights = obj.FWeights_2D_LineDistance( Rt0 );
-%             
-%             Fun = @(Rt) deal( obj.FErr_2D_LineDistance( Rt ) ,...
-%                               obj.FJac_2D_LineDistance( Rt ) ,...
-%                               weights );
-%             Rt = obj.optimize( Fun, Rt0, 'SE(3)', true );
-%             R = Rt(1:3,1:3);
-%             t = Rt(1:3,4);
-%         end
-%         function [R,t] = optimizeRt_C_PreWeighted( obj )
-%             [R,t] = obj.optimizeRt_NonWeighted;
-%             Rt0 = [R,t];
-%             
-%             Fun = @(Rt) deal( obj.FErr_2D_LineDistance( Rt ) ,...
-%                               obj.FJac_2D_LineDistance( Rt ) ,...
-%                               obj.FWeights_2D_LineDistance( Rt ) );
-%             Rt = obj.optimize( Fun, Rt0, 'SE(3)', true );
-%             R = Rt(1:3,1:3);
-%             t = Rt(1:3,4);
-%         end
         
         function h = plotRotation_C_CostFunction( obj, R, t )
             gv  = obj.get_plot_gv( obj.plot_dist_R );
@@ -282,7 +243,7 @@ classdef CCornerOptimization < handle & CBaseOptimization
         %% Get-functions
         % For translation
         function cam_L = get.cam_L( obj )
-            cam_L = [obj.obs.cam_l];
+            cam_L = [obj.obs(1:obj.Nobs).cam_l];
             % Mask with existing measures and not-inliers
 %             mask_valid = obj.mask_LRF_Q & (~obj.mask_RANSAC_t_outliers);
 %             cam_L = cam_L(:, mask_valid);
@@ -290,7 +251,7 @@ classdef CCornerOptimization < handle & CBaseOptimization
         end
         
         function LRF_Q = get.LRF_Q( obj )
-            LRF_Q = [obj.obs.LRF_q];
+            LRF_Q = [obj.obs(1:obj.Nobs).LRF_q];
             % Remove non-observed data: Not necessary really (already empty)
             % Remove outliers: Set as empty observations
 %             mask_valid = obj.mask_LRF_Q & (~obj.mask_RANSAC_t_outliers);
@@ -300,12 +261,12 @@ classdef CCornerOptimization < handle & CBaseOptimization
         end
         
         function cam_C_L = get.cam_C_L( obj )
-            cam_C_L = reshape([obj.obs.cam_l],3,[]);
+            cam_C_L = reshape([obj.obs(1:obj.Nobs).cam_l],3,[]);
             cam_C_L = cell2mat( cam_C_L(1,:) );
         end
         
         function LRF_C_Q = get.LRF_C_Q( obj )
-            LRF_C_Q = reshape([obj.obs.LRF_q],3,[]);
+            LRF_C_Q = reshape([obj.obs(1:obj.Nobs).LRF_q],3,[]);
             LRF_C_Q = cell2mat( LRF_C_Q(1,:) );
         end
 
@@ -313,10 +274,16 @@ classdef CCornerOptimization < handle & CBaseOptimization
             Rt0 = [ obj.R0, obj.t0 ];
         end
         function Ncorresp = get.Ncorresp( obj )
-            Ncorresp = 3 * length(obj.obs);
+            Ncorresp = 3 * length(obj.obs(1:obj.Nobs));
         end
         function Ncorresp_C = get.Ncorresp_C( obj )
-            Ncorresp_C = length(obj.obs);
+            Ncorresp_C = length(obj.obs(1:obj.Nobs));
+        end
+        % More functions
+        function disp_N_obs( obj )
+%             Nobs = length(obj.obs);
+            Nobs = obj.Nobs;
+            fprintf('The number of Corner complete observations is %d\n',Nobs);
         end
     end
     
