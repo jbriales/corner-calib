@@ -100,7 +100,6 @@ classdef CCheckerboard < CPattern & CPlane3D
         function T_plane = getCalibPlane( obj, grid_pts, img_pts, K)
             
             % Set the parameters for the plane equation extraction
-%             K        = Rig.Camera.K; Direct input
             fc       = [K(1,1); K(2,2)];
             cc       = [K(1,3); K(2,3)];
             kc       = zeros(5,1);
@@ -118,37 +117,5 @@ classdef CCheckerboard < CPattern & CPlane3D
             T_plane = [[R t*1000];[0 0 0 1]]; % They work in mm            
         end     
 
-        % DEPRECATED
-        % Project the 3D points to the image and estimate the plane eq.
-%         function [T_plane, points] = getCalibPlanes( obj, Rig, corresp )
-%             
-%             % Set the parameters for the plane equation extraction
-%             K        = Rig.Camera.K;
-%             fc       = [K(1,1); K(2,2)];
-%             cc       = [K(1,3); K(2,3)];
-%             kc       = zeros(5,1);
-%             alpha_c  = 0;
-%             max_iter = 20;
-%             th_cond  = 1000000;
-%             
-%             Nsamples = size(corresp,2);
-%             Npoints  = size(corresp{1,1},2);
-%             
-%             for i = 1:Nsamples
-%                 % Project the 3D points to the image plane
-%                 pts_ref = [corresp{1,i} ; zeros(1,Npoints)];
-%                 pts_img = K * corresp{2,i} ;
-%                 pts_img = makeinhomogeneous( pts_img ./ pts_img(3) );
-% 
-%                 [omc,t,R] = compute_extrinsic_init(pts_img,pts_ref,fc,cc,kc,alpha_c);
-%                 [omc,t,R,JJ_kk] = compute_extrinsic_refine(omc,t,pts_img,pts_ref,fc,cc,kc,alpha_c,max_iter,th_cond);
-% 
-%                 T_plane(:,:,i) = [[R t*1000];[0 0 0 1]]; % They work in mm     
-%                 points{1,i}    = corresp{3,i};
-%             end
-%         end     
-        
-        
-        
     end
 end
