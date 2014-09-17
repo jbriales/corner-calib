@@ -29,7 +29,7 @@ checkerboard = CCheckerboard( LCheckerboard, RotationZ(deg2rad(45))*RotationY(de
 pattern = { trihedron, corner, checkerboard };
 
 % Set Simulation properties
-noise_config_file = fullfile( pwd, 'sim_noise.ini' );
+% noise_config_file = fullfile( pwd, 'sim_noise.ini' );
 noiseOpts = readConfigFile( noise_config_file );
 extractStructFields( noiseOpts );
 clear noiseOpts
@@ -194,17 +194,19 @@ for idx_scan_sd=1:scan_sd_N
             end
             
             % Estimate duration of simulation
+%             mean_time = (toc-first_time)/counter_loops;
             mean_time = (toc-first_time)/counter_loops;
-            fprintf('Mean time: %d\tEstimated left duration: %d\n',mean_time,round((total_loops-counter_loops)*mean_time));
+            fprintf('Mean time: %.2f\tEstimated left duration: %.2f\n',mean_time,(total_loops-counter_loops)*mean_time);
+            first_time = toc;
         end
     end
 end
     
 end
-% Plot results in boxplots
-comp.plotCameraNoise( Rig.Rt_c_s )
-
 save(storeFile); % For further repetition
+
+% Plot results in boxplots
+comp.plotCameraNoise;
 end
 
 function co = getCorrectCorrespondence( pattern, Rig )
