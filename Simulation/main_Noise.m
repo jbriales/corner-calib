@@ -129,6 +129,29 @@ for idx_scan_sd=1:scan_sd_N
                     checkerOptim.stackObservation( co );
                     clear co
                 end
+                
+                if WITHPLOTSCENE
+                    % Need to update Rig poses for plotting
+                    figure
+                    if WITHTRIHEDRON
+                        subplot(131)
+                        Rig.updateCamPose( R_w_Cam_Trihedron{idx_N_co}, t_w_Rig_Trihedron{idx_N_co} );
+                        trihedron.plotScene(Rig.Camera, Rig.Lidar);
+                    end
+                    if WITHCORNER
+                        subplot(132)
+                        Rig.updateLRFPose( R_w_LRF_Corner{idx_N_co}, t_w_Rig_Corner{idx_N_co} );
+                        corner.plotScene(Rig.Camera, Rig.Lidar);
+                    end
+                    if WITHZHANG
+                        subplot(133)
+                        Rig.updateLRFPose( R_w_LRF_Checkerboard{idx_N_co}, t_w_Rig_Checkerboard{idx_N_co} );
+                        checkerboard.plotScene(Rig.Camera, Rig.Lidar);
+                    end
+                    set(gcf,'units','normalized','position',[0 0 1 1]);
+                    keyboard
+                    close
+                end
         end
         
         % Optimize only for value of Nsamples in N_co_n
@@ -176,9 +199,8 @@ for idx_scan_sd=1:scan_sd_N
         end
     end
 end
+    
 end
-
-toc
 % Plot results in boxplots
 comp.plotCameraNoise( Rig.Rt_c_s )
 
