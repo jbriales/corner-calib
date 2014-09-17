@@ -108,6 +108,16 @@ classdef CCorner < CPattern
                             end
                         end
                     end
+                    % Check detected line length
+                    line_length = norm( p{1}-p{2} );
+                    if line_length < 15 % Minimum length in pixels for detected line
+                        warning('Corner: The detected line is too short: %f < 15. The observation will be dismissed', line_length);
+                        uv_proj = [];
+                        uv_pixels = [];
+                        return
+                    end
+                    
+                    % All tests passed, store points for new line
                     uv_pixels{k} = cell2mat( p );
                 end
                 uv_pixels = cell2mat( uv_pixels );
