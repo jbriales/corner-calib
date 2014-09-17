@@ -40,6 +40,22 @@ classdef CComparison < handle
             
             obj.N_sim           = N_sim;
         end
+        
+        function dispAvailable( obj )
+            fprintf('==========================================\n');
+            fprintf('Object data:\n')
+            fprintf('==========================================\n');
+            fprintf('Number of simulations for each tuple: %d\n', obj.N_sim);
+            fprintf('Vector of camera noises (pixels):\n');
+            disp(obj.cam_sd_n);
+            fprintf('Vector of LRF noises (m):\n');
+            disp(obj.scan_sd_n);
+            fprintf('Vector of N of observations:\n');
+            disp(obj.N_co_n);
+            fprintf('==========================================\n\n');
+        end
+        
+        
                
         function obj = plotCameraNoise( obj )
             % Set GT from object properties
@@ -73,28 +89,34 @@ classdef CComparison < handle
 
                     % Trihedron error
                     if WITHTRIHEDRON
-                        x = cell2mat(obj.TrihedronComp.(TRIHEDRON_METHOD)(i,scan_sd_it,N_co_it,j));
+                        x = obj.TrihedronComp.(TRIHEDRON_METHOD){i,scan_sd_it,N_co_it,j};
                         R_err_trih(i,j) = angularDistance(x(1:3,1:3),R_gt);
                         t_err_trih(i,j) = norm(x(1:3,4)-t_gt);
                     end
-
+                    
+                    if WITHWASIEL
+                        x_k = obj.KwakComp.Wasielewski{i,scan_sd_it,N_co_it,j};
+                        R_err_wasiel(i,j) = angularDistance(x_k(1:3,1:3),R_gt);
+                        t_err_wasiel(i,j) = norm(x_k(1:3,4)-t_gt);
+                    end
+                    
                     % Corner error
-                    if WITHCORNER
-                        x_k = cell2mat(obj.KwakComp.(KWAK_METHOD)(i,scan_sd_it,N_co_it,j));
+                    if WITHKWAK
+                        x_k = obj.KwakComp.(KWAK_METHOD){i,scan_sd_it,N_co_it,j};
                         R_err_kwak(i,j) = angularDistance(x_k(1:3,1:3),R_gt);
                         t_err_kwak(i,j) = norm(x_k(1:3,4)-t_gt);
                     end
 
                     % Zhang error
                     if WITHZHANG
-                        x_z = cell2mat(obj.ZhangComp.Linear(i,scan_sd_it,N_co_it,j));
+                        x_z = obj.ZhangComp.Linear{i,scan_sd_it,N_co_it,j};
                         R_err_zhang(i,j) = angularDistance(x_z(1:3,1:3),R_gt);
                         t_err_zhang(i,j) = norm(x_z(1:3,4)-t_gt);
                     end
 
                     % Vasconcelos error
                     if WITHVASC
-                        x_v = cell2mat(obj.VasconcelosComp.Linear(cam_sd,scan_sd_it,N_co_it,j));
+                        x_v = obj.VasconcelosComp.Linear{cam_sd,scan_sd_it,N_co_it,j};
                         R_err_vasc(i,j) = angularDistance(x_v(1:3,1:3),R_gt);
                         t_err_vasc(i,j) = norm(x_v(1:3,4)-t_gt);
                     end
@@ -107,7 +129,12 @@ classdef CComparison < handle
                 t_err = [t_err_trih'];
                 b = [repmat({'Trihedron'},1,size(obj.cam_sd_n,2))];
             end
-            if WITHCORNER
+            if WITHWASIEL
+                R_err = [R_err R_err_wasiel'];
+                t_err = [t_err t_err_wasiel'];
+                b = [b, repmat({'Wasiel'},1,size(obj.cam_sd_n,2))];
+            end
+            if WITHKWAK
                 R_err = [R_err R_err_kwak'];
                 t_err = [t_err t_err_kwak'];
                 b = [b, repmat({'Kwak'},1,size(obj.cam_sd_n,2))];
@@ -123,11 +150,18 @@ classdef CComparison < handle
                 b = [b, repmat({'Vasconcelos'},1,size(obj.cam_sd_n,2))];
             end
             
-            N_plots = WITHTRIHEDRON + WITHCORNER + WITHZHANG + WITHVASC;
+            N_plots = WITHTRIHEDRON + WITHWASIEL + WITHKWAK + WITHZHANG + WITHVASC;
             color   = color(1:N_plots,:);                           
             a = repmat(cam_sd_vec,1,N_plots);
 %             b = [repmat({'Trihedron'},1,3), repmat({'Kwak'},1,size(obj.cam_sd_n,2))];
+            figure
+            subplot(211)
             boxplot(R_err,{a,b},'colors', repmat(color,size(obj.cam_sd_n,2),1), 'factorgap',[5 0.05],'plotstyle','compact');
+            set(gca,'YScale','log') 
+            subplot(212)
+            boxplot(t_err,{a,b},'colors', repmat(color,size(obj.cam_sd_n,2),1), 'factorgap',[5 0.05],'plotstyle','compact');
+            set(gca,'YScale','log')
+%             set(gca,'xticklabel',{'Direct care','Housekeeping','Mealtimes','Medication','Miscellaneous','Personal care'})
         end
         
         function obj = plotLidarNoise( obj, x_GT )
