@@ -15,18 +15,14 @@ classdef CComparison < handle
         scan_sd_n       % Lidar noise levels
         N_co_n          % Number of correspondences levels
         
-        % Commond indexes for all possible dimensions
-        idx_cam_sd
-        idx_scan_sd
-        idx_N_co
-        idx_Nsim
+        Rt0              % Store groundtruth Rt for this specific comparison
     end
     
     methods
                
         % Constructor TODO: add propertie GTComp if the GT change every it
-        function obj = CComparisonNoise( N_sim, cam_sd_n, scan_sd_n, N_co_n )
-        
+        function obj = CComparison( Rt0, N_sim, cam_sd_n, scan_sd_n, N_co_n )
+            
             cam_sd_N  = size(cam_sd_n,2);
             scan_sd_N = size(scan_sd_n,2);
             N_co_N    = size(N_co_n,2);            
@@ -36,6 +32,8 @@ classdef CComparison < handle
             obj.ZhangComp       = CZhangComp(N_sim, cam_sd_N, scan_sd_N, N_co_N);         
             obj.VasconcelosComp = CVasconcelosComp(N_sim, cam_sd_N, scan_sd_N, N_co_N);   
             
+            obj.Rt0 = Rt0; % Store groundtruth transformation
+            
             obj.cam_sd_n        = cam_sd_n;
             obj.scan_sd_n       = scan_sd_n;
             obj.N_co_n          = N_co_n;
@@ -43,7 +41,10 @@ classdef CComparison < handle
             obj.N_sim           = N_sim;
         end
                
-        function obj = plotCameraNoise( obj, x_gt )
+        function obj = plotCameraNoise( obj )
+            % Set GT from object properties
+            x_gt = obj.Rt0;
+            
             % Plot options
             plot_sim_file = fullfile( pwd, 'plotCameraNoise.ini' );
             plotOpts = readConfigFile( plot_sim_file );
