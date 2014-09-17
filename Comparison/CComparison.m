@@ -1,4 +1,4 @@
-classdef CComparisonNoise < handle
+classdef CComparison < handle
     %CComparison class to grab data from several simulations(TODO: comment)
     
     % Constructor is object-dependent

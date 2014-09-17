@@ -39,7 +39,7 @@ scan_sd_n = 3*logspace(scan_sd_range(1),scan_sd_range(2),scan_sd_N);
 N_co_N    = size(N_co_n,2);
 
 % Create the output structure for comparison
-comp = CComparisonNoise( Nsim, cam_sd_n, scan_sd_n, N_co_n );
+comp = CComparison( Nsim, cam_sd_n, scan_sd_n, N_co_n );
 
 % Create objects for storage and optimization
 optim_config_file = fullfile( pwd, 'optim_config.ini' );
