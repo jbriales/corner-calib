@@ -16,6 +16,7 @@ p2cam   = xdata((nPlanes+2):(1+7*nPlanes));
 lrsPtsIdx   = 2+7*nPlanes;
 
 ylrs = [];
+% tic
 for i=1:nPlanes  
     clear L
     
@@ -31,9 +32,11 @@ for i=1:nPlanes
     PIlrs = [Rlrs2cam [0;0;0]; -tlrs2cam.'*Rlrs2cam 1]*[Rp2cam [0;0;0]; -tp2cam.'*Rp2cam 1]*[0; 0; 1; 0];
     % Get Laser Lines
     L(1:3,:) = [LrsPts(1:2,:); zeros(1,size(LrsPts,2))];
-    for j=1:size(LrsPts,2)
-        L(4:6,j) = cross(LrsPts(:,j),[0;0;10]);
-    end
+%     for j=1:size(LrsPts,2)
+%         L(4:6,j) = cross(LrsPts(:,j),[0;0;10]);
+%     end
+    % Improve speed
+    L(4:6,:) = -skew([0;0;10]) * LrsPts;
     % Get intersection between lines and plane
     P=IntersectionLinePlane(PIlrs, L);
     % Get error between intersections and laser points
@@ -41,5 +44,6 @@ for i=1:nPlanes
     
     ylrs   = [ylrs err];
 end
+% toc
 
 y = ylrs;

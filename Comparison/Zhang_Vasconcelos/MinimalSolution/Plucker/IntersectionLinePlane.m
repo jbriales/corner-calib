@@ -15,7 +15,9 @@ else
     Points=aux*Planes;
 end
 % Points=Points(1:3,:)*diag(Points(4,:).^-1);
-for i=1:size(Points,2)
-    Points(:,i)=Points(:,i)/Points(4,i);
-end
-Points=Points(1:3,:);
+% for i=1:size(Points,2)
+%     Points(:,i)=Points(:,i)/Points(4,i);
+% end
+% Points=Points(1:3,:);
+% Improve speed
+Points = makeinhomogeneous( Points );
