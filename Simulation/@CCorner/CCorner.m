@@ -96,14 +96,12 @@ classdef CCorner < CPattern
                         
                         if size(inter_pts,2) ~= 2
                             warning('Corner: There was some mistake obtaining FOV intersections. The observation will be dismissed');
-                            keyboard
                             uv_proj = [];
                             uv_pixels = [];
                             return
                         end
                         
                         for idx=1:2
-                            
                             if ~mask_inside(idx)
                                 [~,ind_min] = min( sum((inter_pts - repmat(p{idx},1,2)).^2,1) );
                                 p{idx} = inter_pts(:,ind_min);
