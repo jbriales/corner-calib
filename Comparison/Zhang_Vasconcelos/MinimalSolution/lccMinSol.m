@@ -59,6 +59,11 @@ disp('Initialization ...');
 tic
 [Ti, inl] = laserCamMSACCalib(PIcam,L,rt, Ti); % JESUS: Uses GT to speed filtering
 fprintf('done in %d\n',toc);
+while isempty( inl )
+    warning('No inliers in Vasconcelos: Reducing threshold in o(10)');
+    rt = rt*10;
+    [Ti, inl] = laserCamMSACCalib(PIcam,L,rt, Ti);
+end
 
 if opt
     disp('Optimization ...');
