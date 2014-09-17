@@ -57,6 +57,10 @@ classdef CCheckerboardOptimization < handle & CBaseOptimization
         end
         
         function [R,t] = optimizeRt_Zhang(obj)
+            % Vasconcelos has to be applied first to obtain inliers
+            if isempty(obj.inliers)
+                error('Zhang: No inliers. Vasconcelos has to be applied fist to get inliers');
+            end
             Ti = [obj.R0, obj.t0];
             % Convert from Cam frame to LRF frame (t in [mm])
             Ti = [Ti(1:3,1:3)', -1000*Ti(1:3,1:3)'*Ti(1:3,4)];
