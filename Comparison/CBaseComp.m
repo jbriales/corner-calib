@@ -1,18 +1,37 @@
 classdef CBaseComp < handle
     
-    properties
-        idx_cam_sd  
-        idx_scan_sd 
-        idx_N_co    
-        idx_Nsim    
-    end
-    
-    methods
-        function obj = setIndexes( obj, idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim )
-            obj.idx_cam_sd  = idx_cam_sd;
-            obj.idx_scan_sd = idx_scan_sd;
-            obj.idx_N_co    = idx_N_co;
-            obj.idx_Nsim    = idx_Nsim;
+    % Define static variables through static methods for all common indexes
+    methods (Static = true)
+        function val = idx_cam_sd(newval)
+            persistent currentval;
+            if nargin >= 1
+                currentval = newval;
+            end
+            val = currentval;
+        end
+        
+        function val = idx_scan_sd(newval)
+            persistent currentval;
+            if nargin >= 1
+                currentval = newval;
+            end
+            val = currentval;
+        end
+        
+        function val = idx_N_co(newval)
+            persistent currentval;
+            if nargin >= 1
+                currentval = newval;
+            end
+            val = currentval;
+        end
+        
+        function val = idx_Nsim(newval)
+            persistent currentval;
+            if nargin >= 1
+                currentval = newval;
+            end
+            val = currentval;
         end
     end
     

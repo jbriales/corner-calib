@@ -1,4 +1,4 @@
-function  comparisonObj = main_Noise( )
+function  comp = main_Noise( )
 % Main script for the synthetic simulations with variable noise
 
 % Simulated data for the Extrinsic Calibration of a 2D Lidar and a
@@ -140,7 +140,11 @@ for idx_scan_sd=1:scan_sd_N
             fprintf('Optimization %d of %d\n',counter_loops,total_loops);
             counter_loops = counter_loops + 1;
             
-            comp.setIndexes( idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim );
+            % Set static indexes common for all comp objects
+            CBaseComp.idx_cam_sd( idx_cam_sd );
+            CBaseComp.idx_scan_sd( idx_scan_sd );
+            CBaseComp.idx_N_co( idx_N_co );
+            CBaseComp.idx_Nsim( idx_Nsim );
             % Trihedron optimization
             if WITHTRIHEDRON
                 triOptim.setNobs( N_co_n(idx_N_co) );
@@ -193,7 +197,7 @@ elseif isa(pattern,'CCheckerboard')
     gen_config_file = fullfile( pwd, 'pose_gen_checkerboard.ini' );
 end
 
-while isempty(co) & counter < 500
+while isempty(co) && counter < 500
 
 [R_w_Cam, R_w_LRF, t_w_Rig, ~, ~] = generate_random_poses( 1, gen_config_file, Rig );
 

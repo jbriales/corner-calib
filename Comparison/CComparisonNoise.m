@@ -42,16 +42,7 @@ classdef CComparisonNoise < handle
             
             obj.N_sim           = N_sim;
         end
-        
-        % Function to automatically update indexes of current optimization
-        % in all Comparison objects
-        function obj = setIndexes( obj, idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim )
-            obj.TrihedronComp.setIndexes( idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim );
-            obj.KwakComp.setIndexes( idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim );
-            obj.ZhangComp.setIndexes( idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim );
-            obj.VasconcelosComp.setIndexes( idx_cam_sd, idx_scan_sd, idx_N_co, idx_Nsim );
-        end
-        
+               
         function obj = plotCameraNoise( obj, x_gt )
             % Plot options
             plot_sim_file = fullfile( pwd, 'plotCameraNoise.ini' );
