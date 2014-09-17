@@ -81,13 +81,16 @@ for i=1:N
 end
 R_Cam = R;
 
-% Transform output to cell arrays:
-t = mat2cell( t, 3, ones(1,N) );
-% Camera
-R_Cam = mat2cell( R_Cam, 3, 3, ones(1,N) );
-R_Cam = permute( R_Cam, [1 3 2] );
-% LRF
-R_LRF = mat2cell( R_LRF, 3, 3, ones(1,N) );
-R_LRF = permute( R_LRF, [1 3 2] );
+if N > 1
+    % Transform output to cell arrays:
+    t = mat2cell( t, 3, ones(1,N) );
+    % Camera
+    
+    R_Cam = mat2cell( R_Cam, 3, 3, ones(1,N) );
+    R_Cam = permute( R_Cam, [1 3 2] );
+    % LRF
+    R_LRF = mat2cell( R_LRF, 3, 3, ones(1,N) );
+    R_LRF = permute( R_LRF, [1 3 2] );
+end
 
 end
