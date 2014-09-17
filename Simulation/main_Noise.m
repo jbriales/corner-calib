@@ -199,11 +199,11 @@ while isempty(co) & counter < 500
 
 % Update reference (LRF or Cam) pose in Rig for Pattern
 if isa(pattern,'CTrihedron')
-    Rig.updateCamPose( R_w_Cam{1}, t_w_Rig{1} );
+    Rig.updateCamPose( R_w_Cam, t_w_Rig );
 elseif isa(pattern,'CCorner')
-    Rig.updateLRFPose( R_w_LRF{1}, t_w_Rig{1} );
+    Rig.updateLRFPose( R_w_LRF, t_w_Rig );
 elseif isa(pattern,'CCheckerboard')
-    Rig.updateLRFPose( R_w_LRF{1}, t_w_Rig{1} );
+    Rig.updateLRFPose( R_w_LRF, t_w_Rig );
 end
 
 co = pattern.getCorrespondence(Rig);
