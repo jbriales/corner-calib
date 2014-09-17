@@ -12,6 +12,8 @@ classdef CCheckerboardOptimization < handle & CBaseOptimization
         % Optimized variables
         R0
         t0
+        
+        inliers     % Field to store inliers found by Vasconcelos to use them in Zhang
     end
     
     properties (Dependent) % Array values collected from set of observations
@@ -42,7 +44,12 @@ classdef CCheckerboardOptimization < handle & CBaseOptimization
         
         %% Optimization functions and methods
         function [R,t] = optimizeRt_Vasc(obj)
-            [T, ~,~,~,~] = lccMinSol(obj.plane_T,obj.LRF_pts);
+            Ti = [obj.R0, obj.t0];
+            % Convert from Cam frame to LRF frame (t in [mm])
+            Ti = [Ti(1:3,1:3)', -1000*Ti(1:3,1:3)'*Ti(1:3,4)];
+            [T, ~, obj.inliers,~,~] = lccMinSol(obj.plane_T,obj.LRF_pts,Ti); % Added initial estimate to save time
+            % * Store inliers (planes) to speed Zhang
+            
             % The criterion is different for Vasconcelos (T_S_C) -> Convert
             T = inv(T);
             R = T(1:3,1:3);
@@ -50,7 +57,11 @@ classdef CCheckerboardOptimization < handle & CBaseOptimization
         end
         
         function [R,t] = optimizeRt_Zhang(obj)
-            [T, ~,~,~,~] = lccZhang(obj.plane_T,obj.LRF_pts);
+            Ti = [obj.R0, obj.t0];
+            % Convert from Cam frame to LRF frame (t in [mm])
+            Ti = [Ti(1:3,1:3)', -1000*Ti(1:3,1:3)'*Ti(1:3,4)];
+            [T, ~,~,~,~] = lccZhang(obj.plane_T,obj.LRF_pts, Ti,obj.inliers);
+            obj.inliers = NaN; % Set NaN to check Zhang used them
             % The criterion is different for Zhang (T_S_C) -> Convert
             T = inv(T);
             R = T(1:3,1:3);

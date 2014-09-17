@@ -33,7 +33,7 @@
 %   Ti  - initial lrs-camera calibration.
 %   ri  - initial residue of lrs depths. 
 %      
-function [T, r, inl, Ti, ri] = lccZhang(Tp, Pl, rt, opt)
+function [T, r, inl, Ti, ri] = lccZhang(Tp, Pl, Ti, inl, rt, opt)
 
 if ~exist('rt','var')
     rt = 50;
@@ -51,12 +51,14 @@ np = -reshape(Tp(1:3,3,:),3,N,1);
 d  = sum(np.*reshape(Tp(1:3,4,:),3,N,1));
 
 % CALIBRATION
-disp('Initialization ...');
-[Ti, inl] = laserCamLinearRobust(np.*[d;d;d],Pl,rt);
-disp('done.');
+disp('Initialization done with Vasconcelos inliers...');
+% tic
+% Ti = [ Ti ; 0 0 0 1 ];
+% [Ti, inl] = laserCamLinearRobust(np.*[d;d;d],Pl,rt, Ti); % JESUS: Uses GT to speed filtering
+% fprintf('done in %d\n',toc);
 
 if opt
     disp('Optimization ...');
     [T, r, ri] = optimizeLaserCamCalib(Ti, Tp(:,:,inl), Pl(inl));
-    disp('done.');
+    fprintf('done in %d\n',toc);
 end

@@ -15,8 +15,10 @@ p2cam   = xdata((nPlanes+2):(1+7*nPlanes));
 
 lrsPtsIdx   = 2+7*nPlanes;
 
-ylrs = [];
+% num_data = (length(xdata)-lrsPtsIdx+1)/3;
+% ylrs = [];
 % tic
+err = cell(1,nPlanes);
 for i=1:nPlanes  
     clear L
     
@@ -38,12 +40,16 @@ for i=1:nPlanes
     % Improve speed
     L(4:6,:) = -skew([0;0;10]) * LrsPts;
     % Get intersection between lines and plane
-    P=IntersectionLinePlane(PIlrs, L);
+%     P=IntersectionLinePlane(PIlrs, L);
+    % Avoid call function
+    P = makeinhomogeneous( [PIlrs(4)*eye(3), skew_symetric_v(PIlrs(1:3));
+                               -PIlrs(1:3)',                   zeros(1,3)] * L );
     % Get error between intersections and laser points
-    err = sqrt(sum((LrsPts(1:2,:,1)-P(1:2,:)).^2));
-    
-    ylrs   = [ylrs err];
+    err{i} = sqrt(sum((LrsPts(1:2,:,1)-P(1:2,:)).^2));
+%     err    = sqrt(sum((LrsPts(1:2,:,1)-P(1:2,:)).^2));
+%     ylrs   = [ylrs err];
 end
+ylrs = cell2mat( err );
 % toc
 
 y = ylrs;

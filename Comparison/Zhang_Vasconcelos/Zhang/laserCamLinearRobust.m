@@ -1,4 +1,4 @@
-function [best_T, best_inliers, best_sample] = laserCamLinearRobust(NPI,LrsPts,threshold)
+function [best_T, best_inliers, best_sample] = laserCamLinearRobust(NPI,LrsPts,threshold, Ti)
 
 for i=1:length(LrsPts)
     if size(LrsPts{i},1) == 2
@@ -14,8 +14,9 @@ plane_set = nchoosek(1:N_PLANES,5);
 
 min_cost = inf;
 error = nan(1,5);
+T = Ti; % JESUS: Use input (GT) as best T
 for i = 1:size(plane_set,1)
-    T = ZhangAlgorithm(NPI(:,plane_set(i,:)),LrsPts(plane_set(i,:)));
+%     T = ZhangAlgorithm(NPI(:,plane_set(i,:)),LrsPts(plane_set(i,:)));
     for j=1:N_PLANES
         error(j) = mean(laserCamRes(LrsPts{j},PIcam(:,j),T));
     end

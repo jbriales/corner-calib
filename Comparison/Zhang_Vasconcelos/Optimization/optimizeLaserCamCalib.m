@@ -38,7 +38,8 @@ else
     Err0  = y-ydata;
     
     % levenberg-marquadt error minimization
-    x = lsqcurvefit(@reprojectLaserCalib,x0,xdata,ydata);
+    opts = optimset('display','off');
+    x = lsqcurvefit(@reprojectLaserCalib,x0,xdata,ydata, [],[], opts);
     
     rlrs2cam = [x(1); x(2); x(3)];
     tlrs2cam = [x(4); x(5); x(6)];

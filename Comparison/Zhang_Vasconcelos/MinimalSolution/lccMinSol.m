@@ -30,7 +30,7 @@
 %   ri  - initial residue of lrs depths. 
 %         
 
-function [T, r, inl, Ti, ri] = lccMinSol(Tp, Pl, rt, opt)
+function [T, r, inl, Ti, ri] = lccMinSol(Tp, Pl, Ti, rt, opt)
 
 if ~exist('rt','var')
     rt = 0.00001;
@@ -56,11 +56,13 @@ PIcam = PIcam ./ (ones(4,1)*PIcam(4,:));
 
 % CALIBRATION
 disp('Initialization ...');
-[Ti, inl] = laserCamMSACCalib(PIcam,L,rt);
-disp('done.');
+tic
+[Ti, inl] = laserCamMSACCalib(PIcam,L,rt, Ti); % JESUS: Uses GT to speed filtering
+fprintf('done in %d\n',toc);
 
 if opt
     disp('Optimization ...');
+    tic
     [T, r, ri] = optimizeLaserCamCalib(Ti, Tp(:,:,inl), Pl(inl));
-    disp('done.');
+    fprintf('done in %d\n',toc);
 end
