@@ -59,6 +59,13 @@ classdef CComparison < handle & CStaticComp
             disp(obj.scan_sd_n);
             fprintf('Vector of N of observations:\n');
             disp(obj.N_co_n);
+            fprintf('Complete lines for .ini\n');
+            fprintf('cam_sd_vals  = [ ');
+            fprintf('%f ',obj.cam_sd_n); fprintf(']\n');
+            fprintf('scan_sd_vals = [ ');
+            fprintf('%f ',obj.scan_sd_n); fprintf(']\n');
+            fprintf('Nobs_vals    = [ ');
+            fprintf('%f ',obj.N_co_n); fprintf(']\n');
             fprintf('==========================================\n\n');
         end
         function patterns = getPatterns( obj )
@@ -69,37 +76,70 @@ classdef CComparison < handle & CStaticComp
             methods(end) = []; % Remove mem
         end
         
-        function obj = plotCameraNoise( obj )
-            % Set GT from object properties
-            x_gt = obj.Rt_gt;
-            
+        function checkValue( obj, field, v )
+            for val = v
+                if isempty(find(val==obj.(field),1))
+                    fprintf('%s available values:\n',field);
+                    disp(obj.(field));
+                    error('Non existent value %f for field %s',val,field);
+                end
+            end            
+        end
+        
+        function indexes = getIndexes( obj, field, v )
+            indexes = [];
+            for val = v
+                idx = find(val==obj.(field),1);
+                if isempty(idx)
+                    fprintf('%s available values:\n',field);
+                    disp(obj.(field));
+                    error('Non existent value %f for field %s',val,field);
+                else
+                    indexes(end+1) = idx;
+                end
+            end            
+        end
+        
+        function obj = plotData( obj, cam_sd_vals, scan_sd_vals, Nobs_vals )           
             % Plot options
-            plot_sim_file = fullfile( pwd, 'plotCameraNoise.ini' );
+            plot_sim_file = fullfile( pwd, 'plotBoxplot.ini' );
             plotOpts = readConfigFile( plot_sim_file );
             extractStructFields( plotOpts );
             clear plotOpts;
-
+            
+            % Check size of inputs (only one should be > 1)
+            s = [ length(cam_sd_vals), length(scan_sd_vals), length(Nobs_vals) ];
+            if length(find(s>1)) > 1
+                error('Currently only one variable can be a vector')
+            end
+            [Nx,imax] = max(s); % The number of groups (one for each X value)
+            % Get label
+            vals = {cam_sd_vals, scan_sd_vals, Nobs_vals};
+            xlabels = {'Cam noise','LRF noise','Nobs'};
+            val_label = {};
+            for val = vals{imax};
+                val_label{end+1} = num2str(val);
+            end
+            xlab = xlabels{imax};
+            
             % Check if the scan_sd value is correct
-            if scan_sd_it > size(obj.scan_sd_n,2)
-                error('Value of "scan_sd_it" out of range (max = %i)',size(obj.scan_sd_n,2));
-            end
-            scan_sd = obj.scan_sd_n(scan_sd_it);    
-
-            % Check if the N_samples value is correct 
-            if N_co_it > size(obj.N_co_n,2)
-                error('Value of "N_co_it" out of range (max = %i)',size(obj.N_co_n,2));
-            end
-            N_co    = obj.N_co_n(N_co_it);
+            cam_idxs  = obj.getIndexes('cam_sd_n',cam_sd_vals);
+            scan_idxs = obj.getIndexes('scan_sd_n',scan_sd_vals);
+            Nobs_idxs = obj.getIndexes('N_co_n',Nobs_vals);
 
             % Extract dim x Nsim matrices for representation
             all_R_err = [];
             all_t_err = [];
+            Cval = cell(1,0);
+            Ctag = cell(1,0);
+            N_met = 0;
             for idx_pattern = 1:size(patterns,1)
                 pat = patterns{idx_pattern,1};
                 methods = patterns{idx_pattern,2};
                 for idx_method = 1:length(methods)
                     met = methods{idx_method};
-                    Rt = squeeze(obj.(pat).(met).mem(:,scan_sd_it,N_co_it,:));
+%                     Rt = squeeze(obj.(pat).(met).mem(:,scan_sd_it,N_co_it,:));
+                    Rt = squeeze(obj.(pat).(met).mem(cam_idxs,scan_idxs,Nobs_idxs,:));
                     if size(Rt,2)==1
                         warning('Check squeeze changed dimension order if too many singletons');
                         keyboard
@@ -111,52 +151,33 @@ classdef CComparison < handle & CStaticComp
                     err.(pat).(met).t = t_err;
                     all_R_err = [ all_R_err , R_err' ];
                     all_t_err = [ all_t_err , t_err' ];
+                    
+                    met_label = repmat({met},1,Nx);
+                    Cval = {Cval{:},val_label{:}};
+                    Ctag = {Ctag{:},met_label{:}};
+                    
+                    N_met = N_met+1;
                 end
             end
             err.xtick = num2str( obj.cam_sd_n );
             
             % TODO: Complete options (color, grouping, etc.)
-            boxplot(R_err,'plotstyle','compact');
-            
-            % Plot the errors
-            if WITHTRIHEDRON
-                R_err = [R_err_trih'];
-                t_err = [t_err_trih'];
-                b = [repmat({'Trihedron'},1,size(obj.cam_sd_n,2))];
-            end
-            if WITHWASIEL
-                R_err = [R_err R_err_wasiel'];
-                t_err = [t_err t_err_wasiel'];
-                b = [b, repmat({'Wasiel'},1,size(obj.cam_sd_n,2))];
-            end
-            if WITHKWAK
-                R_err = [R_err R_err_kwak'];
-                t_err = [t_err t_err_kwak'];
-                b = [b, repmat({'Kwak'},1,size(obj.cam_sd_n,2))];
-            end
-            if WITHZHANG
-                R_err = [R_err R_err_zhang'];
-                t_err = [t_err t_err_zhang']; 
-                b = [b, repmat({'Zhang'},1,size(obj.cam_sd_n,2))];
-            end
-            if WITHVASC
-                R_err = [R_err R_err_vasc'];
-                t_err = [t_err t_err_vasc'];
-                b = [b, repmat({'Vasconcelos'},1,size(obj.cam_sd_n,2))];
-            end
-            
-            N_plots = WITHTRIHEDRON + WITHWASIEL + WITHKWAK + WITHZHANG + WITHVASC;
-            color   = color(1:N_plots,:);                           
-            a = repmat(cam_sd_vec,1,N_plots);
-%             b = [repmat({'Trihedron'},1,3), repmat({'Kwak'},1,size(obj.cam_sd_n,2))];
+            color = repmat(rand(N_met,3),Nx,1);
+            Rlab = 'Rotation error (deg)';
+            tlab = 'Translation error (m)';
             figure
             subplot(211)
-            boxplot(R_err,{a,b},'colors', repmat(color,size(obj.cam_sd_n,2),1), 'factorgap',[5 0.05],'plotstyle','compact');
-            set(gca,'YScale','log') 
-            subplot(212)
-            boxplot(t_err,{a,b},'colors', repmat(color,size(obj.cam_sd_n,2),1), 'factorgap',[5 0.05],'plotstyle','compact');
+%             boxplot(all_R_err,{Cval,Ctag},'colors', color, 'factorgap',[5 0.05],'plotstyle','compact');
+            boxplot(all_R_err,{Cval,Ctag},'colors', color, 'factorgap',10,'plotstyle','compact');
             set(gca,'YScale','log')
-%             set(gca,'xticklabel',{'Direct care','Housekeeping','Mealtimes','Medication','Miscellaneous','Personal care'})
+            xlabel(xlab)
+            ylabel(Rlab)
+            subplot(212)
+            boxplot(all_t_err,{Cval,Ctag},'colors', color, 'factorgap',[5 0.05],'plotstyle','compact');
+            set(gca,'YScale','log')
+            xlabel(xlab)
+            ylabel(tlab)
+%             set(gcf,'units','normalized','position',[0 0 1 1]);
         end
         
         function [R_err] = R_err( obj, Rt )
@@ -166,9 +187,14 @@ classdef CComparison < handle & CStaticComp
             t_err = norm( Rt(1:3,4) - obj.Rt_gt(1:3,4) );
         end
         
-        function obj = plotLidarNoise( obj, x_GT )
+        function obj = plotCamNoise( obj )
             %TODO            
         end
+        function obj = plotLidarNoise( obj )
+            %TODO            
+        end
+        
+        
         
     end
     
