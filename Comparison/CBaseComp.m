@@ -1,37 +1,47 @@
-classdef CBaseComp < handle
+classdef CBaseComp < handle & CStaticComp
+    % CBaseComp Basic object for storage of results and some elementary
+    % operations with that data common for all the methods
     
-    % Define static variables through static methods for all common indexes
-    methods (Static = true)
-        function val = idx_cam_sd(newval)
-            persistent currentval;
-            if nargin >= 1
-                currentval = newval;
-            end
-            val = currentval;
+    properties
+%     properties (Access = protected)
+        mem
+    end
+    
+    methods
+        % Constructor
+        function obj = CBaseComp( )
+            obj.mem = obj.preallocate_cell;
         end
         
-        function val = idx_scan_sd(newval)
-            persistent currentval;
-            if nargin >= 1
-                currentval = newval;
-            end
-            val = currentval;
+        % Method to store information in current indexes
+        function obj = storeResult( obj, input )
+            obj.mem{ obj.idx_cam_sd,...
+                     obj.idx_scan_sd,...
+                     obj.idx_N_co,...
+                     obj.idx_N_sim } = input;
         end
         
-        function val = idx_N_co(newval)
-            persistent currentval;
-            if nargin >= 1
-                currentval = newval;
-            end
-            val = currentval;
-        end
+        % Method to extract information
+%         function arr = extractDimension( obj, dim )
+%             switch dim
+%                 case 'cam_sd'
+%                     arr = obj.mem( :, 1, 1, : );
+%                 case 'scan_sd'
+%                     arr = obj.mem( 1, :, 1, : );
+%                 case 'N_co'
+%                     arr = obj.mem( 1, 1, :, : );
+%                 otherwise
+%                     warning('Non valid dimension tag')
+%                     arr = {};
+%             end
+%         end
         
-        function val = idx_Nsim(newval)
-            persistent currentval;
-            if nargin >= 1
-                currentval = newval;
-            end
-            val = currentval;
+        % Auxiliar
+        function empty_cell = preallocate_cell( obj )
+            empty_cell = cell(obj.dim_cam_sd,...
+                              obj.dim_scan_sd,...
+                              obj.dim_N_co,...
+                              obj.dim_N_sim);
         end
     end
     

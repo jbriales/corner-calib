@@ -164,16 +164,16 @@ for idx_scan_sd=1:scan_sd_N
             counter_loops = counter_loops + 1;
             
             % Set static indexes common for all comp objects
-            CBaseComp.idx_cam_sd( idx_cam_sd );
-            CBaseComp.idx_scan_sd( idx_scan_sd );
-            CBaseComp.idx_N_co( idx_N_co );
-            CBaseComp.idx_Nsim( idx_Nsim );
+            comp.idx_cam_sd( idx_cam_sd );
+            comp.idx_scan_sd( idx_scan_sd );
+            comp.idx_N_co( idx_N_co );
+            comp.idx_N_sim( idx_Nsim );
             % Trihedron optimization
             if WITHTRIHEDRON
                 triOptim.setNobs( N_co_n(idx_N_co) );
                 triOptim.setInitialRotation( R0 );
                 triOptim.setInitialTranslation( t0 );
-                comp.TrihedronComp.optim( triOptim, WITHRANSAC );
+                comp.Trihedron.optim( triOptim, WITHRANSAC );
             end
             
             % Kwak optimization
@@ -181,7 +181,7 @@ for idx_scan_sd=1:scan_sd_N
                 cornerOptim.setNobs( N_co_n(idx_N_co) );
                 cornerOptim.setInitialRotation( R0 );
                 cornerOptim.setInitialTranslation( t0 );
-                comp.KwakComp.optim( cornerOptim );
+                comp.Corner.optim( cornerOptim );
             end
             
             % Zhang and Vasconcelos optimization
@@ -189,8 +189,7 @@ for idx_scan_sd=1:scan_sd_N
                 checkerOptim.setNobs( N_co_n(idx_N_co) );
                 checkerOptim.setInitialRotation( R0 );
                 checkerOptim.setInitialTranslation( t0 );
-                comp.VasconcelosComp.optim( checkerOptim );
-                comp.ZhangComp.optim( checkerOptim );
+                comp.Checkerboard.optim( checkerOptim );
             end
             
             % Estimate duration of simulation
@@ -206,7 +205,7 @@ end
 save(storeFile); % For further repetition
 
 % Plot results in boxplots
-comp.plotCameraNoise;
+% comp.plotCameraNoise;
 end
 
 function co = getCorrectCorrespondence( pattern, Rig )
