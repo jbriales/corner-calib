@@ -48,7 +48,7 @@
 %             Alastair Harrison) 
 
 
-function [R, inliers] = ransacFitTransNormals(corresps, thres, feedback)
+function [R, inliers, dist] = ransacFitTransNormals(corresps, thres, feedback)
     
     if nargin == 2
         feedback = 0;
@@ -71,7 +71,7 @@ function [R, inliers] = ransacFitTransNormals(corresps, thres, feedback)
     degenfn   = @isdegenerate;
 
     [R, inliers] = ransac(corresps, fittingfn, distfn, degenfn, s, thres, feedback);
-    
+    [~,~, dist] = correspdist(R, corresps, thres)
     % Perform least squares fit to the inlying points
 %     B = fitplane(linR(:,inliers));
     
@@ -98,7 +98,7 @@ J = cross( R(1:3,1:2) * L, N, 1 )';
 % The plane is defined by a 3x3 matrix, P.  The three columns of P defining
 % three points that are within the plane.
 
-function [inliers, R] = correspdist(R, X, t)
+function [inliers, R, d] = correspdist(R, X, t)
     
     all_n = X(1:3,:);
     all_l = X(4:5,:);
