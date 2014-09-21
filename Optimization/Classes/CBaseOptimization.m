@@ -52,7 +52,7 @@ classdef CBaseOptimization < handle % handle for compatibility with C...Optimiza
             obj.plot_dist_t = plot_dist_t;
             
             if ~exist('plot_dist_R','var')
-                plot_dist_R = deg2rad( 0.2 );
+                plot_dist_R = deg2rad( 3 );
             end
             obj.plot_dist_R = plot_dist_R;
             
@@ -111,12 +111,21 @@ classdef CBaseOptimization < handle % handle for compatibility with C...Optimiza
                     xlabel(labels{1,k});
                     ylabel(labels{2,k});
                     title( titles{k_sub,k} );
-                    surf(w_i,w_j, Err{k_sub});
-                    % Plot GT point
-                    plot3(0,0,err2_GT{k_sub}, '.y', 'LineWidth', 3);
-                    axis([gv(1) gv(end) gv(1) gv(end)]);
-                    shading interp;
-                    view([90 90]);
+                    if 1 % Surf plot
+                        surf(w_i,w_j, Err{k_sub});
+                        contour3(w_i,w_j, Err{k_sub}, 'k');
+                        plot3(0,0,err2_GT{k_sub}, '.y', 'LineWidth', 3);
+                        shading interp;
+                        view([90 90]);
+                        axis([gv(1) gv(end) gv(1) gv(end)])
+%                         axis([gv(1) gv(end) gv(1) gv(end)...
+%                               min(Err{k_sub}(:)) median(Err{k_sub}(:))]);
+                    else
+                        contourf(w_i,w_j, Err{k_sub}, 20);
+                        shading interp;
+                        view([90 90]);
+                        plot(0,0,'.y', 'LineWidth', 3);
+                    end  
                 end
             end
             h = []; % TODO
@@ -125,6 +134,12 @@ classdef CBaseOptimization < handle % handle for compatibility with C...Optimiza
         function plot_gv = get_plot_gv( obj, dist )
              inc = 2*dist/obj.plot_res;
              plot_gv  = -dist:inc:+dist;
+        end
+        
+        function plot_gv = get_plot_log_gv( obj, dist )
+            % TODO
+%              inc = 2*dist/obj.plot_res;
+%              plot_gv  = -dist:inc:+dist;
         end
         
         function setNobs( obj, Nobs )
