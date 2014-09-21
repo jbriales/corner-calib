@@ -31,28 +31,15 @@ classdef CTrihedronObservation
     end
     
     methods
-        function obj = CTrihedronObservation( cam_R_c_w, cam_A_R_c_w, cam_l, cam_A_l,...
+        function obj = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp,...
                 LRF_v, LRF_A_v, LRF_l, LRF_A_l, LRF_q, LRF_A_q )
 
-            obj.cam_R_c_w = cam_R_c_w;
-            obj.cam_A_R_c_w = cam_A_R_c_w;
-            obj.cam_l = cam_l;
-            obj.cam_A_l = cam_A_l;
-            
-            norms = sqrt(sum(cam_l.^2,1));
-            obj.cam_reprN = cam_l ./ repmat( norms, 3,1 ); % Normalize vectors as plane normals
-            % TODO: Check if it is valid using norms as constant in this
-            % case (changing representation of vector)
-            if 0 % Using norm as a constant
-                J_n_l = diag( kron( 1./norms, ones(1,3) ) );
-                obj.cam_A_reprN = J_n_l * cam_A_l * J_n_l';
-            else % Taking into account jacobian of normalization to propagate
-                J_snormalize = @(x) 1/norm(x) * (eye(3) - x*x'/norm(x)^2);
-                J_N_L = blkdiag( J_snormalize( J_snormalize(cam_l(:,1)) ),...
-                    J_snormalize( J_snormalize(cam_l(:,2)) ),...
-                    J_snormalize( J_snormalize(cam_l(:,3)) ) );
-                obj.cam_A_reprN = J_N_L * cam_A_l * J_N_L';
-            end
+            obj.cam_R_c_w = obj_Rtri.X;
+            obj.cam_A_R_c_w = obj_Rtri.A_X;
+            obj.cam_l = obj_LP2.arr;
+            obj.cam_A_l = obj_LP2.A_X;
+            obj.cam_reprN = obj_Nbp.arr;
+            obj.cam_A_reprN = obj_Nbp.A_X;
             
             obj.LRF_v = LRF_v;
             obj.LRF_A_v = LRF_A_v;

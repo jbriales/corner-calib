@@ -119,14 +119,46 @@ classdef CTrihedron < CPattern
             end
         end
         
+        function obj_xi = simulateTOimage( obj, img_pts, sd )
+            % Control variables
+            sigma = sd;
+            A_cp  = sigma * eye(8);
+            
+            % Define the x and A_x structures
+            x   = zeros(5,1);
+            A_x = zeros(5,5,1);
+            
+            % Assignment of auxiliar variables
+            c     = img_pts(:,1);
+            delta = img_pts(:,2:4) - repmat(c,1,3);
+            
+            % Normalization of p directions
+            J_v__ = cell(1,3);
+            v = Manifold.S1.empty(0,3);
+            for i=1:3
+                v(i) = Manifold.S1( delta(:,i) );
+                J_normalize = 1/norm(delta(:,i))^3 * ...
+                    (eye(2) - delta(:,i)*delta(:,i)');
+                J_v__{i} = v(i).DLie * J_normalize;
+            end
+            J = [ eye(2)            , zeros(2,3*2)      ;
+                  -cell2mat(J_v__)' , blkdiag(J_v__{:}) ];
+            A_xi = J * A_cp * J';
+            
+            % Store results in object
+            obj_xi = Cxi( c, v(1), v(2), v(3) );
+            obj_xi.setRepresentationCov( A_xi );
+        end
+        
         % Get 4x3 cell array with correspondences (lines and points)
         function co = getCorrespondence( obj, Rig )
             % Camera data
             [~, img_pts] = obj.getProjection( Rig.Camera );
             if ~isempty(img_pts)
-                [N_im, c, A_co, L_P2, A_L_P2] = obj.getCalibratedCornerData( img_pts, Rig.Camera );
+                obj_xi  = obj.simulateTOimage( img_pts, Rig.Camera.sd );
+                [obj_Nbp, obj_LP2] = obj.getBackprojectedNormals( obj_xi, Rig.Camera.K );
                 R0 = Rig.Camera.R'; % Initial estimate for R_c_w
-                [R_c_w, A_R_c_w, ~] = obj.getWorldNormals( R0, N_im, c, A_co );
+                obj_Rtri = obj.getTrihedronNormals( obj_Nbp, R0 );
             else
                 co = [];
                 return
@@ -136,7 +168,7 @@ classdef CTrihedron < CPattern
             [l,A_l,~,~,q,A_q, ~,~] = ...
                 obj.computeScanCorner( Rig.Lidar, 0 ); % Debug = 0
 
-            co = CTrihedronObservation( R_c_w, A_R_c_w, L_P2, A_L_P2,...
+            co = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp,...
                 l, A_l, [], [], q, A_q );
         end
         
