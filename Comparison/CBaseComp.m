@@ -5,12 +5,18 @@ classdef CBaseComp < handle & CStaticComp
     properties
 %     properties (Access = protected)
         mem
+        cov_R
+        cov_t
+        cov_Rt
     end
     
     methods
         % Constructor
         function obj = CBaseComp( )
-            obj.mem = obj.preallocate_cell;
+            obj.mem    = obj.preallocate_cell;
+            obj.cov_R  = obj.preallocate_cell;
+            obj.cov_t  = obj.preallocate_cell;
+            obj.cov_Rt = obj.preallocate_cell;
         end
         
         % Method to store information in current indexes
@@ -19,6 +25,12 @@ classdef CBaseComp < handle & CStaticComp
                      obj.idx_scan_sd,...
                      obj.idx_N_co,...
                      obj.idx_N_sim } = input;
+        end
+        function obj = store( obj, field, input )
+            obj.(field){ obj.idx_cam_sd,...
+                         obj.idx_scan_sd,...
+                         obj.idx_N_co,...
+                         obj.idx_N_sim } = input;
         end
         
         % Method to extract information
