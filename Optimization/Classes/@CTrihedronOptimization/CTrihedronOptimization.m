@@ -121,6 +121,68 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             H = jacobian' * weights * jacobian;
         end
         
+        function jacobian = FJac_R_NW( obj, R )
+            n_cam = obj.cam_N;
+            v_LRF = obj.LRF_V;
+            
+            % Create two blocks of jacobian: J_eps_N and J_eps_V
+            blockH  = cell(1,N);
+            blockDN = cell(1,N);
+            blockDV = cell(1,N);
+            for i=1:obj.Nobs
+                ni  = n_cam(:,i); % Trihedron normal seen from camera (3x1)
+                vsi = v_LRF(:,i); % Dir vector seen from scanner (2x1)
+                vci = R(:,1:2) * vsi; % Line vector seen from camera (3x1)
+                
+                % Phi is dC/deps = -Sum( cross(R*lsi, ni*(R*lsi)'*ni) )
+                d_phi_ni  = 2 * skew(vci) * (ni*vci' + vci'*ni*eye(3));
+                d_phi_vci = 2 * skew(vci) * (ni*ni') - 2 * skew(ni * vci' * ni);
+                d_vci_vsi = R(:,1:2);
+                d_vci_eps = - skew( R(:,1:2)*vsi );
+                
+                % Derivation wrt l Lie algebra instead of complete space
+                d_vsi_alpha = [ -vsi(2), +vsi(1) ]';
+                
+                % Store blocks of H and D2
+                blockH{i} = d_phi_vci * d_vci_eps;
+                blockDN{i} = d_phi_ni;
+                blockDV{i} = d_phi_vci * d_vci_vsi * d_vsi_alpha;
+            end
+            H = sum( reshape(cell2mat( blockH ),3,3,[]), 3 );
+            D = [ cell2mat( blockDH ), cell2mat( blockDV ) ];
+            jacobian = - H \ D;
+        end
+        function cov = FCov_R_NW( obj, R )
+            N_obs = obj.Nobs;
+            CA_N = cell(1, N_obs);
+            CA_V = cell(1, N_obs);
+            
+            ort = [ 0 -1
+                1  0 ];
+            
+            R12 = R(1:3,1:2); % Only 2 columns are used
+            
+            for i=1:N_obs
+                % Take observation elements which exist and are not
+                % outliers
+                mask_N = obj.obs(i).thereis_LRF_v & (~obj.obs(i).is_R_outlier);
+                                
+                % Correlated covariance of normals to planes
+                A_N = obj.obs(i).cam_A_R_c_w;
+                A_N = mat2cell(A_N,[3 3 3],[3 3 3]);
+                A_N = A_N(mask_N,mask_N);
+                CA_N{i} = cell2mat(A_N);
+                
+                mask_V = obj.obs(i).thereis_LRF_v & (~obj.obs(i).is_R_outlier);
+                
+                % Could be used non-minimal covariance
+                % Input LRF_A_v is a 1x3 cell array (diagonal elements)
+                A_V = obj.obs(i).LRF_A_v;
+                % Remove outlier of existing part of A:V
+                A_V(~mask_V) = [];
+                CA_V{i} = diag(cell2mat(A_V));
+            end
+        
         R = optimizeRotation_NonWeighted( obj )
         R = optimizeRotation_Weighted( obj )
         R = optimizeRotation_DiagWeighted( obj )
@@ -289,8 +351,11 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             x0 = t;
             h  = obj.plotCostFunction( gv, W, FE, Fx, x0 );
         end
-        function h = plotRotation_Global_CostFunction( obj, R, t )
-            gv  = obj.get_plot_gv( obj.plot_dist_R );
+        function h = plotRotation_Global_CostFunction( obj, R, t, dist )
+            if ~exist( 'dist','var' )
+                dist = obj.plot_dist_R;
+            end
+            gv  = obj.get_plot_gv( dist );
             
             FE = @(R)obj.FErr_Global_Ort_3D( R, t );
             W  = obj.FWeights_Global_Ort_3D( R, t );
