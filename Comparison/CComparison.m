@@ -180,11 +180,96 @@ classdef CComparison < handle & CStaticComp
 %             set(gcf,'units','normalized','position',[0 0 1 1]);
         end
         
+        function obj = plot( obj, field, cam_sd_vals, scan_sd_vals, Nobs_vals )
+            % Plot options
+            plot_sim_file = fullfile( pwd, 'plotBoxplot.ini' );
+            plotOpts = readConfigFile( plot_sim_file );
+            extractStructFields( plotOpts );
+            clear plotOpts;
+            
+            % Check size of inputs (only one should be > 1)
+            s = [ length(cam_sd_vals), length(scan_sd_vals), length(Nobs_vals) ];
+            if length(find(s>1)) > 1
+                error('Currently only one variable can be a vector')
+            end
+            [Nx,imax] = max(s); % The number of groups (one for each X value)
+            % Get label
+            vals = {cam_sd_vals, scan_sd_vals, Nobs_vals};
+            xlabels = {'Cam noise','LRF noise','Nobs'};
+            val_label = {};
+            for val = vals{imax};
+                val_label{end+1} = num2str(val);
+            end
+            xlab = xlabels{imax};
+            
+            % Check if the scan_sd value is correct
+            cam_idxs  = obj.getIndexes('cam_sd_n',cam_sd_vals);
+            scan_idxs = obj.getIndexes('scan_sd_n',scan_sd_vals);
+            Nobs_idxs = obj.getIndexes('N_co_n',Nobs_vals);
+
+            % Extract dim x Nsim matrices for representation
+            all_val_plot = [];
+            Cval = cell(1,0);
+            Ctag = cell(1,0);
+            N_met = 0;
+            for idx_pattern = 1:size(patterns,1)
+                pat = patterns{idx_pattern,1};
+                methods = patterns{idx_pattern,2};
+                for idx_method = 1:length(methods)
+                    met = methods{idx_method};
+%                     Rt = squeeze(obj.(pat).(met).mem(:,scan_sd_it,N_co_it,:));
+                    val = squeeze(obj.(pat).(met).(field)(cam_idxs,scan_idxs,Nobs_idxs,:));
+                    if size(val,2)==1
+                        warning('Check squeeze changed dimension order if too many singletons');
+                        keyboard
+                        val = val';
+                    end
+                    val_plot = cell2mat( cellfun(@(x)obj.(field)(x), val, 'UniformOutput',false) );
+%                     err.(pat).(met).R = R_err;
+%                     err.(pat).(met).t = t_err;
+                    values.(pat).(met).(field) = val_plot;
+                    all_val_plot = [ all_val_plot , val_plot' ];
+                    
+                    met_label = repmat({met},1,Nx);
+                    Cval = {Cval{:},val_label{:}};
+                    Ctag = {Ctag{:},met_label{:}};
+                    
+                    N_met = N_met+1;
+                end
+            end
+%             err.xtick = num2str( obj.cam_sd_n );
+            
+            % TODO: Complete options (color, grouping, etc.)
+            color = repmat(rand(N_met,3),Nx,1);
+            medians{1} = median( values.Trihedron.Weighted3D.cov_t' );
+%             medians{2} = median( values.Trihedron.NonWeighted3D.cov_R' );
+            medians{2} = median( values.Trihedron.Global.cov_t' );
+            figure, hold on
+            plot( [5 10 20 50], medians{1}, '-o' )
+            plot( [5 10 20 50], medians{2}, '-o' )
+            
+            val_lab = field;
+            figure
+            boxplot(all_val_plot,{Cval,Ctag},'colors', color, 'factorgap',10,'plotstyle','compact');
+%             set(gca,'YScale','log')
+            xlabel(xlab)
+            ylabel(val_lab)
+%             set(gcf,'units','normalized','position',[0 0 1 1]);
+        end
+        
         function [R_err] = R_err( obj, Rt )
             R_err = angularDistance( Rt(1:3,1:3), obj.Rt_gt(1:3,1:3) );
         end
         function [t_err] = t_err( obj, Rt )
             t_err = norm( Rt(1:3,4) - obj.Rt_gt(1:3,4) );
+        end
+        function [max_eig] = cov_R( obj, cov )
+            s = svd( cov );
+            max_eig = s(1);
+        end
+        function [max_eig] = cov_t( obj, cov )
+            s = svd( cov );
+            max_eig = s(1);
         end
         
         function obj = plotCamNoise( obj )
