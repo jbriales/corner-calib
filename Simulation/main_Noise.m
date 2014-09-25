@@ -34,8 +34,10 @@ noiseOpts = readConfigFile( noise_config_file );
 extractStructFields( noiseOpts );
 clear noiseOpts
 
-cam_sd_n  =   logspace(cam_sd_range(1),cam_sd_range(2),cam_sd_N);
-scan_sd_n = 3*logspace(scan_sd_range(1),scan_sd_range(2),scan_sd_N);
+% cam_sd_n  =   logspace(cam_sd_range(1),cam_sd_range(2),cam_sd_N);
+% scan_sd_n = 3*logspace(scan_sd_range(1),scan_sd_range(2),scan_sd_N);
+cam_sd_n = cam_sd_range;
+scan_sd_n = scan_sd_range;
 N_co_N    = size(N_co_n,2);
 
 % Create the output structure for comparison
@@ -51,10 +53,14 @@ clear optimOpts
 tic
 Nobs = N_co_n(end); %#ok<COLND>
 counter_loops = 1;
-total_loops   = numel(cam_sd_n) * numel(scan_sd_n) * numel(N_co_n) * Nsim;
+% total_loops   = numel(cam_sd_n) * numel(scan_sd_n) * numel(N_co_n) * Nsim;
+total_loops   = numel(cam_sd_n) * numel(N_co_n) * Nsim;
 first_time    = toc;
-for idx_cam_sd=1:cam_sd_N
-for idx_scan_sd=1:scan_sd_N
+for idx_sd=1:cam_sd_N
+    idx_cam_sd = idx_sd;
+    idx_scan_sd = idx_sd;
+% for idx_cam_sd=1:cam_sd_N
+% for idx_scan_sd=1:scan_sd_N
     % Updates the rig
     Rig = CSimRig( eye(3), zeros(3,1), R_c_s, t_c_s,... % Extrinsic options
         N, FOVd, scan_sd_n(idx_scan_sd), d_range,... % Lidar options
@@ -201,7 +207,7 @@ for idx_scan_sd=1:scan_sd_N
     end
 end
     
-end
+% end % cam and lidar separate
 save(storeFile); % For further repetition
 
 % Plot results in boxplots

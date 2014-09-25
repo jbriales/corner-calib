@@ -29,8 +29,18 @@ classdef SO3 < Manifold.Base
             N = size( inc_eps, 2 );
             R = zeros(3,3,N);
             R0 = obj.X;
-            for i=1:N
-                R(:,:,i) = expmap( inc_eps(:,i) ) * R0;
+            
+            if size(inc_eps,2)>1 % Parallel computation
+                if exist('multiprod','file') % manopt tool
+                    R_eps = expmap( inc_eps );
+                    R = multiprod( R_eps, R0 );
+                else
+                    for i=1:N
+                        R(:,:,i) = expmap( inc_eps(:,i) ) * R0;
+                    end
+                end
+            else
+                R = expmap( inc_eps ) * R0;
             end
         end
         
@@ -86,6 +96,43 @@ classdef SO3 < Manifold.Base
             R  = reshape( RR, 3,3, [] );
             [U,~,V] = svd( sum( R, 3 ) );
             mu_R = U*V';
+        end
+        
+        function R = splus_l( R0, inc_eps )
+            % inc_eps can be an array of column vectors
+            N = size( inc_eps, 2 );
+            R = zeros(3,3,N);
+            
+            if size(inc_eps,2)>1 % Parallel computation
+                if exist('multiprod','file') % manopt tool
+                    R_eps = expmap( inc_eps );
+                    R = multiprod( R_eps, R0 );
+                else
+                    for i=1:N
+                        R(:,:,i) = expmap( inc_eps(:,i) ) * R0;
+                    end
+                end
+            else
+                R = expmap( inc_eps ) * R0;
+            end
+        end
+        function R = splus_r( R0, inc_eps )
+            % inc_eps can be an array of column vectors
+            N = size( inc_eps, 2 );
+            R = zeros(3,3,N);
+            
+            if size(inc_eps,2)>1 % Parallel computation
+                if exist('multiprod','file') % manopt tool
+                    R_eps = expmap( inc_eps );
+                    R = multiprod( R0, R_eps );
+                else
+                    for i=1:N
+                        R(:,:,i) = expmap( inc_eps(:,i) ) * R0;
+                    end
+                end
+            else
+                R = expmap( inc_eps ) * R0;
+            end
         end
     end
     
