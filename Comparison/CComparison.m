@@ -100,7 +100,7 @@ classdef CComparison < handle & CStaticComp
             end            
         end
         
-        function obj = plotData( obj, cam_sd_vals, scan_sd_vals, Nobs_vals )           
+        function obj = plotDataOld( obj, cam_sd_vals, scan_sd_vals, Nobs_vals )           
             % Plot options
             plot_sim_file = fullfile( pwd, 'plotBoxplot.ini' );
             plotOpts = readConfigFile( plot_sim_file );
@@ -167,8 +167,7 @@ classdef CComparison < handle & CStaticComp
             tlab = 'Translation error (m)';
             figure
             subplot(211)
-%             boxplot(all_R_err,{Cval,Ctag},'colors', color, 'factorgap',[5 0.05],'plotstyle','compact');
-            boxplot(all_R_err,{Cval,Ctag},'colors', color, 'factorgap',10,'plotstyle','compact');
+            boxplot(all_R_err,{Cval,Ctag},'position',pos_,'colors', color, 'factorgap',0,'whisker',0,'plotstyle','compact');
             set(gca,'YScale','log')
             xlabel(xlab)
             ylabel(Rlab)
@@ -177,8 +176,132 @@ classdef CComparison < handle & CStaticComp
             set(gca,'YScale','log')
             xlabel(xlab)
             ylabel(tlab)
-%             set(gcf,'units','normalized','position',[0 0 1 1]);
+            set(gcf,'units','normalized','position',[0 0 1 1]);
         end
+        
+        function obj = plotData( obj, cam_sd_vals, scan_sd_vals, Nobs_vals )           
+            % Plot options
+            plot_sim_file = fullfile( pwd, 'plotBoxplot.ini' );
+            plotOpts = readConfigFile( plot_sim_file );
+            extractStructFields( plotOpts );
+            clear plotOpts;
+            
+            % Check size of inputs (only one should be > 1)
+            s = [ length(cam_sd_vals), length(scan_sd_vals), length(Nobs_vals) ];
+            if length(find(s>1)) > 1
+                error('Currently only one variable can be a vector')
+            end
+            [Nx,imax] = max(s); % The number of groups (one for each X value)
+            % Get label
+            vals = {cam_sd_vals, scan_sd_vals, Nobs_vals};
+            xlabels = {'Cam noise','LRF noise','Nobs'};
+            val_label = {};
+            for val = vals{imax};
+                val_label{end+1} = num2str(val);
+            end
+            xlab = xlabels{imax};
+            
+            % Check if the scan_sd value is correct
+            cam_idxs  = obj.getIndexes('cam_sd_n',cam_sd_vals);
+            scan_idxs = obj.getIndexes('scan_sd_n',scan_sd_vals);
+            Nobs_idxs = obj.getIndexes('N_co_n',Nobs_vals);
+
+            % Extract dim x Nsim matrices for representation
+            all_R_err = [];
+            all_t_err = [];
+            Cval = cell(1,0);
+            Ctag = cell(1,0);
+            Cleg = cell(1,0);
+            Clab = cell(1,0);
+            N_met = 0;
+            for idx_pattern = 1:size(patterns,1)
+                pat = patterns{idx_pattern,1};
+                methods = patterns{idx_pattern,2};
+                for idx_method = 1:length(methods)
+                    met = methods{idx_method};
+%                     Rt = squeeze(obj.(pat).(met).mem(:,scan_sd_it,N_co_it,:));
+                    Rt = squeeze(obj.(pat).(met).mem(cam_idxs,scan_idxs,Nobs_idxs,:));
+                    if size(Rt,2)==1
+                        warning('Check squeeze changed dimension order if too many singletons');
+                        keyboard
+                        Rt = Rt';
+                    end
+                    R_err = cell2mat( cellfun(@(x)obj.R_err(x), Rt, 'UniformOutput',false) );
+                    t_err = cell2mat( cellfun(@(x)obj.t_err(x), Rt, 'UniformOutput',false) );
+                    err.(pat).(met).R = R_err;
+                    err.(pat).(met).t = t_err;
+                    all_R_err = [ all_R_err , R_err' ];
+                    all_t_err = [ all_t_err , t_err' ];
+                    
+                    met_label = repmat({met},1,Nx);
+                    Cval = {Cval{:},val_label{:}};
+                    Ctag = {Ctag{:},met_label{:}};
+                                       
+                    N_met = N_met+1;
+                end
+            end
+            err.xtick = num2str( obj.cam_sd_n );
+            
+            % Parameters to control the position in X label
+            Npos    = 5;    % gap between samples in X label
+            pos_ini = 1;    % initial value in X label
+            Nsep    = 0.1;  % gap between methods in X label
+            % Load the vector of positions
+            pos_aux = pos_ini:Npos:Npos*Nx;
+            pos_    = pos_aux
+            pos_1   = [];
+            for i = 1:N_met-1
+                pos_ = [pos_ pos_aux+i*Nsep];
+            end
+            
+            color = repmat(rand(N_met,3),Nx,1);
+            Rlab = 'Rotation error (deg)';
+            tlab = 'Translation error (m)';
+            
+            % Boxplot for R
+            h = figure; hold on;
+            boxplot(all_R_err,{Cval,Ctag},'position',sort(pos_),'colors', color, 'factorgap',0,'whisker',0,'plotstyle','compact');
+            bp_ = findobj(h, 'tag', 'Outliers');
+            set(bp_,'Visible','Off');   % Remove the outliers           
+            xlabel(xlab); ylabel(Rlab);
+            % Plot the lines
+            median_ = median(all_R_err);
+            for i = 1:N_met
+                x_ = pos_(1, Nx*(i-1)+1:Nx*i);
+                y_ = median_(1, Nx*(i-1)+1:Nx*i);               
+                plot(x_,y_,'Color',color(i,:),'LineWidth',1.5);
+                Cleg = {Cleg{:}, Ctag{1,Nx*(i-1)+1} };
+            end
+            Clab = {Cval{1,1:Nx}};
+            set(gca,'YScale','log');
+            set(gca,'XTickLabel',{' '});  
+            [legh,objh,outh,outm] = legend(Cleg);
+            set(objh,'linewidth',3);   
+            set(gca,'XTick',pos_aux);
+            set(gca,'XTickLabel',Clab);
+            
+            % Boxplot for t
+            h = figure; hold on;
+            boxplot(all_t_err,{Cval,Ctag},'position',sort(pos_),'colors', color, 'factorgap',0,'whisker',0,'plotstyle','compact');
+            bp_ = findobj(h, 'tag', 'Outliers');
+            set(bp_,'Visible','Off');   % Remove the outliers           
+            xlabel(xlab); ylabel(tlab);
+            % Plot the lines
+            median_ = median(all_t_err);
+            for i = 1:N_met
+                x_ = pos_(1, Nx*(i-1)+1:Nx*i);
+                y_ = median_(1, Nx*(i-1)+1:Nx*i);               
+                plot(x_,y_,'Color',color(i,:),'LineWidth',1.5);
+            end
+            set(gca,'YScale','log');
+            set(gca,'XTickLabel',{' '});  
+            [legh,objh,outh,outm] = legend(Cleg);
+            set(objh,'linewidth',3);   
+            set(gca,'XTick',pos_aux);
+            set(gca,'XTickLabel',Clab);           
+                        
+
+        end        
         
         function obj = plot( obj, field, cam_sd_vals, scan_sd_vals, Nobs_vals )
             % Plot options
