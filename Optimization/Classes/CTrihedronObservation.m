@@ -58,6 +58,20 @@ classdef CTrihedronObservation
             % TODO: Add tracking information?
         end
         
+        function minimalPoseEstimation( )
+            % TODO: If complete, compute T_tri_LRF and R_c_s
+            % Below is old code to refactor
+            [R_w_s, t_w_s] = co2LidarPose( cell2mat(q), signOfAxis );
+            
+            % Closed estimation of R_c_s according to current frame
+            co(nobs).R_c_s = obj_Rtri.X * R_w_s;
+            if ~isreal( co(nobs).R_c_s )
+                warning('Complex value for R_c_s in iteration %d',nobs)
+                keyboard
+                co(nobs).R_c_s = [];
+            end
+        end
+        
     end
     
 end
