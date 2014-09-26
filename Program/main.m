@@ -29,13 +29,25 @@ debug = 0;
 CompleteCO = true;
 repr_planes = [];
 scan_points = [];
-im_frame = 0;
 CHECK_IMAGE = false;
-nco = 0;
 
+% Create objects for storage and optimization
+optim_config_file = fullfile( pwd, 'optim_config.ini' );
+optimOpts = readConfigFile( optim_config_file );
+extractStructFields( optimOpts );
+clear optimOpts
+triOptim = CTrihedronOptimization( imgs(1).K,...
+                RANSAC_Rotation_threshold,...
+                RANSAC_Translation_threshold,...
+                debug_level, maxIters,...
+                minParamChange, minErrorChange);
+
+            % Temporal
+            WITHGT = false;
+            
 %% FOR LOOP BEGIN
-for nframe=1:length(scans)
-    fprintf('nframe = %d\n',nframe)
+for nobs=1:length(scans)
+    fprintf('nframe = %d\n',nobs)
     fprintf('-------------\n')
     figure( hWin )
     
@@ -43,116 +55,113 @@ for nframe=1:length(scans)
         disp('D was hit: Debug activation')
         keyboard
     end
-    
 
+    img = imgs(nobs);
     
-%     if im_frame < find( [imgs.ts] <= scan.ts, 1, 'last' );
-    if 1
-        new_image_reached = true;
+    if WITHGT
+        gt = loadGT( gt, path, nobs );
+        co(nobs).gt = gt;
+    end
+    
+    %% Trihedron data from image
+    % TO image is named as xi, composed of:
+    %   c - vertex image and 3 lines, R2
+    %   v(i) - 3 directions in image, S1
+    % Load image: Remove if not necessary to improve speed
+    img.I = imread( img.path );
+    
+    imgtrack0 = imgtrack;
+    img_gray = rgb2gray( img.I );
+    
+    subplot( hImg ), set( gcf, 'Visible', win_visibility )
+    fprintf('Image tracking in frame %d\n',nobs)
+    %         metafile = fullfile( path, 'meta_img', img.file );
+    metafile = img.metafile;
+    if exist(metafile,'file')
+        load( metafile, '-mat', 'xi', 'A_xi', 'imgtrack' );
     else
-        new_image_reached = false;
+        tic
+        debug = 0;
+        [xi, A_xi, imgtrack, CHECK_IMAGE] = ...
+            corner_calib(imgtrack, img_gray, debug);
+        fprintf('CORNER_CALIB TIME: %f\n',toc)
+        
+        if CHECK_IMAGE
+            subplot( hImg ), set( gcf, 'Visible', win_visibility )
+            corner_calib_plot(imgtrack.x, imgtrack0.x, img_gray)
+            
+            imgtrack = initialisation_calib( img_gray );
+            
+            [~, ~, imgtrack, ~] = corner_calib(imgtrack, img_gray, debug);
+            [xi, A_xi, imgtrack, ~] = ...
+                corner_calib(imgtrack, img_gray, debug);
+            % Twice to avoid gradient direction alarm from initialisation
+            CHECK_IMAGE = false;
+        end
+        clear debug
+        if ~exist( fileparts(metafile), 'dir' )
+            warning('Directory meta_img does not exist for dataset. Created.');
+            mkdir( fileparts(metafile) )
+        end
+        save( metafile, 'xi', 'A_xi', 'imgtrack' );
+    end
+    clear metafile
+    
+    % Temporarily create object here (from Gdetector output)
+    obj_xi = Cxi( xi(1:2), xi(3), xi(4), xi(5) );
+    obj_xi.setMinimalCov( A_xi ); % MinimalCov is 5x5 (2+1+1+1)
+    
+    [obj_Nbp, obj_LP2] = computeBackprojectedNormals( obj_xi, img.K );
+    % IMP TODO: Check cov in Nbp and use older if wrong
+%     [NL, c, A_co, L_P2] = imgParams2calibratedData( xi, img.K, A_xi );
+%     N_repr = L_P2 ./ repmat( sqrt(sum(L_P2.^2,1)), 3,1 );
+    
+    %% Plot image tracking
+    tic
+    subplot( hImg ), set( gcf, 'Visible', win_visibility )
+    corner_calib_plot(xi, imgtrack0.x, img_gray)
+    % Store image for later visualisation
+    if 0
+        F = getframe(hImg);
+        [track_im,~] = frame2im(F);
+        imwrite(track_im, fullfile(path,'track_img',img.file));
+        clear F
+    end
+    fprintf('IMAGE PLOT TIME: %f\n',toc)
+    
+    % Compute trihedron planes normals from xi parameter
+    tic
+    obj_Rtri = computeTrihedronNormals( obj_xi, obj_Nbp, img.K );
+%     [R_c_w, A_R_c_w, A_eps_c_w] = getWorldNormals( R0, NL, c, A_co );
+    fprintf('R_c_w optimization TIME: %f\n',toc)
+    if WITHGT
+        disp('Compare computed R_c_w to GT')
+        disp(obj_Rtri.X), disp(gt.R_c_w)
+        fprintf('Angular distance with GT rotation: %f\n', angularDistance(obj_Rtri.X, gt.R_c_w))
+        if angularDistance(obj_Rtri.X, gt.R_c_w) > 3
+            CHECK_IMAGE = true;
+        end
     end
     
-    if new_image_reached
-        nco = nco + 1; % If new image is reached new Corner Observation will be added
-        
-%         im_frame = find( [imgs.ts] <= scan.ts, 1, 'last' );
-        im_frame = nframe;
-        img = imgs(im_frame);
-        
-        if WITHGT
-            gt = loadGT( gt, path, im_frame );
-            co(nco).gt = gt;
-        end
-        
-        %% Go from image to Camera-World data
-        % Load image: Remove if not necessary to improve speed
-        img.I = imread( img.path );
-        
-        imgtrack0 = imgtrack;
-        img_gray = rgb2gray( img.I );
-        
-        subplot( hImg ), set( gcf, 'Visible', win_visibility )
-        fprintf('Image tracking in frame %d\n',nframe)
-%         metafile = fullfile( path, 'meta_img', img.file );
-        metafile = img.metafile;
-        if exist(metafile,'file')
-            load( metafile, '-mat', 'img_params', 'A_img_params', 'imgtrack' );
-        else
-            tic
-            debug = 0;
-            [img_params, A_img_params, imgtrack, CHECK_IMAGE] = ...
-                corner_calib(imgtrack, img_gray, debug);
-            fprintf('CORNER_CALIB TIME: %f\n',toc)
-            
-            if CHECK_IMAGE
-                subplot( hImg ), set( gcf, 'Visible', win_visibility )
-                corner_calib_plot(imgtrack.x, imgtrack0.x, img_gray)
-                
-                imgtrack = initialisation_calib( img_gray );
-                
-                [~, ~, imgtrack, ~] = corner_calib(imgtrack, img_gray, debug);
-                [img_params, A_img_params, imgtrack, ~] = ...
-                    corner_calib(imgtrack, img_gray, debug);
-                % Twice to avoid gradient direction alarm from initialisation
-                CHECK_IMAGE = false;
-            end
-            clear debug
-            save( metafile, 'img_params', 'A_img_params', 'imgtrack' );
-        end
-        clear metafile
-        
-        x = img_params;
-        A_x = A_img_params;
-        [NL, c, A_co, L_P2] = imgParams2calibratedData( x, img.K, A_x );
-        N_repr = L_P2 ./ repmat( sqrt(sum(L_P2.^2,1)), 3,1 );
-        
-        %% Plot image tracking
-        tic
-        subplot( hImg ), set( gcf, 'Visible', win_visibility )
-        corner_calib_plot(img_params, imgtrack0.x, img_gray)
-        % Store image for later visualisation
-        if 0
-            F = getframe(hImg);
-            [track_im,~] = frame2im(F);
-            imwrite(track_im, fullfile(path,'track_img',img.file));
-            clear F
-        end
-        fprintf('IMAGE PLOT TIME: %f\n',toc)
-            
-        % Solve world plane normals seen from camera and uncertainty
-        R0 = R_c_w;
-        tic
-        [R_c_w, A_R_c_w, A_eps_c_w] = getWorldNormals( R0, NL, c, A_co );
-        fprintf('R_c_w optimization TIME: %f\n',toc)
-        if WITHGT
-            disp('Compare computed R_c_w to GT')
-            disp(R_c_w), disp(gt.R_c_w)
-            fprintf('Angular distance with GT rotation: %f\n', angularDistance(R_c_w, gt.R_c_w))
-            if angularDistance(R_c_w, gt.R_c_w) > 3
-                CHECK_IMAGE = true;
-            end
-        end
-        
-        % Check displacement from previous frame
-        if exist('R_c_w0','var')
-            fprintf('Angular distance from image %d to %d: %e\n', im_frame-1, im_frame, angularDistance(R_c_w0,R_c_w))
-        end
-        R_c_w0 = R_c_w; % Store previous for comparison       
-                
-        debug_im_reprojection = false;
-        if debug_im_reprojection
-            % Check world projection with obtained rotation
-            figure
-            imshow( img.I ); hold on
-            checkRotationReprojection( c, R_c_w, img.K )
-            pause, close
-        end
+    % Check displacement from previous frame
+    if exist('R_c_w0','var')
+        fprintf('Angular distance from image %d to %d: %e\n', nobs-1, nobs, angularDistance(R_c_tri0,obj_Rtri.X))
     end
-
+    R_c_tri0 = obj_Rtri.X; % Store previous for comparison
+    
+    debug_im_reprojection = false;
+    if debug_im_reprojection
+        % Check world projection with obtained rotation
+        figure
+        imshow( img.I ); hold on
+        % TODO: update
+        checkRotationReprojection( c, obj_Rtri.X, img.K )
+        pause, close
+    end
+    
     %% Go from LIDAR information to Corner Observation
     % Set algorithm input
-    scan = scans(nframe);
+    scan = scans(nobs);
     if isempty(scan.xy)
         switch typeOfSource
             case 'Blender'
@@ -181,7 +190,7 @@ for nframe=1:length(scans)
             end
         end
     end
-        
+    
     debug = 0;
     metafile = scan.metafile;
     if exist(metafile,'file')
@@ -193,12 +202,13 @@ for nframe=1:length(scans)
         save( metafile, '-mat', 'scantrack', 'inPts', 'lost' );
     end
     clear metafile
-    [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = computeScanCorner( scan, scan_sigma, {scantrack.all_inliers}, debug );
+    [v,A_v,~,~,q,A_q, lin,seg] = computeScanTO( scan.xy, scan_sigma, {scantrack.all_inliers}, debug );
+%     [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = computeScanCorner( scan, scan_sigma, {scantrack.all_inliers}, debug );
     [scantrack.lin] = deal( lin{:} );
     [scantrack.seg] = deal( seg{:} );
-
+    
     fprintf('SCAN2CO TIME: %f\n',toc)
-    thereis_line   = cellfun(@(x)~isempty(x), l);
+    thereis_line   = cellfun(@(x)~isempty(x), v);
     thereis_corner = cellfun(@(x)~isempty(x), q);
     if all(thereis_corner) && all(thereis_line)
         CompleteCO = true;
@@ -216,8 +226,9 @@ for nframe=1:length(scans)
         warning('LIDAR tracking has lost segment %c', lab(lost))
         keyboard
     end
-
+    
     %% Update LIDAR visualization
+    % TODO: Put as option in a new class CLRF
     tic
     subplot(hLidar), set( gcf, 'Visible', win_visibility )
     ax = axis;
@@ -234,75 +245,70 @@ for nframe=1:length(scans)
         end
     end
     fprintf('LIDAR PLOT TIME: %f\n',toc)
-       
-    % Update calibration closed estimation
-    tic
-    if new_image_reached && CompleteCO % Currently deactivated
-        % TODO: signOfAxis could change and this has to be automated or
-        % problems can arise (complex numbers, etc.)
-        [R_w_s, t_w_s] = co2LidarPose( cell2mat(q), signOfAxis );
         
-        % Closed estimation of R_c_s according to current frame
-        co(nco).R_c_s = R_c_w * R_w_s;
-        if ~isreal( co(nco).R_c_s )
-            warning('Complex value for R_c_s in iteration %d',nframe)
-            keyboard
-            co(nco).R_c_s = [];
-        end
-        
-        if 0
-            % Average of estimated rotations
-            R_c_s = sum( reshape([co.R_c_s],3,3,[]), 3 );
-            [U,~,V] = svd( R_c_s );
-            R_c_s = U*V';
-            
-            % Solve t_c_s (closed solution with Lidar and Cam poses)
-            % Add new complete observation
-            repr_planes = [repr_planes, imgs(im_frame).L]; %#ok<AGROW>
-            scan_points = [scan_points, cell2mat(scans(nframe).q)]; %#ok<AGROW>
-            b = - dot( repr_planes, R_c_s(:,1:2) * scan_points, 1 )';
-            A = repr_planes';
-            
-            t_c_s = A \ b;
-        end
-    end
-    fprintf('Current frame R_c_s estimation TIME: %f\n',toc)
-    
     %% Store data for final optimization
     tic
-    if new_image_reached
+    co = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp,...
+                v, A_v, [], [], q, A_q );
+	triOptim.stackObservation( co );
+    if 0 % Deprecated, use new classes
         lab = [1 2 3];
-        co(nco).complete = CompleteCO;
-        co(nco).thereis_line = thereis_line; % Line - rotation correspondence
-        co(nco).lab_line = lab(thereis_line);
-        co(nco).thereis_corner = thereis_corner; % Corner - translation correspondence
-        co(nco).lab_corner = lab(thereis_corner);
+        co(nobs).complete = CompleteCO;
+        co(nobs).thereis_line = thereis_line; % Line - rotation correspondence
+        co(nobs).lab_line = lab(thereis_line);
+        co(nobs).thereis_corner = thereis_corner; % Corner - translation correspondence
+        co(nobs).lab_corner = lab(thereis_corner);
         
         % For rotation optimization
-        co(nco).R_c_w   = R_c_w; % Normal vectors to world planes (in Camera SR)
-        co(nco).A_R_c_w = A_R_c_w;
-        co(nco).l       = l; % Direction vector of LIDAR segments (in LIDAR SR)
-        co(nco).A_l     = A_l;
+        co(nobs).R_c_w   = R_c_w; % Normal vectors to world planes (in Camera SR)
+        co(nobs).A_R_c_w = A_R_c_w;
+        co(nobs).l       = l; % Direction vector of LIDAR segments (in LIDAR SR)
+        co(nobs).A_l     = A_l;
         
         % For translation optimization
-        co(nco).N_repr  = N_repr; % Normal vectors to reprojection planes (in Camera SR)
-        co(nco).L_P2    = L_P2;
-        co(nco).A_lh    = A_lh;
-        co(nco).q       = q; % 2D (XY) Corner points (in LIDAR SR)
-        co(nco).A_q     = A_q;
+        co(nobs).N_repr  = N_repr; % Normal vectors to reprojection planes (in Camera SR)
+        co(nobs).L_P2    = L_P2;
+        co(nobs).A_lh    = A_lh;
+        co(nobs).q       = q; % 2D (XY) Corner points (in LIDAR SR)
+        co(nobs).A_q     = A_q;
         
         % For final checking and debug
-        check(nco).cam_frame  = im_frame;
-        check(nco).scan_frame = nframe;
-        check(nco).scan_inPts = inPts;
-        check(nco).scan_track = scantrack;
-        check(nco).img_track  = imgtrack;
+        check(nobs).cam_frame  = nobs;
+        check(nobs).scan_frame = nobs;
+        check(nobs).scan_inPts = inPts;
+        check(nobs).scan_track = scantrack;
+        check(nobs).img_track  = imgtrack;
     end
     fprintf('STORAGE TIME: %f\n',toc)
-
+    
 end
-save( fullfile( path, 'cache', strcat('preoptimization',stereoLabel,hokuyoLabel) ) )
+save( fullfile( path, 'cache',...
+      strcat('preoptimization',stereoLabel,hokuyoLabel) ),...
+      'triOptim' )
 keyboard
+
+%% Final optimization with triOptim object
+WITHRANSAC = true;
+if WITHRANSAC
+    triOptim.filterRotationRANSAC;
+end
+triOptim.disp_N_R_inliers;
+R_c_s_w  = triOptim.optimizeRotation_Weighted;
+
+if WITHRANSAC
+    triOptim.filterTranslationRANSAC( R_c_s_w );
+end
+triOptim.disp_N_t_inliers;
+% triOptim.setInitialTranslation( Rig.t_c_s + 0.05*randn(3,1) );
+% t_3D_nw = triOptim.optimizeTranslation_3D_NonWeighted( R_c_s_w );
+t_3D_w  = triOptim.optimizeTranslation_3D_Weighted( R_c_s_w );
+% t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted( R_c_s_w );
+% t_2D_w = triOptim.optimizeTranslation_2D_Weighted( R_c_s_w );
+
+[R_global, t_global] = triOptim.optimizeGlobal_Ort_3D( R_c_s_w, t_3D_w );
+
+return
+% Code below is deprecated!
 
 %% Final optimization
 % Plot map of sampled regions
