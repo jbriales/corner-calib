@@ -176,9 +176,11 @@ classdef CTrihedron < CPattern
             
             % Compute GT parameters
 %             keyboard
-            n_gt = mat2cell(R_gt,3,[1 1 1]);
-            for i=1:3
-                lambda_gt{i} = Om{i}' * n_gt{i};
+            if exist('R_gt','var')
+                n_gt = mat2cell(R_gt,3,[1 1 1]);
+                for i=1:3
+                    lambda_gt{i} = Om{i}' * n_gt{i};
+                end
             end
                 
             % Compute bilinear forms matrices
@@ -265,7 +267,7 @@ classdef CTrihedron < CPattern
                 R_tri_ = cell2mat( n_ );
             end
             
-            if 0 % Show results and compare
+            if exist('R_gt','var') % Show results and compare
                 disp( [lambda_gt{:} ; lambda{:}] )
                 disp( [n_gt{:}      ; n{:} ]      )
                 disp( cell2mat(n_gt)-cell2mat(n) )
@@ -294,41 +296,46 @@ classdef CTrihedron < CPattern
             [~, img_pts] = obj.getProjection( Rig.Camera );
             if ~isempty(img_pts)
                 obj_xi  = obj.simulateTOimage( img_pts, Rig.Camera.sd );
-                [obj_Nbp, obj_LP2] = obj.getBackprojectedNormals( obj_xi, Rig.Camera.K );
+                [obj_Nbp, obj_LP2] = computeBackprojectedNormals( obj_xi, Rig.Camera.K );
 %                 R0 = Rig.Camera.R'; % Initial estimate for R_c_w
                 
-                c = obj_xi.c;
-                K = Rig.Camera.K;
-                v_im = reshape(obj_xi.X(3:end),2,[]);
-                R_gt = Rig.Camera.R';
-                Rtri = obj.getTrihedronNormals_Closed( c, K, v_im, R_gt ); % Final GT
+%                 c = obj_xi.c;
+%                 K = Rig.Camera.K;
+%                 v_im = reshape(obj_xi.X(3:end),2,[]);
+%                 R_gt = Rig.Camera.R';
+%                 Rtri = obj.getTrihedronNormals_Closed( c, K, v_im ); % Final GT
+                obj_Rtri = computeTrihedronNormals( obj_xi, obj_Nbp, Rig.Camera.K );
 %                 obj_Rtri = obj.getTrihedronNormals( obj_Nbp, R0 );
 %                 fprintf('Distance: %f\n',angularDistance(R_gt,Rtri));
 %                 disp('Done')
 %                 keyboard
                 
-                % Compute covariance
-                obj_Rtri = Manifold.SO3( Rtri );
-                % Temporarily use the other function
-                N = obj_Nbp.arr;
-                J_Phi = @(R) cross( R, N, 1 )';
-                % Compute covariance of trihedron normals
-                J_Phi_eps = J_Phi( Rtri );
-                J_Phi_Nbp = mat2cell( Rtri, 3, [1 1 1] );
-                J_Phi_Nbp = blkdiag( J_Phi_Nbp{:} )';
-                J_eps_Nbp = - J_Phi_eps \ J_Phi_Nbp;
-                obj_Rtri.setMinimalCov( J_eps_Nbp * obj_Nbp.A_X * J_eps_Nbp' );
+%                 % Compute covariance
+%                 obj_Rtri = Manifold.SO3( Rtri );
+%                 % Temporarily use the other function
+%                 N = obj_Nbp.arr;
+%                 J_Phi = @(R) cross( R, N, 1 )';
+%                 % Compute covariance of trihedron normals
+%                 J_Phi_eps = J_Phi( Rtri );
+%                 J_Phi_Nbp = mat2cell( Rtri, 3, [1 1 1] );
+%                 J_Phi_Nbp = blkdiag( J_Phi_Nbp{:} )';
+%                 J_eps_Nbp = - J_Phi_eps \ J_Phi_Nbp;
+%                 obj_Rtri.setMinimalCov( J_eps_Nbp * obj_Nbp.A_X * J_eps_Nbp' );
             else
                 co = [];
                 return
             end
             
-            % Lidar data            
-            [l,A_l,~,~,q,A_q, ~,~] = ...
+            % Lidar data
+%             [xy, ~, ~, idxs] = obj.getScan( Rig.Lidar );
+%             [v,A_v,~,~,q,A_q, ~,~] = ...
+%                 computeScanTO( cell2mat(xy), Rig.Lidar.sd, idxs, false );
+            [v,A_v,~,~,q,A_q, ~,~] = ...
                 obj.computeScanCorner( Rig.Lidar, 0 ); % Debug = 0
+            % Newer version in LIDAR/computeScanTO, try to make compatible
 
             co = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp,...
-                l, A_l, [], [], q, A_q );
+                v, A_v, [], [], q, A_q );
         end
         
         % Get calibrated data from corner (line normals, center and
