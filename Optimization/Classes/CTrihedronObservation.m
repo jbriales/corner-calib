@@ -70,6 +70,20 @@ classdef CTrihedronObservation
                 keyboard
                 co(nobs).R_c_s = [];
             end
+            
+            % Average of estimated rotations
+            R_c_s = sum( reshape([co.R_c_s],3,3,[]), 3 );
+            [U,~,V] = svd( R_c_s );
+            R_c_s = U*V';
+            
+            % Solve t_c_s (closed solution with Lidar and Cam poses)
+            % Add new complete observation
+            repr_planes = [repr_planes, imgs(im_frame).L]; %#ok<AGROW>
+            scan_points = [scan_points, cell2mat(scans(nframe).q)]; %#ok<AGROW>
+            b = - dot( repr_planes, R_c_s(:,1:2) * scan_points, 1 )';
+            A = repr_planes';
+            
+            t_c_s = A \ b;
         end
         
     end
