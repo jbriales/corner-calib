@@ -3,10 +3,7 @@ classdef Dyn < Manifold.Base
     %by several manifold variables
     %   Detailed explanation goes here
     
-    properties
-        c   % 2x1 R2 vector
-        v   % 1x3 array with S1 directions of lines
-        
+    properties        
         vars    % Variables composing the manifold
         Nvars   % Number of variables in composed manifold
     end
