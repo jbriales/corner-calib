@@ -244,6 +244,11 @@ for i = 1:3
     while Npts < 10 && cont_growth < 20
         % Get points within trapezoid with distances h1 and h2 from p and q
         [pts, corners] = findClosePoints( p_0, q, [h 10*h], n, mu_ini, size_img); %#ok<NASGU>
+        % Security check
+        if isempty(pts)
+            warning('pts is empty in image tracking');
+            [pts, corners] = findClosePoints( p_0, q, [h 10*h], n, mu_ini, size_img); %#ok<NASGU>
+        end
         % TODO: look for best proportional constant
 %         d = ( l' * makehomogeneous( pts ) )';
         X = pts(1,:)';
