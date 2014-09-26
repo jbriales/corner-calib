@@ -63,8 +63,10 @@ for i=1:length(varargin)
             
         end
     end
-    varargout(i) = {S};
+    fclose(FID);
+    varargout(i) = {S}; %#ok<AGROW>
 end
+
 end
 
 function line = removeComment( line )
