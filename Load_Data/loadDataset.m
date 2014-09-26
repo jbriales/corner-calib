@@ -32,6 +32,10 @@ else
 end
 
 if USER_INITIALISE
+    if ~exist(fullfile(pwd,'cache'),'dir')
+        mkdir(fullfile(pwd,'cache'));
+        warning('cache dir does not exist in %s.\nIt has been created.',pwd);
+    end
     FID = fopen( fullfile(pwd,'cache','path'), 'w' );
     if ( FID >= 0 )
         fprintf( FID, '%s', path );
