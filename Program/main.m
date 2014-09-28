@@ -16,7 +16,7 @@ kbhit('init') % Track keyboard hits
 % To position figures centered and visible by default
 set(0,'defaultfigureposition', [642   503   560   420])
 
-userOpts = readConfigFile( fullfile(pwd,'main.ini') );
+userOpts = readConfigFile( fullfile(pwd,'main.ini'), '[Real]' );
 extractStructFields( userOpts );
 
 all_dataset_data = loadDataset( userOpts );
@@ -131,7 +131,7 @@ for nobs=1:length(scans)
     
     % Compute trihedron planes normals from xi parameter
     tic
-    obj_Rtri = computeTrihedronNormals( obj_xi, obj_Nbp, img.K );
+    obj_Rtri = computeTrihedronNormals( obj_xi, img.K, obj_Nbp );
 %     [R_c_w, A_R_c_w, A_eps_c_w] = getWorldNormals( R0, NL, c, A_co );
     fprintf('R_c_w optimization TIME: %f\n',toc)
     if WITHGT

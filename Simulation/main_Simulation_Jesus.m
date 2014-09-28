@@ -7,8 +7,8 @@
 clear;
 
 % Main options:
-main_sim_file = fullfile( pwd, 'main_Simulation.ini' );
-mainOpts = readConfigFile( main_sim_file );
+main_sim_file = fullfile( pwd, 'main.ini' );
+mainOpts = readConfigFile( main_sim_file, '[Simulation]' );
 extractStructFields( mainOpts );
 clear mainOpts
 
@@ -29,17 +29,16 @@ checkerboard = CCheckerboard( LCheckerboard, RotationZ(deg2rad(45))*RotationY(de
 pattern = { trihedron, corner, checkerboard };
 
 % Generate Rig (Camera) poses for different patterns
+gen_config_file = fullfile( pwd, 'pose_gen.ini' );
 % Trihedron
-gen_config_file = fullfile( pwd, 'pose_gen_trihedron.ini' );
-[R_w_Cam_Trihedron, R_w_LRF_Trihedron, t_w_Rig_Trihedron, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
-
+[R_w_Cam_Trihedron, R_w_LRF_Trihedron, t_w_Rig_Trihedron, ~, ~] = ...
+    generate_random_poses( Nobs, gen_config_file, '[Trihedron]', Rig );
 % Corner
-gen_config_file = fullfile( pwd, 'pose_gen_corner.ini' );
-[R_w_Cam_Corner, R_w_LRF_Corner, t_w_Rig_Corner, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
-
+[R_w_Cam_Corner, R_w_LRF_Corner, t_w_Rig_Corner, ~, ~] =...
+    generate_random_poses( Nobs, gen_config_file, '[Corner]', Rig );
 % Checkerboard
-gen_config_file = fullfile( pwd, 'pose_gen_checkerboard.ini' );
-[R_w_Cam_Checkerboard, R_w_LRF_Checkerboard, t_w_Rig_Checkerboard, ~, ~] = generate_random_poses( Nobs, gen_config_file, Rig );
+[R_w_Cam_Checkerboard, R_w_LRF_Checkerboard, t_w_Rig_Checkerboard, ~, ~] =...
+    generate_random_poses( Nobs, gen_config_file, '[Checkerboard]', Rig );
 
 tic
 optim_config_file = fullfile( pwd, 'optim_config.ini' );
@@ -72,9 +71,6 @@ for i=1:Nobs
     Rig.updateLRFPose( R_w_LRF_Checkerboard{i}, t_w_Rig_Checkerboard{i} );
     co = checkerboard.getCorrespondence( Rig );
     checkerOptim.stackObservation( co );
-%     check_corresp{1,i} = checkerboard.p2D;
-%     check_corresp{2,i} = checkerboard.getProjection( Rig.Camera );    
-%     check_corresp{3,i} = 1000 * cell2mat(checkerboard.getScan( Rig.Lidar ));
     
     % Correspondences for trihedron
     % Update reference (Camera) pose in Rig for Trihedron
@@ -132,6 +128,25 @@ if WITHTRIHEDRON
     
     [R_global, t_global] = triOptim.optimizeGlobal_Ort_3D( R_c_s_w, t_3D_w );
     
+    % Compute and check covariances
+    if 0 % Monte Carlo for rotation
+        keyboard
+        % Create manifold input
+        N = triOptim.cam_N;
+        V = triOptim.LRF_V;
+        cN = num2cell(N,1);
+        cV = num2cell(V,1);
+        for k=1:size(cN,2)
+            obN{k} = Manifold.S2(cN{k});
+            obV{k} = Manifold.S1(cV{k});
+        end
+        obData = Manifold.Dyn( obN{:}, obV{:} );
+        % TODO yet
+        out = Manifold.MonteCarloSim( ...,
+            @(in)obj.simulateTOimage( reshape(in.X,2,4), Rig.Camera.sd ),...
+            obj_pts, 'Ref', obj_xi, 'N', 1e4 );
+        keyboard
+    end
 end
 
 % ------------- Kwak -------------------
