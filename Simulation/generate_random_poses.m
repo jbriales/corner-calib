@@ -1,4 +1,4 @@
-function [R_Cam, R_LRF, t, rand_ang_z, rand_ang_x] = generate_random_poses( N, config_file, Rig )
+function [R_Cam, R_LRF, t, rand_ang_z, rand_ang_x] = generate_random_poses( N, config_file, config_section, Rig )
 % [R_Cam, R_LRF, t, rand_ang_z, rand_ang_x] = generate_random_poses( config_file )
 % Main input:
 % config_file - path to .ini file with configuration parameters
@@ -25,7 +25,7 @@ function [R_Cam, R_LRF, t, rand_ang_z, rand_ang_x] = generate_random_poses( N, c
 % 
 % device = 'Lidar';
 
-userOpts = readConfigFile( config_file );
+userOpts = readConfigFile( config_file, config_section );
 extractStructFields( userOpts );
 
 % Auxiliar variables
@@ -73,10 +73,8 @@ for i=1:N
 %     R(:,:,i) = R(:,:,i) * RotationX(rand_ang_x1(i)) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i));
 %     R(:,:,i) = R(:,:,i) * RotationY(rand_ang_x1(i)) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i));
     R(:,:,i) = R(:,:,i) * RotationZ(rand_ang_z(i)) * RotationX(rand_ang_x(i)) * RotationY(rand_ang_y(i)) ;
-    switch device
-        case 'Lidar'
-            R_LRF(:,:,i) = R(:,:,i) * R_c_s;
-        % Case camera is default does not need any change
+    if strcmp(device,'Lidar')
+        R_LRF(:,:,i) = R(:,:,i) * R_c_s;
     end
 end
 R_Cam = R;
@@ -85,12 +83,15 @@ if N > 1
     % Transform output to cell arrays:
     t = mat2cell( t, 3, ones(1,N) );
     % Camera
-    
     R_Cam = mat2cell( R_Cam, 3, 3, ones(1,N) );
     R_Cam = permute( R_Cam, [1 3 2] );
     % LRF
-    R_LRF = mat2cell( R_LRF, 3, 3, ones(1,N) );
-    R_LRF = permute( R_LRF, [1 3 2] );
+    if strcmp(device,'Lidar')
+        R_LRF = mat2cell( R_LRF, 3, 3, ones(1,N) );
+        R_LRF = permute( R_LRF, [1 3 2] );
+    else
+        R_LRF = [];
+    end
 end
 
 end
