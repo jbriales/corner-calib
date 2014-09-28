@@ -1,4 +1,4 @@
-function obj_Rtri = computeTrihedronNormals( xi, Nbp, K )
+function obj_Rtri = computeTrihedronNormals( xi, K, Nbp )
 % R_tri = computeTrihedronNormals( c, K, v_im )
 % 
 
@@ -96,14 +96,17 @@ end
 
 % Compute covariance: Temporarily use old function Phi
 obj_Rtri = Manifold.SO3( R_tri );
-% Temporarily use the other function
-N = Nbp.arr;
-J_Phi = @(R) cross( R, N, 1 )';
-% Compute covariance of trihedron normals
-J_Phi_eps = J_Phi( R_tri );
-J_Phi_Nbp = mat2cell( R_tri, 3, [1 1 1] );
-J_Phi_Nbp = blkdiag( J_Phi_Nbp{:} )';
-J_eps_Nbp = - J_Phi_eps \ J_Phi_Nbp;
-obj_Rtri.setMinimalCov( J_eps_Nbp * Nbp.A_X * J_eps_Nbp' );
+
+if exist('Nbp','var')
+    % Temporarily use the other function
+    N = Nbp.arr;
+    J_Phi = @(R) cross( R, N, 1 )';
+    % Compute covariance of trihedron normals
+    J_Phi_eps = J_Phi( R_tri );
+    J_Phi_Nbp = mat2cell( R_tri, 3, [1 1 1] );
+    J_Phi_Nbp = blkdiag( J_Phi_Nbp{:} )';
+    J_eps_Nbp = - J_Phi_eps \ J_Phi_Nbp;
+    obj_Rtri.setMinimalCov( J_eps_Nbp * Nbp.A_X * J_eps_Nbp' );
+end
 
 end
