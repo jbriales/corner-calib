@@ -17,7 +17,7 @@ for k=1:3
 %     l{k} = K' * [ n ; d ];
     l(k) = Manifold.P2( K' * [ n ; d ] ); % Camera->Image line conversion is K^(-T), so inverse is applied
 end
-J_project_P2 = blkdiag( l(1).DLie, l(2).DLie, l(3).DLie );
+J_project_P2 = blkdiag( l(1).Dproj, l(2).Dproj, l(3).Dproj );
 J_L_xi = J_project_P2 * Jacobian_L_xi ( obj_xi, K );
 A_L = J_L_xi * obj_xi.A_X * J_L_xi'; % Covariance of 3 P2 lines in camera frame
 obj_LP2 = Manifold.Dyn( l(1), l(2), l(3) );
@@ -27,8 +27,9 @@ obj_LP2.setRepresentationCov( A_L );
 J_normalize = cell(1,3);
 N = Manifold.S2.empty(0,3);
 for k=1:3
-    N(k) = Manifold.S2( l(k).X / norm(l(k).X) );
-    J_normalize{k} = N(k).DLie * 1/norm(l(k).X)^3 * (eye(3) - l(k).X*l(k).X');
+    N(k) = Manifold.S2( snormalize( l(k).X ) );
+    J_normalize{k} = N(k).Dproj * Dsnormalize(l(k).X);
+%     J_normalize{k} = Dsnormalize(l(k).X);
 end
 J_normalize = blkdiag( J_normalize{:} );
 A_N = J_normalize * A_L * J_normalize';
@@ -42,14 +43,14 @@ function [ J_L_xi ] = Jacobian_L_xi ( obj_xi, K )
 % Jacobian of 3 camera P2 lines wrt xi object (c,v1,v2,v3)
 Ort = [0 -1 ; 1 0];
 c  = obj_xi.c;
-v1 = Ort * obj_xi.v(1).X;
-v2 = Ort * obj_xi.v(2).X;
-v3 = Ort * obj_xi.v(3).X;
+v1 = obj_xi.v(1).X;
+v2 = obj_xi.v(2).X;
+v3 = obj_xi.v(3).X;
 
 Jc = @(v) K' * [ zeros(2,2) ; -(Ort*v)' ];
 Jv = cell(1,3);
-for i=1:3
-    Jv{i} = K' * [ eye(2) ; -c' ] * Ort * obj_xi.v(1).DLie; % Projected to S1
+for i=1:3 % Check here Dproj's
+    Jv{i} = K' * [ eye(2) ; -c' ] * Ort; % Projected to S1
 end
 J_L_xi = [ [Jc(v1); Jc(v2); Jc(v3)] , blkdiag(Jv{:}) ];
 
