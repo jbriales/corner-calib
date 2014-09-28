@@ -34,7 +34,6 @@ classdef P2 < Manifold.Base
             end
         end
         
-        
         function J_X_x = Dexp( obj )
             l = obj.X;
             J_X_x = null( l' ); % Transpose of Dlog
@@ -45,24 +44,33 @@ classdef P2 < Manifold.Base
             J_x_X = null( l' )';
         end
         
-        function J_X_X = DLie( obj )
+        function J_X_X = Dproj( obj )
             J_X_X = obj.Dexp * obj.Dlog;
         end
         
     end
-    methods (Static)        
-%         function n = exp( alpha )
-%             n = [ cos(alpha) ; sin(alpha) ];
-%         end
-%         
-%         function alpha = log( n )
-%             alpha = atan2( n(2), n(1) );
-%         end
-%         
-%         function mu_n = mean( X )
-%             mu_n = sum( X, 2 );
-%             mu_n = mu_n / norm( mu_n );
-%         end
+    methods (Static)
+        %         function n = exp( alpha )
+        %             n = [ cos(alpha) ; sin(alpha) ];
+        %         end
+        %
+        %         function alpha = log( n )
+        %             alpha = atan2( n(2), n(1) );
+        %         end
+        %
+        %         function mu_n = mean( X )
+        %             mu_n = sum( X, 2 );
+        %             mu_n = mu_n / norm( mu_n );
+        %         end
+        function mu_n = mean( in )
+            if isa(in,'Manifold.P2')
+                in = [in.X];
+            end
+            in = snormalize( in );
+            mu_n = sum( in, 2 );
+            mu_n = mu_n / norm( mu_n );
+            mu_n = Manifold.P2( mu_n );
+        end
     end
     
 end

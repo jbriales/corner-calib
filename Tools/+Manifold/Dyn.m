@@ -3,23 +3,42 @@ classdef Dyn < Manifold.Base
     %by several manifold variables
     %   Detailed explanation goes here
     
-    properties        
+    properties
         vars    % Variables composing the manifold
         Nvars   % Number of variables in composed manifold
+        
+        idxs    % Cell array with indexes corresponding to minimal repr.
+        IDXS    % Cell array with indexes corresponding to complete repr.
     end
     
     methods % Not compulsory
         function obj = Dyn( varargin )
-            obj.X = zeros(0,1);
-            obj.dim = 0;
-            obj.DIM = 0;
-            for i=1:nargin
-                obj.vars{i} = varargin{i};
-                obj.X = [ obj.X ; varargin{i}.X(:) ];
-                obj.dim = obj.dim + varargin{i}.dim;
-                obj.DIM = obj.DIM + varargin{i}.DIM;
+            if nargin ~= 0
+                obj.X = zeros(0,1);
+                obj.dim = 0;
+                obj.DIM = 0;
+                for i=1:nargin
+                    obj.vars{i} = varargin{i};
+                    obj.X = [ obj.X ; varargin{i}.X(:) ];
+                    
+                    obj.idxs{i} = obj.dim + (1:varargin{i}.dim);
+                    obj.IDXS{i} = obj.DIM + (1:varargin{i}.DIM);
+                    
+                    obj.dim = obj.dim + varargin{i}.dim;
+                    obj.DIM = obj.DIM + varargin{i}.DIM;
+                end
+                obj.Nvars = nargin;
             end
-            obj.Nvars = nargin;
+        end
+        
+        function obj = setFromX( obj, X )
+            % obj = setFromX( obj, X )
+            % Method to set Dyn manifold using existing reference with
+            % input a set of vectorized values
+            % TODO
+            for k=1:obj.Nvars
+                
+            end
         end
         
         function arr = arr( obj )
@@ -37,8 +56,41 @@ classdef Dyn < Manifold.Base
             end
         end
         
-%         x = minus( obj, X )
-%         X = plus( obj, x )
+        function [out_X,out_ob] = plus( obj, inc_eps )
+            N_eps = size(inc_eps,2);
+            temp = cell(1,obj.Nvars);
+            out_X = [];
+            for k=1:obj.Nvars
+                X = obj.vars{k} + inc_eps(obj.idxs{k},:);
+                out_X = [out_X ; X];
+                eval(strcat('ob=',class(obj.vars{k}),'(X)'));
+                temp{k} = ob;
+            end
+
+            if nargout == 2
+%                 out_ob(1,N_eps) = Manifold.Dyn;
+%                 eval( strcat('out_ob(1,N_eps) = ',class(obj),';') );
+                for i=1:N_eps
+                    c = cell(1,obj.Nvars);
+                    for j=1:obj.Nvars
+                        c{j} = temp{j}(i);
+                    end
+                    eval( strcat('out_ob(i) = ',class(obj),'(c{:});') );
+%                     out_ob(i) = Manifold.Dyn(c{:});
+                    % Set same cov as input to avoid errors in input functions
+                    out_ob(i).setMinimalCov(obj.A_x);
+                end
+            end
+        end
+        
+        function inc_eps = minus( obj, in )
+            all_inc = [];
+            for k=1:obj.Nvars
+                inc = obj.vars{k} - in.vars{k};
+                all_inc = [all_inc ; inc];
+            end
+            inc_eps = all_inc;
+        end
         
         function J = Dexp( obj )
             J = cell(1,obj.Nvars);
@@ -59,10 +111,21 @@ classdef Dyn < Manifold.Base
         end
     end
     
-%     methods (Static)
-%         % Static methods
+    methods (Static)
+        % Static methods
 %         X = exp( x )
 %         x = log( X )
-%         m = mean( XX )
-%     end
+        function out = mean( objs )
+            vars = cell(1,objs(1).Nvars);
+            % Extract different manifolds
+            temp = reshape( [ objs.vars ], objs(1).Nvars,[] );
+            for k=1:objs(1).Nvars
+                eval(strcat('var_mu=',...
+                     class(objs(1).vars{k}),'.mean([temp{k,:}])'));
+                vars{k} = var_mu;
+            end
+            eval(strcat('out=',class(objs),'(vars{:});'));
+%             out = Manifold.Dyn( vars{:} );
+        end
+    end
 end

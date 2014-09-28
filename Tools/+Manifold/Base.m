@@ -20,7 +20,8 @@ classdef Base < handle
         
         J = Dexp( obj )
         J = Dlog( obj )
-        function J = DLie( obj )
+        function J = Dproj( obj )
+            % Useful result to constrain derivatives into manifold
             J = obj.Dexp * obj.Dlog;
         end
         

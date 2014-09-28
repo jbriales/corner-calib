@@ -7,24 +7,53 @@ classdef S1 < Manifold.Base
     
     methods
         function obj = S1( input )
-            if all( size(input) == [2 1] )
-                n = input / norm(input);
-                a = atan2( n(2), n(1) );
-            elseif numel( input ) == 1
-                a = input;
-                n = [ cos(a) ; sin(a) ];
+            if nargin ~= 0 % To validate no input call
+                m = size(input,2); % Number of inputs in 3rd dimension
+                if m == 1
+                    if all( size(input) == [2 1] )
+                        n = input / norm(input);
+                        a = atan2( n(2), n(1) );
+                    elseif numel( input ) == 1
+                        a = input;
+                        n = [ cos(a) ; sin(a) ];
+                    end
+                    obj.X = n;
+                    obj.x = a;
+                    obj.dim = 1;
+                    obj.DIM = 2;
+                else
+                    if size(input,1) == 2
+                        n = snormalize( input );
+                        a = atan2( n(2,:,:), n(1,:,:) );
+                    else % Make more robust the access to this option
+                        a = input;
+                        n = [ cos(a) ; sin(a) ];
+                    end
+                    % Parallel constructor case
+                    obj(1,m) = Manifold.S1;
+                    
+                    n = num2cell( n, 1 );
+                    a = num2cell( a );
+                    % Assign
+                    [obj.X] = deal( n{:} );
+                    [obj.x] = deal( a{:} );
+                    [obj.dim] = deal(1);
+                    [obj.DIM] = deal(2);
+                end
             end
-                
-            obj.X = n;
-            obj.x = a;
-            obj.dim = 1;
-            obj.DIM = 2;
         end
         
-        function inc_alpha = minus( n, obj )
-            n0 = obj.X;
+        function inc_alpha = minus( n1, n2 )
+            if isa(n1,'Manifold.S1')
+                n1 = n1.X;
+            end
+            if isa(n2,'Manifold.S1')
+                n2 = n2.X;
+            end
+            n  = n1; % The element being substracted
+            n0 = n2; % The element substracting
             
-            N = size( n, 2 );
+            N = size( n1, 2 );
             ort_n0 = [ -n0(2) +n0(1) ]';
             ort_n0 = repmat( ort_n0, 1, N );
             % TODO: asin or atan?
@@ -58,11 +87,6 @@ classdef S1 < Manifold.Base
             J_alpha_n = [ -n(2) , +n(1) ]; % Transpose of Dexp
         end
         
-        function J_n_n = DLie( obj )
-            % Useful result to constrain derivatives into manifold
-            J_n_n = obj.Dexp * obj.Dlog;
-        end
-        
         % Static methods
     end
     methods (Static)        
@@ -74,9 +98,13 @@ classdef S1 < Manifold.Base
             alpha = atan2( n(2), n(1) );
         end
         
-        function mu_n = mean( X )
-            mu_n = sum( X, 2 );
+        function mu_n = mean( in )
+            if isa(in,'Manifold.S1')
+                in = [in.X];
+            end
+            mu_n = sum( in, 2 );
             mu_n = mu_n / norm( mu_n );
+            mu_n = Manifold.S1( mu_n );
         end
     end
     

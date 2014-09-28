@@ -7,41 +7,49 @@ classdef SO3 < Manifold.Base
     
     methods
         function obj = SO3( R )
-            obj.X = R;
-            obj.x = obj.log( R );
-            obj.dim = 3;
-            obj.DIM = 9;
+            if nargin ~= 0 % To validate no input call
+                m = size(R,3); % Number of inputs in 3rd dimension
+                if m == 1
+                    % This case is maintaned for the sake of clarity
+                    obj.X = R;
+                    obj.x = obj.log( R );
+                    obj.dim = 3;
+                    obj.DIM = 9;
+                else
+                    % Parallel constructor case
+                    obj(1,m) = Manifold.SO3;
+                    
+                    % Compute auxiliary values
+                    u = obj.log( R );
+                    
+                    % Create cell of 3x3 Rs, removing singleton dimensions
+                    % This type allows to work with lists
+                    R = squeeze( num2cell( R, [1 2] ) );
+                    u = num2cell( u, 1 );
+
+                    % Assign
+                    [obj.X] = deal( R{:} );
+                    [obj.x] = deal( u{:} );
+                    
+                    [obj.dim] = deal(3);
+                    [obj.DIM] = deal(9);
+                end
+            end
         end
         
-        function inc_eps = minus( obj, X )
-            R  = reshape( X, 3,3, [] );
-            R0 = obj.X;
-            
-            N = size(X,2);
-            inc_eps = zeros(3,N);
-            for i=1:N
-                inc_eps(:,i) = logmap( R(:,:,i) * R0' );
+        function eps = minus( R1, R2 )
+            if isa(R1,'Manifold.SO3')
+                R1 = R1.X;
             end
+            if isa(R2,'Manifold.SO3')
+                R2 = R2.X;
+            end
+            eps = Manifold.SO3.sminus( R1, R2 );
         end
         
         function R = plus( obj, inc_eps )
-            % inc_eps can be an array of column vectors
-            N = size( inc_eps, 2 );
-            R = zeros(3,3,N);
             R0 = obj.X;
-            
-            if size(inc_eps,2)>1 % Parallel computation
-                if exist('multiprod','file') % manopt tool
-                    R_eps = expmap( inc_eps );
-                    R = multiprod( R_eps, R0 );
-                else
-                    for i=1:N
-                        R(:,:,i) = expmap( inc_eps(:,i) ) * R0;
-                    end
-                end
-            else
-                R = expmap( inc_eps ) * R0;
-            end
+            R = splus_l( R0, inc_eps );
         end
         
         function J_R_eps = Dexp( obj )
@@ -58,44 +66,48 @@ classdef SO3 < Manifold.Base
                               -skew(R(:,3)) ]';
         end
         
+        function J_R_R = Dproj( obj )
+            J_R_R = obj.Dexp * obj.Dlog;
+        end
+        
         % Static methods
     end
     methods (Static)        
         function R = exp( u )
-            %  R = exp( inc_eps )
-            %  Rodrigues' rotation formula.
-            if nargin==1
-                theta = norm(u,2);
-            end
-            
-            if theta == 0
-                R = eye(3);
-            else
-                u = u./norm(u,2);
-                S = [    0 -u(3)  u(2);
-                    u(3)   0  -u(1);
-                    -u(2) u(1)   0  ];
-                R = eye(3) + sin(theta)*S + (1-cos(theta))*S^2;
-            end
+            % R = exp( u )
+            % The Rodrigues' formula for rotation matrices.
+            % u can be an array of column vectors
+            R = expmap( u );
         end
         
         function u = log( R )
-            %  inc_eps = log( R )
-            %  The Rodrigues' formula for rotation matrices.
-            [~,~,V] = svd(R - eye(3));
-            u = V(:,3);
-            
-            c2 = trace(R) - 1; % cos(theta)*2
-            s2 = u' * [R(3,2)-R(2,3) , R(1,3)-R(3,1) , R(2,1)-R(1,2)]';
-            theta = atan2(s2,c2);
-            
-            u = u * theta;
+            % u = log( R )
+            % The Rodrigues' formula for rotation matrices.
+            % R can be an 3x3xN array of rotation matrices
+            u = logmap( R );
         end
         
         function mu_R = mean( RR )
+            if isa(RR,'Manifold.SO3')
+                RR = [RR.X];
+            end
             R  = reshape( RR, 3,3, [] );
             [U,~,V] = svd( sum( R, 3 ) );
             mu_R = U*V';
+            mu_R = Manifold.SO3( mu_R );
+        end
+        
+        function eps = sminus( R, R0 )
+            if exist('multiprod','file') % manopt tool
+                R_eps = multiprod( R, multitransp(R0) );
+                eps   = Manifold.SO3.log( R_eps );
+            else
+                N = size(R,2);
+                eps = zeros(3,N);
+                for i=1:N
+                    eps(:,i) = logmap( R(:,:,i) * R0' );
+                end
+            end
         end
         
         function R = splus_l( R0, inc_eps )
@@ -103,17 +115,17 @@ classdef SO3 < Manifold.Base
             N = size( inc_eps, 2 );
             R = zeros(3,3,N);
             
+            R_eps = expmap( inc_eps );
             if size(inc_eps,2)>1 % Parallel computation
                 if exist('multiprod','file') % manopt tool
-                    R_eps = expmap( inc_eps );
                     R = multiprod( R_eps, R0 );
                 else
                     for i=1:N
-                        R(:,:,i) = expmap( inc_eps(:,i) ) * R0;
+                        R(:,:,i) = R_eps(:,:,i) * R0;
                     end
                 end
             else
-                R = expmap( inc_eps ) * R0;
+                R = R_eps * R0;
             end
         end
         function R = splus_r( R0, inc_eps )
@@ -121,17 +133,17 @@ classdef SO3 < Manifold.Base
             N = size( inc_eps, 2 );
             R = zeros(3,3,N);
             
+            R_eps = expmap( inc_eps );
             if size(inc_eps,2)>1 % Parallel computation
                 if exist('multiprod','file') % manopt tool
-                    R_eps = expmap( inc_eps );
                     R = multiprod( R0, R_eps );
                 else
                     for i=1:N
-                        R(:,:,i) = expmap( inc_eps(:,i) ) * R0;
+                        R(:,:,i) = R0 * R_eps(:,:,i);
                     end
                 end
             else
-                R = expmap( inc_eps ) * R0;
+                R = R0 * R_eps;
             end
         end
     end
