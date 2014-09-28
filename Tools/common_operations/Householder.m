@@ -12,7 +12,7 @@ I = eye( n );
 
 v = x - sign( x(1) ) * norm(x) * I(:,ei);
 if ~exist('a','var')
-    H = I - 2 * v * v' / (v'*v);
+    H = I - 2 * (v * v') / (v'*v);
     out = H;
 else
     Ha = a - 2*v*(v'*a)/(v'*v);
