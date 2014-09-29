@@ -58,6 +58,15 @@ classdef Rn < Manifold.Base
             [x1,x2] = Manifold.Rn.autodim( x1,x2 );
             out = x1 - x2;
         end
+        function out = mtimes( x1, x2 )
+            if isa(x1,'Manifold.Rn')
+                x1 = x1.X;
+            end
+            if isa(x2,'Manifold.Rn')
+                x2 = x2.X;
+            end
+            out = x1 * x2;
+        end
         
         function J_X_x = Dexp( obj )
             J_X_x = eye( obj.dim );

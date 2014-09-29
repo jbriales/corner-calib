@@ -45,6 +45,15 @@ if USER_INITIALISE
     end
 end
 
+% Assure auxiliar folders exist in dataset folder
+aux_folders = {'cache','meta_img','meta_laser'};
+for fold = aux_folders
+    fold = fold{:};
+    if ~exist(fullfile(path,fold),'dir')
+        mkdir(path,fold)
+    end
+end
+
 % Set plotting space
 if exist(fullfile(pwd,'cache','winPosition.mat'),'file')
     load( fullfile(pwd,'cache','winPosition.mat'), 'winPosition' );
@@ -98,6 +107,14 @@ else
     end
 
     %% LOAD INITIAL DATA AND USER INPUT
+    SConfigCam = readConfigFile( fullfile(path,'rig.ini'),'[Cam]' );
+    Cam = CRealCamera( SConfigCam );
+    SConfigLRF = readConfigFile( fullfile(path,'rig.ini'),'[LRF]' );
+    LRF = CRealLidar( SConfigLRF );
+    
+    % Set handle for figure
+    Cam.hFig = hImg;
+    
     % Load images
     blur = false;
     imgs = loadCamData( path, imgFormat, blur, decimation, img_idxs );
@@ -135,17 +152,23 @@ else
     % Plot scans and images timestamps:
 %     plotTs( scans, imgs )
     
-    % User input: Set initial points in image for tracking
-    if exist(imgs(1).metafile,'file')
-        load( imgs(1).metafile, '-mat', 'imgtrack' );
-    else
-        imgs(1).I = imread( imgs(1).path );
-        imgtrack = initialisation_calib( rgb2gray(imgs(1).I) );
-    end
-    
-    imgs(1).I = imread( imgs(1).path );
-    subplot(hImg);
-    imshow( rgb2gray(imgs(1).I) );
+    frames = CFrame( imgs );
+% %     % User input: Set initial points in image for tracking
+% % %     Cam.setFrame( frames(1) );
+% %     if exist(imgs(1).metafile,'file')
+% % %         load( imgs(1).metafile, '-mat', 'imgtrack' );
+% %         load( fullfile(imgs(1).path,'meta_img',imgs(1).metafile),...
+% %             '-mat', 'imgtrack' );
+% %     else
+% % %         imgs(1).I = imread( imgs(1).path );
+% %         imgs(1).I = imread( fullfile(imgs(1).path,'img',imgs(1).file) );
+% %         imgtrack = initialisation_calib( rgb2gray(imgs(1).I) );
+% %     end
+% %     
+% % %     imgs(1).I = imread( imgs(1).path );
+% %     imgs(1).I = imread( fullfile(imgs(1).path,'img',imgs(1).file) );
+% %     subplot(hImg);
+% %     imshow( rgb2gray(imgs(1).I) );
     
     % User input: Set segments of interest in scan observation
     scan = scans(1);
@@ -172,9 +195,9 @@ else
     % Set rotation R_c_w initial estimate
     R_c_w = R_w_c'; % Inverse of R_w_c
     
-    save( fullfile(path,'cache','initialisation'),...
-          'imgs', 'scans', 'imgtrack', 'scantrack', 'R_c_w', 'WITHGT',...
-          'signOfAxis', 'gt')
+%     save( fullfile(path,'cache','initialisation'),...
+%           'imgs', 'scans', 'imgtrack', 'scantrack', 'R_c_w', 'WITHGT',...
+%           'signOfAxis', 'gt')
 end
 winPosition = get(gcf,'Position');
 save( fullfile(pwd,'cache','winPosition'), 'winPosition' )
@@ -182,7 +205,7 @@ save( fullfile(pwd,'cache','winPosition'), 'winPosition' )
 out = struct( );
 out.imgs = imgs;
 out.scans = scans;
-out.imgtrack = imgtrack;
+% out.imgtrack = imgtrack;
 out.scantrack = scantrack;
 out.R_c_w = R_c_w;
 out.signOfAxis = signOfAxis;
@@ -192,6 +215,9 @@ out.hLidar = hLidar;
 out.hImg = hImg;
 out.WITHGT = WITHGT;
 out.gt = gt;
+out.Cam = Cam;
+out.LRF = LRF;
+out.frames = frames;
 end
 
 %% Local functions

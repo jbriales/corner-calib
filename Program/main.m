@@ -16,15 +16,16 @@ kbhit('init') % Track keyboard hits
 % To position figures centered and visible by default
 set(0,'defaultfigureposition', [642   503   560   420])
 
-userOpts = readConfigFile( fullfile(pwd,'main.ini'), '[Real]' );
+main_type = readConfigFile( fullfile(pwd,'main.ini'),'','main_type' );
+userOpts = readConfigFile( fullfile(pwd,'main.ini'), main_type );
 extractStructFields( userOpts );
 
 all_dataset_data = loadDataset( userOpts );
 extractStructFields( all_dataset_data );
 
-debug = 0;
-[img_params, A_img_params, imgtrack, checkImage] = ...
-    corner_calib(imgtrack, rgb2gray(imgs(1).I), debug);
+% debug = 0;
+% [img_params, A_img_params, imgtrack, checkImage] = ...
+%     corner_calib(imgtrack, rgb2gray(imgs(1).I), debug);
 
 CompleteCO = true;
 repr_planes = [];
@@ -68,70 +69,15 @@ for nobs=1:length(scans)
     %   c - vertex image and 3 lines, R2
     %   v(i) - 3 directions in image, S1
     % Load image: Remove if not necessary to improve speed
-    img.I = imread( img.path );
+    Cam.setFrame( frames(nobs) );
+    obj_xi = Cam.computeXi;
+    Cam.visualize;
     
-    imgtrack0 = imgtrack;
-    img_gray = rgb2gray( img.I );
-    
-    subplot( hImg ), set( gcf, 'Visible', win_visibility )
-    fprintf('Image tracking in frame %d\n',nobs)
-    %         metafile = fullfile( path, 'meta_img', img.file );
-    metafile = img.metafile;
-    if exist(metafile,'file')
-        load( metafile, '-mat', 'xi', 'A_xi', 'imgtrack' );
-    else
-        tic
-        debug = 0;
-        [xi, A_xi, imgtrack, CHECK_IMAGE] = ...
-            corner_calib(imgtrack, img_gray, debug);
-        fprintf('CORNER_CALIB TIME: %f\n',toc)
-        
-        if CHECK_IMAGE
-            subplot( hImg ), set( gcf, 'Visible', win_visibility )
-            corner_calib_plot(imgtrack.x, imgtrack0.x, img_gray)
-            
-            imgtrack = initialisation_calib( img_gray );
-            
-            [~, ~, imgtrack, ~] = corner_calib(imgtrack, img_gray, debug);
-            [xi, A_xi, imgtrack, ~] = ...
-                corner_calib(imgtrack, img_gray, debug);
-            % Twice to avoid gradient direction alarm from initialisation
-            CHECK_IMAGE = false;
-        end
-        clear debug
-        if ~exist( fileparts(metafile), 'dir' )
-            warning('Directory meta_img does not exist for dataset. Created.');
-            mkdir( fileparts(metafile) )
-        end
-        save( metafile, 'xi', 'A_xi', 'imgtrack' );
-    end
-    clear metafile
-    
-    % Temporarily create object here (from Gdetector output)
-    obj_xi = Cxi( xi(1:2), xi(3), xi(4), xi(5) );
-    obj_xi.setMinimalCov( A_xi ); % MinimalCov is 5x5 (2+1+1+1)
-    
-    [obj_Nbp, obj_LP2] = computeBackprojectedNormals( obj_xi, img.K );
-    % IMP TODO: Check cov in Nbp and use older if wrong
-%     [NL, c, A_co, L_P2] = imgParams2calibratedData( xi, img.K, A_xi );
-%     N_repr = L_P2 ./ repmat( sqrt(sum(L_P2.^2,1)), 3,1 );
-    
-    %% Plot image tracking
-    tic
-    subplot( hImg ), set( gcf, 'Visible', win_visibility )
-    corner_calib_plot(xi, imgtrack0.x, img_gray)
-    % Store image for later visualisation
-    if 0
-        F = getframe(hImg);
-        [track_im,~] = frame2im(F);
-        imwrite(track_im, fullfile(path,'track_img',img.file));
-        clear F
-    end
-    fprintf('IMAGE PLOT TIME: %f\n',toc)
+    [obj_Nbp, obj_LP2] = computeBackprojectedNormals( obj_xi, Cam.K );
     
     % Compute trihedron planes normals from xi parameter
     tic
-    obj_Rtri = computeTrihedronNormals( obj_xi, img.K, obj_Nbp );
+    obj_Rtri = computeTrihedronNormals( obj_xi, Cam.K, obj_Nbp );
 %     [R_c_w, A_R_c_w, A_eps_c_w] = getWorldNormals( R0, NL, c, A_co );
     fprintf('R_c_w optimization TIME: %f\n',toc)
     if WITHGT
@@ -151,12 +97,7 @@ for nobs=1:length(scans)
     
     debug_im_reprojection = false;
     if debug_im_reprojection
-        % Check world projection with obtained rotation
-        figure
-        imshow( img.I ); hold on
-        % TODO: update
-        checkRotationReprojection( c, obj_Rtri.X, img.K )
-        pause, close
+        Cam.visualizeTrihedronReprojection;
     end
     
     %% Go from LIDAR information to Corner Observation
@@ -288,15 +229,19 @@ save( fullfile( path, 'cache',...
 keyboard
 
 %% Final optimization with triOptim object
-WITHRANSAC = true;
+WITHRANSAC = false;
 if WITHRANSAC
     triOptim.filterRotationRANSAC;
+else % Give initial estimate
+    triOptim.setInitialRotation( gt.R_c_s );
 end
 triOptim.disp_N_R_inliers;
 R_c_s_w  = triOptim.optimizeRotation_Weighted;
 
 if WITHRANSAC
     triOptim.filterTranslationRANSAC( R_c_s_w );
+else
+    triOptim.setInitialTranslation( gt.t_c_s );
 end
 triOptim.disp_N_t_inliers;
 % triOptim.setInitialTranslation( Rig.t_c_s + 0.05*randn(3,1) );

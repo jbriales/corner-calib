@@ -42,7 +42,7 @@ end
 function [ J_L_xi ] = Jacobian_L_xi ( obj_xi, K )
 % Jacobian of 3 camera P2 lines wrt xi object (c,v1,v2,v3)
 Ort = [0 -1 ; 1 0];
-c  = obj_xi.c;
+c  = obj_xi.c.X;
 v1 = obj_xi.v(1).X;
 v2 = obj_xi.v(2).X;
 v3 = obj_xi.v(3).X;
