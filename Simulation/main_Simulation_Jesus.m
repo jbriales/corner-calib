@@ -78,6 +78,29 @@ for i=1:Nobs
     co_ = trihedron.getCorrespondence( Rig );
     triOptim.stackObservation( co_ );
     
+    if 0
+        % Test multi-line framework
+        Rwc = R_w_Cam_Trihedron{1};
+        R0  = Rwc';
+        to = {};
+        Nbp = [];
+        A_Nbp = {};
+        for k=1:15
+            Rig.updateCamPose( Rwc, t_w_Rig_Trihedron{k} );
+            to_ = trihedron.getCorrespondence( Rig );
+            if ~isempty(to_)
+                to{end+1} = to_;
+                Nbp = [Nbp to_.cam_reprN];
+                A_Nbp{end+1} = to_.cam_A_reprN;
+            end
+        end
+        ob = Manifold.S2( Nbp );
+        obj_Nbp = Manifold.Dyn( ob );
+        obj_Nbp.setRepresentationCov( blkdiag(A_Nbp{:}) );
+        labels = kron(ones(1,obj_Nbp.Nvars/3),[1 2 3]); % For complete TO by now, but more flexible for future
+        obj_Rtri = optimizeTrihedronNormals(obj_Nbp,labels,R0);
+    end
+    
     if WITHPLOTSCENE
         % Need to update Rig poses for plotting
         figure

@@ -17,17 +17,25 @@ classdef Dyn < Manifold.Base
                 obj.X = zeros(0,1);
                 obj.dim = 0;
                 obj.DIM = 0;
+                count = 1;
                 for i=1:nargin
-                    obj.vars{i} = varargin{i};
-                    obj.X = [ obj.X ; varargin{i}.X(:) ];
-                    
-                    obj.idxs{i} = obj.dim + (1:varargin{i}.dim);
-                    obj.IDXS{i} = obj.DIM + (1:varargin{i}.DIM);
-                    
-                    obj.dim = obj.dim + varargin{i}.dim;
-                    obj.DIM = obj.DIM + varargin{i}.DIM;
+                    % If any input is an object array, take element wise
+                    in_objs = varargin{i};
+                    for k=1:numel(in_objs)
+                        ob = in_objs(k);
+                        obj.vars{count} = ob;
+                        obj.X = [ obj.X ; ob.X(:) ];
+                        
+                        obj.idxs{count} = obj.dim + (1:ob.dim);
+                        obj.IDXS{count} = obj.DIM + (1:ob.DIM);
+                        
+                        obj.dim = obj.dim + ob.dim;
+                        obj.DIM = obj.DIM + ob.DIM;
+                        
+                        count = count + 1; % Increase total counter
+                    end
                 end
-                obj.Nvars = nargin;
+                obj.Nvars = numel( obj.vars );
             end
         end
         
