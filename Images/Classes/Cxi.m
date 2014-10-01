@@ -43,9 +43,15 @@ classdef Cxi < Manifold.Dyn
             for k=1:3
                 d_ang(k) = acos( obj.v(k).X' * xi2.v(k) );
             end
-%             disp( d_c )
-%             disp( d_ang )
-%             d = {d_c d_ang};
+        end
+        
+        function [v_c, v_ang] = velocity( obj, xi2, t )
+            v_c = ( obj.c.X - xi2.c.X ) / t;
+            v_ang = zeros(1,3);
+            Ort = [0 -1 ; 1 0];
+            for k=1:3
+                v_ang(k) = asin( (Ort*xi2.v(k))' * obj.v(k).X ) / t;
+            end
         end
         
         function l = l( obj, ind )

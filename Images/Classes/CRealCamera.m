@@ -7,6 +7,9 @@ classdef CRealCamera < CConfigCamera & handle
         img
         meta
         
+        % Previous interesting data
+        prev_ts % ts of previous frame
+        
         % Figure handle for visualization
         hFig
         hImg
@@ -51,10 +54,27 @@ classdef CRealCamera < CConfigCamera & handle
                 if ~isempty(obj.GOptimizer)
                     delete( obj.GOptimizer )
                 end
+                % Try to improve initial estimate with xi estimation
+                xi0 = obj.meta.xi;
+                if ~isempty(obj.prev_ts) && ~isempty(obj.meta.v_c)
+                    inc_t = obj.frame.ts - obj.prev_ts;
+                    c_est = xi0.c.X + inc_t * obj.meta.v_c;
+                    for k=1:3
+                        rot = RotationZ( obj.meta.v_ang(k) * inc_t );
+                        rot = rot(1:2,1:2);
+                        v_est{k} = rot * xi0.v(k).X;
+                    end
+                    obj.meta.xi = Cxi( c_est, v_est{1}, v_est{2}, v_est{3} );
+                end
                 obj.GOptimizer = CGoptimizer( obj.frame.loadImg, obj.meta );
                 obj.GOptimizer.expandLines = obj.linesToEnd;
                 
-                [xi,meta] = obj.GOptimizer.compute;
+                [xi,meta] = obj.GOptimizer.compute; % Compute new xi from initial estimate
+                % Store xi velocity information for next frame
+                if ~isempty(obj.prev_ts)
+                    inc_t = obj.frame.ts - obj.prev_ts;
+                    [meta.v_c, meta.v_ang] = xi.velocity( xi0, inc_t );
+                end
                 while isempty(xi) % Sth went wrong and corner is lost, manually set
                     subplot( obj.hFig )
                     delete( obj.hImg ); % Update only if necessary to improve speed
@@ -71,6 +91,13 @@ classdef CRealCamera < CConfigCamera & handle
         end
         
         function setFrame( obj, frame )
+            % Store previous frame interesting information
+            if isempty(obj.frame)
+                obj.prev_ts = [];
+            else
+                obj.prev_ts = obj.frame.ts;
+            end
+            
             obj.frame = frame;
             obj.loadImage; % Find other location to save computation if not necessary
             % Try to load metadata
@@ -110,7 +137,7 @@ classdef CRealCamera < CConfigCamera & handle
         function saveMeta( obj, meta ) %#ok<INUSD>
             file = fullfile(obj.frame.path,'meta_img',obj.frame.metafile);
             if exist(file,'file')
-                warning('Metadata is going to be overwritten');
+%                 warning('Metadata is going to be overwritten');
             end
             save( file, 'meta' );
         end
