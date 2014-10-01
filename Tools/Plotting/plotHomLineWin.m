@@ -1,4 +1,4 @@
-function plotHomLineWin( l, c )
+function h = plotHomLineWin( l, c )
 % plotHomLineWin( l, c )
 % Plot an homogeneous line (3x1) in the current window (inside current axis
 % configuration)
@@ -21,7 +21,7 @@ if 1
     
     p = p(:,in);
     
-    plot(p(1,:),p(2,:),c)
+    h = plot(p(1,:),p(2,:),c);
 else % Change size_img
     n = l(1:2);
     v = [ -n(2) n(1) ]';

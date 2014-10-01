@@ -47,6 +47,10 @@ classdef CMetaImg < handle
             
             title(sprintf('Grab the center, X, Y and Z points\tIMPORTANT: Make coordinates dextrorotatory!'))
             [x, y] = getpts;
+            while isempty(x)
+                warning('Input points');
+                [x,y] = getpts;
+            end
             
             % Vertex point
             c = [ x(1), y(1) ]';
