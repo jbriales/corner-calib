@@ -150,6 +150,7 @@ if WITHTRIHEDRON
     t_2D_w = triOptim.optimizeTranslation_2D_Weighted( R0_for_t );
     
     [R_global, t_global] = triOptim.optimizeGlobal_Ort_3D( R_c_s_w, t_3D_w );
+    [R_global_3D, t_global_3D] = triOptim.optimizeGlobal_3D( R_c_s_w, t_3D_w );
     
     % Compute and check covariances
     if 0 % Monte Carlo for rotation
@@ -173,8 +174,8 @@ if WITHTRIHEDRON
 end
 
 % ------------- Kwak -------------------
-cornerOptim.setNobs(Nobs);
 if WITHCORNER
+    cornerOptim.setNobs(Nobs);
     if WITHVERBOSE
         cornerOptim.disp_N_obs;
     end
@@ -315,6 +316,8 @@ if WITHVERBOSE
             angularDistance(R_c_s_w,Rig.R_c_s) );
         fprintf('Trihedron (global W, 3D) rotation error (deg): \t \t %f \n',...
             angularDistance(R_global,Rig.R_c_s) );
+        fprintf('Trihedron (global W, 3D only) rotation error (deg): \t %f \n',...
+            angularDistance(R_global_3D,Rig.R_c_s) );
         fprintf('=============================================================\n');
         fprintf('Trihedron (non-weighted, 3D) translation error (cm): \t %f \n',...
             norm(t_3D_nw-Rig.t_c_s)*100 );
@@ -326,6 +329,8 @@ if WITHVERBOSE
             norm(t_2D_w-Rig.t_c_s)*100 );
         fprintf('Trihedron (    global W, 3D) translation error (cm): \t %f \n',...
             norm(t_global-Rig.t_c_s)*100 );
+        fprintf('Trihedron (    global W, 3D only) translation error (cm):%f \n',...
+            norm(t_global_3D-Rig.t_c_s)*100 );
     end
     
     if WITHCORNER
