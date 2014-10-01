@@ -150,13 +150,23 @@ save( fullfile( path, 'cache',...
       strcat('preoptimization',stereoLabel,hokuyoLabel) ),...
       'triOptim' )
 keyboard
+figure('Name','Sampling map'), hold on
 triOptim.showSamplingSphere;
 
 %% Final optimization with triOptim object
 % WITHRANSAC = false;
 % WITHRANSAC = true;
+
+if 1 % Code to filter obs for R and t from different datasets
+    mask_data1 = kron([frames.ts]<1412150000, ones(1,3));
+    triOptim.mask_RANSAC_t_outliers = mask_data1;
+    mask_data2 = kron([frames.ts]>1412150000, ones(1,3));
+    triOptim.mask_RANSAC_R_outliers = mask_data2;
+end
+
 if WITHRANSAC
     triOptim.filterRotationRANSAC;
+    triOptim.showSamplingSphere('r');
 else % Give initial estimate
 %     triOptim.setInitialRotation( gt.R_c_s );
     triOptim.setInitialRotation( [ 0 -1 0;
