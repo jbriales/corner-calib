@@ -218,6 +218,10 @@ for idx_sd=1:cam_sd_N
             fprintf('Mean time: %.2f\tEstimated left duration: %.2f\n',mean_time,(total_loops-counter_loops)*mean_time);
             first_time = toc;
         end
+        % Remove classes instances
+        delete( triOptim );
+        delete( cornerOptim );
+        delete( checkerOptim );
     end
 end
     
