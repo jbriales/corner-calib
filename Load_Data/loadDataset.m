@@ -103,7 +103,7 @@ else
             signOfCam  = [1 1 -1]';
             %         str = strtrim( evalc('system(''hostname'');') );
             imgFormat = strcat('CAM',stereoLabel,'_%f.jpg');
-            LIDAR_tag = strcat('_LASER_HOKUYO',hokuyoLabel);
+            LIDAR_tag = strcat(LIDAR_tag,hokuyoLabel);
     end
 
     %% LOAD INITIAL DATA AND USER INPUT
@@ -114,6 +114,7 @@ else
     
     % Set handle for figure
     Cam.hFig = hImg;
+    LRF.hFig = hLidar;
     
     % Load images
     blur = false;
@@ -148,10 +149,13 @@ else
     %scans = cropScansArray( scans, imgs );
     % Set image-scan synchronised pairs by finding scan closest to each image and assign:
 %     plotTs( scans, imgs )
+    [imgs, delta_ts] = filterClosestFrames( scans, imgs );
     [scans, delta_ts] = filterClosestScans( scans, imgs );
-    % Plot scans and images timestamps:
-%     plotTs( scans, imgs )
     
+    % Plot scans and images timestamps:
+    plotTs( scans, imgs )
+    
+    scans  = CScan( scans );
     frames = CFrame( imgs );
 % %     % User input: Set initial points in image for tracking
 % % %     Cam.setFrame( frames(1) );
@@ -171,29 +175,29 @@ else
 % %     imshow( rgb2gray(imgs(1).I) );
     
     % User input: Set segments of interest in scan observation
-    scan = scans(1);
-    switch typeOfSource
-        case 'Blender'
-            scan.xy = loadBlenderPCD( scan.path );
-        case 'Rawlog'
-    end
-    hLidar = subplot(121);
-    hold on, title('First scan')
-    if exist(scan.metafile,'file')
-        load( scan.metafile, '-mat', 'scantrack' );
-        plot( scan.xy(1,:), scan.xy(2,:), '.k' )
-        axis equal
-        plotLIDARframe
-    else
-%         scantrack = manualSetScanlines( scans(1).xy, [1 1 1] );
-        scantrack = manualSetScanlines( scan.xy, [1 1 1], scan.metafile );
-    end
+% %     scan = scans(1);
+% %     switch typeOfSource
+% %         case 'Blender'
+% %             scan.xy = loadBlenderPCD( scan.path );
+% %         case 'Rawlog'
+% %     end
+% %     hLidar = subplot(121);
+% %     hold on, title('First scan')
+% %     if exist(scan.metafile,'file')
+% %         load( scan.metafile, '-mat', 'scantrack' );
+% %         plot( scan.xy(1,:), scan.xy(2,:), '.k' )
+% %         axis equal
+% %         plotLIDARframe
+% %     else
+% % %         scantrack = manualSetScanlines( scans(1).xy, [1 1 1] );
+% %         scantrack = manualSetScanlines( scan.xy, [1 1 1], scan.metafile );
+% %     end
     
-    [R_w_c, t_w_c] = manualSetCameraPose( signOfCam, 0 );
+%     [R_w_c, t_w_c] = manualSetCameraPose( signOfCam, 0 );
     % [R_w_c, t_w_c] = manualSetCameraPose( );
         
     % Set rotation R_c_w initial estimate
-    R_c_w = R_w_c'; % Inverse of R_w_c
+%     R_c_w = R_w_c'; % Inverse of R_w_c
     
 %     save( fullfile(path,'cache','initialisation'),...
 %           'imgs', 'scans', 'imgtrack', 'scantrack', 'R_c_w', 'WITHGT',...
@@ -206,9 +210,9 @@ out = struct( );
 out.imgs = imgs;
 out.scans = scans;
 % out.imgtrack = imgtrack;
-out.scantrack = scantrack;
-out.R_c_w = R_c_w;
-out.signOfAxis = signOfAxis;
+% out.scantrack = scantrack;
+% out.R_c_w = R_c_w;
+% out.signOfAxis = signOfAxis;
 out.path = path;
 out.hWin = hWin;
 out.hLidar = hLidar;
@@ -256,14 +260,32 @@ scans = scans_; % Substitute array
 clear scans_
 end
 
+function [imgs, delta_ts] = filterClosestFrames( scans, imgs )
+imgs_ts = [imgs.ts];
+% scan_ts = [scans.ts];
+delta_ts = zeros(1,length(imgs));
+for i=1:length(scans)
+    diff = scans(i).ts - imgs_ts;
+    [delta_ts(i),I] = min( abs(diff) );
+    imgs_(i) = imgs(I);
+end
+for i=1:length(scans)
+    scans(i).delta_ts = delta_ts(i);
+end
+imgs = imgs_; % Substitute array
+clear imgs_
+end
+
 function plotTs( scans, imgs )
 scan_ts = [scans.ts];
 cam_ts = [imgs.ts];
 time_min = min( [scan_ts cam_ts] );
 figure('Name','timestamp LIDAR and Camera'), hold on
-plot( scan_ts-time_min, 1, '.b' )
-plot( cam_ts-time_min, 1, 'or' )
-legend('LIDAR','Camera')
+N = length( scan_ts );
+plot( scan_ts-time_min, ones(1,N), '.b' )
+plot( cam_ts-time_min, ones(1,N), 'or' )
+legend('LIDAR','Camera');
+title(sprintf('Max ts dist: %f',max([scans.delta_ts])));
 pause
 close
 end

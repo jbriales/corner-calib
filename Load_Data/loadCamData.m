@@ -15,8 +15,8 @@ if ~exist('decimation','var')
 end
 
 % Choose and read images
-K          = load( fullfile( path, 'intrinsic_matrix.txt' ) );
-distortion = load( fullfile( path, 'distortion.txt' ) );
+% K          = load( fullfile( path, 'intrinsic_matrix.txt' ) );
+% distortion = load( fullfile( path, 'distortion.txt' ) );
 [~,~,img_ext] = fileparts(imgFormat);
 
 if ~exist('idx_span','var') || isempty(idx_span)
@@ -65,6 +65,6 @@ for k=1:length(imgs)
     imgs(k).path = fullfile(path);
 %     imgs(k).metafile = fullfile(path,'meta_img',img_files{i});
     imgs(k).ts = sscanf(img_files{i}, imgFormat);
-    imgs(k).K = K;
-    imgs(k).distortion = distortion;
+%     imgs(k).K = K;
+%     imgs(k).distortion = distortion;
 end
