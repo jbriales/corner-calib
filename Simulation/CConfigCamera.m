@@ -1,4 +1,4 @@
-classdef CConfigCamera
+classdef CConfigCamera < handle
     %CConfigCamera Config class for Camera object
     % This base class stores configuration parameters
     %   Constructor:
@@ -30,8 +30,19 @@ classdef CConfigCamera
        
     methods
         % Constructor
-        function obj = CConfigCamera( K, res,f, sd  )
-            obj.K  = K;
+        function obj = CConfigCamera( in1, res,f, sd  )
+            % CConfigCamera( K, res,f, sd )
+            % CConfigCamera( S )
+            if isa(in1,'CConfigCamera')
+                obj = in1;
+                return
+            elseif isstruct(in1)
+                S = in1;
+                extractStructFields( S );
+            elseif isnumeric(in1)
+                K = in1; %#ok<PROP>
+            end
+            obj.K  = K; %#ok<PROP>
             obj.res = res;
             obj.f  = f;
             obj.sd = sd;

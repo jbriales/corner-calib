@@ -48,6 +48,7 @@ tic
 check_repeat = true; % TODO: Change loop exit condition
 pts0 = {[],[],[]};
 count = 1;
+% Q0 = imgtrack.q;
 Q0 = [];
 while check_repeat && count < 10
     [x, pts, w, mask, ~, debug_out] = coarseTrack(x0, lambda_ini, lambda_end, R_k, img_grad_mag, img_grad_dir, mag_th, dir_th, Q0, debug);
@@ -91,6 +92,17 @@ A_x = inv( J * i_W * J' );
 imgtrack.x = x;
 imgtrack.mag_th = mag_th;
 imgtrack.ang_th = dir_th;
+
+% Find points further to center and take as new q points
+c = x(1:2);
+Q = cell(1,3);
+for k=1:3
+    Npts = size(pts{k},2);
+    distance = sqrt( sum( (pts{k}-repmat(c,1,Npts)).^2, 1 ) );
+    [~, idx] = max(distance);
+    Q{k} = pts{k}(:,idx);
+end
+imgtrack.q = cell2mat(Q);
 
 %% Check line correctness with gradient direction
 % Check in complete rectangle around detected segment
@@ -147,6 +159,14 @@ if any(cov_angle > 0.750)
     Q = [];
 end
 
+% Check segments are not over the same line
+ang_dist_thres = deg2rad(2);
+if abs(x(3)-x(4)) < ang_dist_thres ||...
+   abs(x(4)-x(5)) < ang_dist_thres ||...
+   abs(x(5)-x(3)) < ang_dist_thres
+   warning('Are two lines the same?');
+   checkImage = true;
+end
 end
 
 function [E, J, W, U] = Corner_Fun( x, Cpts, Cw )
@@ -235,7 +255,7 @@ for i = 1:3
     if isempty(Q)
         q = getBorderIntersection( p_0, v, size_img );
     else
-
+        q = Q(:,i); % increment length?
     end
 
     kt = 1.5; % Growth rate in area width

@@ -583,12 +583,129 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             R = Rt(1:3,1:3); t = Rt(1:3,4);
         end
         
+        % For global optimization (R+t)
+        % 3D back-projected plane distance as error function (without
+        % Orthogonality)
+        function residual = FErr_Global_3D( obj, R, t )
+            % Compute error vector for observations data, R and t
+            % N - (3x...) 3D normals to reprojection planes from camera center
+            % through image lines
+            % Q - (2x...) 2D LRF intersection points
+            res_3D  = obj.FErr_3D_PlaneDistance( R, t );
+            residual = res_3D;
+        end
+        function jacobian = FJac_Global_3D( obj, R, t )
+            % Compute jacobian of error vector wrt R for observations data and certain R
+            % Jac e_3D wrt R and t
+            N = obj.cam_reprN;
+            Q = obj.LRF_Q;
+            jac_3D_R = cross( R(1:3,1:2) * Q, N, 1 )';
+            jac_3D_t = N';
+            jacobian = [ jac_3D_R  , jac_3D_t  ];
+        end
+        function weights = FWeights_Global_3D( obj, R, t )
+            W_3D  = obj.FWeights_3D_PlaneDistance( R, t );
+            weights = W_3D;
+        end
+        function H = FHes_Global_3D( obj, R, t )
+            % Linear approximation to hessian in LM method
+            jacobian = obj.FJac_Global_3D( R, t );
+            weights  = obj.FWeights_Global_3D( R, t );
+            H = jacobian' * weights * jacobian;
+        end
+        function jacobian = FJac_Rt_Global_3D( obj, R, t )
+            % TOCHECK!!! Copied from Ort+3D
+            jac_t_3D  = obj.FJac_t_3D_W( R, t );
+            
+            N = obj.cam_reprN;
+            Q = obj.LRF_Q;
+            
+            W = obj.FWeights_3D_PlaneDistance( R, t );
+            
+            if size(N,2) == size(Q,2) % Just to assure dimensions
+                Ncorresp = size(N,2);
+            end
+            
+            E  = obj.FErr_3D_PlaneDistance( R, t );
+            
+            % A little risky: not completely checked
+            dE_deps = cross( R(1:3,1:2) * Q, N, 1 )';
+            
+            % Create two blocks of jacobian: J_eps_N and J_eps_Q
+            blockH  = cell(1,Ncorresp);
+            blockDN = cell(1,Ncorresp);
+            blockDQ = cell(1,Ncorresp);
+            for i=1:Ncorresp
+                ni  = N(:,i); % Back-projected plane normal seen from camera (3x1)
+                qsi = Q(:,i); % Corner point seen from scanner (2x1)
+                qci = R(:,1:2) * qsi + t; % Corner point seen from camera (3x1)
+                
+                % Phi is dC/deps = 2 E' * W * dE/deps
+                d_ei_qci = ni';
+                d_ei_ni  = qci';
+                d_gi_qci = +skew(ni); % Non-dependent
+                d_gi_ni  = +skew(R(:,1:2)*qsi)';
+                
+                % Constant values related to W
+                WG = ( W(i,:) * dE_deps )';
+                WE = E' * W(:,i);
+                d_phi_qci = 2 * ( WG * d_ei_qci + WE * d_gi_qci );
+                d_phi_ni  = 2 * ( WG * d_ei_ni + WE * d_gi_ni );
+                
+                d_qci_qsi = R(:,1:2);
+                d_qci_eps = - skew( R(:,1:2)*qsi );
+                
+                % Store blocks of H and D2
+                blockH{i} = d_phi_qci * d_qci_eps;
+                blockDN{i} = d_phi_ni;
+                blockDQ{i} = d_phi_qci * d_qci_qsi;
+            end
+            H = sum( reshape(cell2mat( blockH ),3,3,[]), 3 );
+            D = [ cell2mat( blockDN ), cell2mat( blockDQ ) ];
+            jac_R_3D = - H \ D;
+            
+            jacobian = [ jac_R_ort , jac_R_3D ;
+                         jac_t_ort , jac_t_3D ];
+        end
+        function cov = FCov_Global_3D( obj, R, t )
+            A_NQ = obj.FCov_data_3D;
+            
+            J = obj.FJac_Rt_Global_3D( R, t );
+            cov = J * A_NV * J';
+        end
+        
+        function [R,t] = optimizeGlobal_3D( obj, R, t )
+            Fun = @(Rt) deal( obj.FErr_Global_3D(Rt(1:3,1:3),Rt(1:3,4)) ,...
+                             obj.FJac_Global_3D(Rt(1:3,1:3),Rt(1:3,4)) ,...
+                             obj.FWeights_Global_3D(Rt(1:3,1:3),Rt(1:3,4)) );
+%             Rt = obj.optimize( Fun, [obj.R0, obj.t0], 'SE(3)', true );
+            Rt = obj.optimize( Fun, [R, t], 'SE(3)', true );
+            R = Rt(1:3,1:3); t = Rt(1:3,4);
+        end
+        
         
 %         t = optimizeTranslation_2D_NonWeighted( obj, R )
 %         t = optimizeTranslation_2D_Weighted( obj, R )
         t = optimizeTranslation_3D_NonWeighted( obj, R )
         t = optimizeTranslation_3D_Weighted( obj, R )
         
+        function showSamplingSphere( obj )
+            N = obj.cam_N;
+            L = obj.LRF_V;
+            
+            vecL = zeros(3, size(N,2));
+            for i=1:size(N,2) % For representing measures in 3D space
+                n = N(:,i);
+                %     J_n_y = Householder(n) * [eye(2) , [0 0]']';
+                J_n_y = Householder(n);
+                J_n_y = J_n_y(:,1:2);
+                vecL(:,i) = J_n_y * L(:,i);
+            end
+            figure('Name','Sampling map'), hold on
+            scatter3( N(1,:), N(2,:), N(3,:), 'r' )
+            quiver3( N(1,:), N(2,:), N(3,:), vecL(1,:), vecL(2,:), vecL(3,:), 0.1, 'b' )
+            axis equal, rotate3d on
+        end
         
         %% Get-functions
         % For rotation
@@ -597,8 +714,7 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             % Mask with existing measures and not-inliers
             mask_valid = obj.mask_LRF_V & (~obj.mask_RANSAC_R_outliers);
             cam_N = cam_N(:, mask_valid);
-        end
-        
+        end        
         function LRF_V = get.LRF_V( obj )
             LRF_V = [obj.obs(1:obj.Nobs).LRF_v];
             % Remove non-observed data: Not necessary really (already empty)
@@ -608,7 +724,6 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             % Convert from cell with empty elements to dense matrix
             LRF_V = cell2mat( LRF_V );
         end
-        
         % For translation
         function cam_L = get.cam_L( obj )
             cam_L = [obj.obs(1:obj.Nobs).cam_l];
@@ -616,14 +731,12 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             mask_valid = obj.mask_LRF_Q & (~obj.mask_RANSAC_t_outliers);
             cam_L = cam_L(:, mask_valid);
         end
-        
         function cam_reprN = get.cam_reprN( obj )
             cam_reprN = [obj.obs(1:obj.Nobs).cam_reprN];
             % Mask with existing measures and not-inliers
             mask_valid = obj.mask_LRF_Q & (~obj.mask_RANSAC_t_outliers);
             cam_reprN = cam_reprN(:, mask_valid);
         end
-        
         function LRF_Q = get.LRF_Q( obj )
             LRF_Q = [obj.obs(1:obj.Nobs).LRF_q];
             % Remove non-observed data: Not necessary really (already empty)
@@ -633,7 +746,6 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             % Convert from cell with empty elements to dense matrix
             LRF_Q = cell2mat( LRF_Q );
         end
-        
         function mask_LRF_V = get.mask_LRF_V( obj )
             mask_LRF_V = [obj.obs(1:obj.Nobs).thereis_LRF_v];
         end

@@ -1,4 +1,4 @@
-classdef CConfigLidar
+classdef CConfigLidar < handle
     %CConfigLidar Config class for Lidar object
     % This base class stores configuration parameters
     %   Constructor:
@@ -38,8 +38,19 @@ classdef CConfigLidar
     
     methods
         % Constructor
-        function obj = CConfigLidar( N, FOVd, sd, d_range )
-            obj.N  = N;
+        function obj = CConfigLidar( in1, FOVd, sd, d_range )
+            % CConfigLidar( N, FOVd, sd, d_range )
+            % CConfigLidar( S )
+            if isa(in1,'CConfigLidar')
+                obj = in1;
+                return
+            elseif isstruct(in1)
+                S = in1;
+                extractStructFields( S );
+            elseif isnumeric(in1)
+                N = in1; %#ok<PROP>
+            end
+            obj.N  = N; %#ok<PROP>
             obj.FOVd = FOVd;
             obj.sd = sd;
             obj.d_range = d_range;

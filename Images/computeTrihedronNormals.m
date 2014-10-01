@@ -2,7 +2,7 @@ function obj_Rtri = computeTrihedronNormals( xi, K, Nbp )
 % R_tri = computeTrihedronNormals( c, K, v_im )
 % 
 
-Dproj = DprojectionP2( xi.c );
+Dproj = DprojectionP2( xi.c.X );
 Ort   = [ 0 -1 ; 1 0 ];
 v_im  = [ xi.v(1).X , xi.v(2).X , xi.v(3).X ];
 % Obtain null spaces (Om) in which n lies (parallel condition)

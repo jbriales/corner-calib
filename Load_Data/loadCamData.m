@@ -15,8 +15,8 @@ if ~exist('decimation','var')
 end
 
 % Choose and read images
-K          = load( fullfile( path, 'intrinsic_matrix.txt' ) );
-distortion = load( fullfile( path, 'distortion.txt' ) );
+% K          = load( fullfile( path, 'intrinsic_matrix.txt' ) );
+% distortion = load( fullfile( path, 'distortion.txt' ) );
 [~,~,img_ext] = fileparts(imgFormat);
 
 if ~exist('idx_span','var') || isempty(idx_span)
@@ -43,6 +43,9 @@ imgs = repmat( struct('I',[], 'file',[], 'path',[], 'ts',[], 'K',[], 'distortion
 for k=1:length(imgs)
     i = img_idxs(k);
     
+    [~,img_name,~] = fileparts( img_files{i} );
+    metafile = strcat( img_name, '.mat' );
+    
     % Deprecated: Images are loaded only at time of use
 %     Im_ = imread( fullfile(path,'img',img_files{i}) );
 %     if any( distortion )
@@ -56,10 +59,12 @@ for k=1:length(imgs)
     
 %     imgs(k).I = Im_;
     imgs(k).file = img_files{i};
+    imgs(k).metafile = metafile;
     imgs(k).file_idx = int8(img_idxs(k));
-    imgs(k).path = fullfile(path,'img',img_files{i});
-    imgs(k).metafile = fullfile(path,'meta_img',img_files{i});
+%     imgs(k).path = fullfile(path,'img',img_files{i});
+    imgs(k).path = fullfile(path);
+%     imgs(k).metafile = fullfile(path,'meta_img',img_files{i});
     imgs(k).ts = sscanf(img_files{i}, imgFormat);
-    imgs(k).K = K;
-    imgs(k).distortion = distortion;
+%     imgs(k).K = K;
+%     imgs(k).distortion = distortion;
 end

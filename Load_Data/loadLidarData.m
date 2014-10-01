@@ -38,15 +38,17 @@ function scans = loadRawlog( path, tag )
 % tag = '_LASER_HOKUYO_UTM';
 file_range  = fullfile( path, 'laser', strcat(rawlog, tag, '.txt') );
 file_times  = fullfile( path, 'laser', strcat(rawlog, tag, '_times.txt') );
-file_config = fullfile( path, 'laser', strcat(rawlog, tag, '_config.txt') );
+% file_config = fullfile( path, 'laser', strcat(rawlog, tag, '_config.txt') );
+file_config = fullfile( path, 'rig.ini' );
 R  = load( file_range );
 ts = load( file_times );
 
 Nobs = size(ts,1);
 
-scan       = readConfigFile( file_config );
+% scan       = readConfigFile( file_config );
+scan       = readConfigFile( file_config, '[LRF]' );
 scan.FOV   = deg2rad(scan.FOVd);
-scan.theta = linspace( -scan.FOV/2, +scan.FOV/2, scan.Npts );
+scan.theta = linspace( -scan.FOV/2, +scan.FOV/2, scan.N );
 scan.cth   = cos( scan.theta );
 scan.sth   = sin( scan.theta );
 
@@ -56,13 +58,15 @@ y = repmat(scan.sth, Nobs,1) .* R;
 % Remove zero entries (mask 1 for correct values)
 mask_zero = R > 0;
 % Crop scan with given angle (mask 1 for values inside)
-mask_crop = abs(scan.theta) < deg2rad( scan.crop / 2 );
+% mask_crop = abs(scan.theta) < deg2rad( scan.crop / 2 );
+mask_crop = mask_zero;
 
 % Output mask (mask 1 for valid values (columns) in x_scan and y_scan)
-mask = mask_zero( :, mask_crop );
+% mask = mask_zero( :, mask_crop );
+mask = mask_zero;
 
-x = x( :, mask_crop );
-y = y( :, mask_crop );
+% x = x( :, mask_crop );
+% y = y( :, mask_crop );
 
 Nsam = size(mask_crop,2); % TODO: CHECK value
 voidStruct = struct('xy',  zeros(2,Nsam),...
