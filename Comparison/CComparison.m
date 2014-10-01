@@ -245,7 +245,7 @@ classdef CComparison < handle & CStaticComp
             % Parameters to control the position in X label
             Npos    = 5;    % gap between samples in X label
             pos_ini = 1;    % initial value in X label
-            Nsep    = 0.1;  % gap between methods in X label
+            Nsep    = 0.5;  % gap between methods in X label
             % Load the vector of positions
             pos_aux = pos_ini:Npos:Npos*Nx;
             pos_    = pos_aux
@@ -254,9 +254,16 @@ classdef CComparison < handle & CStaticComp
                 pos_ = [pos_ pos_aux+i*Nsep];
             end
             
-            color = repmat(rand(N_met,3),Nx,1);
+            color_ = [0.2980392156862745 0.4470588235294118 0.6901960784313725;
+              0.3333333333333333 0.6588235294117647 0.40784313725490196;
+              0.7686274509803922 0.3058823529411765 0.3215686274509804;
+              %0.5058823529411764 0.4470588235294118 0.6980392156862745;];
+              0.8                0.7254901960784313 0.4549019607843137];
+            color = repmat(color_,Nx,1);           
+%             color = repmat(rand(N_met,3),Nx,1);
             Rlab = 'Rotation error (deg)';
             tlab = 'Translation error (m)';
+            Cleg = {'Trihedron','Kwak et al.','Wasielewski et al.','Vasconcelos et al.'};
             
             % Boxplot for R
             h = figure; hold on;
@@ -270,7 +277,7 @@ classdef CComparison < handle & CStaticComp
                 x_ = pos_(1, Nx*(i-1)+1:Nx*i);
                 y_ = median_(1, Nx*(i-1)+1:Nx*i);               
                 plot(x_,y_,'Color',color(i,:),'LineWidth',1.5);
-                Cleg = {Cleg{:}, Ctag{1,Nx*(i-1)+1} };
+                %Cleg = {Cleg{:}, Ctag{1,Nx*(i-1)+1} };
             end
             Clab = {Cval{1,1:Nx}};
             set(gca,'YScale','log');
