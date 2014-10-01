@@ -144,16 +144,27 @@ else
     % Remove images before and after scan limits:
 %     plotTs( scans, imgs )
     imgs  = cropImgsArray( scans, imgs );
+    
+    % Plot scans and images timestamps (prior):
+    if WITH_plotTs
+        figure('Name','timestamp LIDAR and Camera'), hold on
+        plotTs( scans, imgs, '.k', 'ok' );
+    end
     % Remove scans before and after images limits:
 %     plotTs( scans, imgs )
     %scans = cropScansArray( scans, imgs );
     % Set image-scan synchronised pairs by finding scan closest to each image and assign:
 %     plotTs( scans, imgs )
-    [imgs, delta_ts] = filterClosestFrames( scans, imgs );
-    [scans, delta_ts] = filterClosestScans( scans, imgs );
+    [scans, imgs] = filterClosest( scans, imgs, 0.05 );
+%     [imgs, delta_ts] = filterClosestFrames( scans, imgs );
+%     [scans, delta_ts] = filterClosestScans( scans, imgs );
     
-    % Plot scans and images timestamps:
-    plotTs( scans, imgs )
+    % Plot scans and images timestamps (after correspondences):
+    if WITH_plotTs
+        plotTs( scans, imgs, '+r','sr' );
+        pause
+        close
+    end
     
     scans  = CScan( scans );
     frames = CFrame( imgs );
@@ -245,6 +256,22 @@ scans(scan_last_idx+1:end) = [];
 scans(1:scan_first_idx-1) = [];
 end
 
+function [scans_, imgs_] = filterClosest( scans, imgs, threshold )
+scan_ts = [scans.ts];
+counter = 1;
+for i=1:length(imgs)
+    diff = scan_ts - imgs(i).ts;
+    [delta_ts,I] = min( abs(diff) );
+    
+    if delta_ts < threshold
+        scans_(counter) = scans(I);
+        scans_(counter).delta_ts = delta_ts;
+        imgs_(counter)  = imgs(i);
+        counter = counter + 1;
+    end
+end
+end
+
 function [scans, delta_ts] = filterClosestScans( scans, imgs )
 scan_ts = [scans.ts];
 delta_ts = zeros(1,length(imgs));
@@ -276,16 +303,17 @@ imgs = imgs_; % Substitute array
 clear imgs_
 end
 
-function plotTs( scans, imgs )
+function plotTs( scans, imgs, format_scan, format_img )
 scan_ts = [scans.ts];
 cam_ts = [imgs.ts];
 time_min = min( [scan_ts cam_ts] );
-figure('Name','timestamp LIDAR and Camera'), hold on
-N = length( scan_ts );
-plot( scan_ts-time_min, ones(1,N), '.b' )
-plot( cam_ts-time_min, ones(1,N), 'or' )
+
+plot( scan_ts-time_min, ones(1,length( scan_ts )), format_scan )
+plot( cam_ts-time_min, ones(1,length( cam_ts )), format_img )
 legend('LIDAR','Camera');
-title(sprintf('Max ts dist: %f',max([scans.delta_ts])));
-pause
-close
+if isfield(scans,'delta_ts')
+    title(sprintf('Max ts dist: %f',max([scans.delta_ts])));
+end
+% pause
+% close
 end
