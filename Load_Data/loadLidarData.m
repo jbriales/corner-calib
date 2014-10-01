@@ -78,6 +78,7 @@ for i=1:Nobs
     scans(i).xy   = [ x(i,:) ; y(i,:) ];
     scans(i).mask = mask(i,:);
     scans(i).ts   = ts(i);
+    scans(i).delta_ts = [];
     scans(i).metafile = fullfile(path,'meta_laser',...
         strcat(tag(end),num2str(ts(i),'%.6f')));
 end
@@ -117,6 +118,7 @@ for i=1:Nobs
     scans(i).xy   = []; % Loaded in run-time
 %     scans(i).mask = ones(1, size(pts,2)); % TODO: Not used by now
     scans(i).ts   = ts;
+    scans(i).delta_ts = [];
     scans(i).metafile = fullfile(path,'meta_laser',...
         strcat(num2str(ts,'%d')));
 end
