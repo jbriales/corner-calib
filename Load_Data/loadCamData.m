@@ -37,6 +37,10 @@ else
             img_files(k) = [];
         end
     end
+    if idx_span(end) > numel(img_files)
+        idx_span(end) = numel(img_files);
+        warning('Number of images is %d, fix idx_span',idx_span(end));
+    end
     img_idxs = idx_span(1):decimation:idx_span(end);
 end
 imgs = repmat( struct('I',[], 'file',[], 'path',[], 'ts',[], 'K',[], 'distortion', [] ), length(img_idxs), 1 );

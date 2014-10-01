@@ -20,7 +20,7 @@ res = 512;
 colors = jet( res );
 scaled_d = round( res * (d - min(d) + 1) / (max(d) - min(d) + 1) ); % +1 to correct Matlab indexes from 1 instead of 0
 for k=1:size(uv,2)
-    plot(uv(1,k),uv(2,k), 'Color',colors(scaled_d(k),:), 'Marker','.', 'MarkerSize',1);
+    plot(uv(1,k),uv(2,k), 'Color',colors(scaled_d(k),:), 'Marker','.', 'MarkerSize',2);
 %     pause
 end
 colormap(colors)

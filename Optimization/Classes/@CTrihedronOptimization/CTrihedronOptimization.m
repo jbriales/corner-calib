@@ -63,7 +63,9 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         
         %% Filter correspondences with RANSAC
         obj = filterRotationRANSAC( obj )
+        obj = filterRotation_R0( obj, R0 )
         obj = filterTranslationRANSAC( obj, R )
+        obj = filterTranslation_t0( obj, R0, t0 )
         % Functions to set all outlier masks to false
         function obj = resetRotationRANSAC( obj )
             Nobs = length( obj.obs );
