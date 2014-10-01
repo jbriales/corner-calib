@@ -109,7 +109,10 @@ end
 % Update magnitude threshold
 for i=1:3
 %     mag_th(i) = median( w{i} ); % w is a cell array with grad mag values
-    mag_th(i) = prctile(w{i},80);
+%     mag_th(i) = prctile(w{i},80);
+%     mag_th(i) = prctile(w{i},50);
+    mag_th(i) = prctile(w{i},40);
+%     mag_th(i) = prctile(w{i},75);
 end
 % Median is applied to the whole set of geometric area covered by trapezoid in image
 
