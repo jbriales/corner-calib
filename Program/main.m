@@ -8,7 +8,7 @@ global WITH_MONTECARLO %#ok<NUSED>
 
 % Previous assertions:
 clear
-close all
+% close all
 dbstop if error % Set debug mode on if error occurs
 kbhit('stop')
 kbhit('init') % Track keyboard hits
@@ -37,7 +37,7 @@ optim_config_file = fullfile( pwd, 'optim_config.ini' );
 optimOpts = readConfigFile( optim_config_file );
 extractStructFields( optimOpts );
 clear optimOpts
-triOptim = CTrihedronOptimization( imgs(1).K,...
+triOptim = CTrihedronOptimization( Cam.K,...
                 RANSAC_Rotation_threshold,...
                 RANSAC_Translation_threshold,...
                 debug_level, maxIters,...
@@ -71,14 +71,15 @@ for nobs=1:length(scans)
     % Load image: Remove if not necessary to improve speed
     Cam.setFrame( frames(nobs) );
     obj_xi = Cam.computeXi;
-    Cam.visualize;
+    if strcmp( win_visibility, 'on' )
+        Cam.visualize;
+    end
     
     [obj_Nbp, obj_LP2] = computeBackprojectedNormals( obj_xi, Cam.K );
     
     % Compute trihedron planes normals from xi parameter
     tic
     obj_Rtri = computeTrihedronNormals( obj_xi, Cam.K, obj_Nbp );
-%     [R_c_w, A_R_c_w, A_eps_c_w] = getWorldNormals( R0, NL, c, A_co );
     fprintf('R_c_w optimization TIME: %f\n',toc)
     if WITHGT
         disp('Compare computed R_c_w to GT')
@@ -102,14 +103,10 @@ for nobs=1:length(scans)
     
     %% Go from LIDAR information to Corner Observation
     % Set algorithm input
-    scan = scans(nobs);
-    if isempty(scan.xy)
-        switch typeOfSource
-            case 'Blender'
-                scan.xy = loadBlenderPCD( scan.path );
-            case 'Rawlog'
-                % TODO: Not necessary?
-        end
+    LRF.setFrame( scans(nobs) );
+    [v,A_v,q,A_q] = LRF.compute;
+    if strcmp( win_visibility, 'on' )
+        LRF.visualize;
     end
     
     % User reallocation of LIDAR segments
@@ -132,94 +129,20 @@ for nobs=1:length(scans)
         end
     end
     
-    debug = 0;
-    metafile = scan.metafile;
-    if exist(metafile,'file')
-        % TODO: What to do with lost var?
-        load( metafile, '-mat', 'scantrack', 'inPts', 'lost' );
-    else
-        tic
-        [scantrack, inPts, lost] = updateSegments( scan, scantrack, debug );
-        save( metafile, '-mat', 'scantrack', 'inPts', 'lost' );
-    end
-    clear metafile
-    [v,A_v,~,~,q,A_q, lin,seg] = computeScanTO( scan.xy, scan_sigma, {scantrack.all_inliers}, debug );
+%     debug = 0;
+%     [v,A_v,~,~,q,A_q, lin,seg] = ...
+%         computeScanTO( LRF.xy, LRF.sd,...
+%         {LRF.meta.scantrack.all_inliers}, debug );
+%     [v,A_v,~,~,q,A_q, lin,seg] = computeScanTO( scan.xy, scan_sigma, {scantrack.all_inliers}, debug );
 %     [l,A_l,A_lh,p,A_p,q,A_q, lin,seg] = computeScanCorner( scan, scan_sigma, {scantrack.all_inliers}, debug );
-    [scantrack.lin] = deal( lin{:} );
-    [scantrack.seg] = deal( seg{:} );
-    
-    fprintf('SCAN2CO TIME: %f\n',toc)
-    thereis_line   = cellfun(@(x)~isempty(x), v);
-    thereis_corner = cellfun(@(x)~isempty(x), q);
-    if all(thereis_corner) && all(thereis_line)
-        CompleteCO = true;
-    else
-        CompleteCO = false;
-        if 0 % Automatic reallocation
-            % Estimate wrt to thereis_corner data
-            [~, ~, ~, ~, cam_Ms] = solveCamLidarUnknowns( c, q{k}, R_c_w(:,k), R_c_s, t_c_s );
-            Ms = R_c_w' * cam_Ms;
-        end
-    end
-    
-    if any( lost ) % Stop in iteration with loss of complete CO
-        lab = 'XYZ';
-        warning('LIDAR tracking has lost segment %c', lab(lost))
-        keyboard
-    end
-    
-    %% Update LIDAR visualization
-    % TODO: Put as option in a new class CLRF
-    tic
-    subplot(hLidar), set( gcf, 'Visible', win_visibility )
-    ax = axis;
-    cla, hold on
-    hold on, title('Current scan segmentation')
-    plot( scan.xy(1,:), scan.xy(2,:), '.k' ), axis equal
-    axis( ax );
-    plotLIDARframe( );
-    col = 'rgb';
-    for k=1:3
-        if thereis_line(k)
-            plot( inPts{k}(1,:), inPts{k}(2,:), [col(k),'.'] );
-            plotHomLineWin( scantrack(k).lin, col(k) );
-        end
-    end
-    fprintf('LIDAR PLOT TIME: %f\n',toc)
+%     [scantrack.lin] = deal( lin{:} );
+%     [scantrack.seg] = deal( seg{:} );    
         
     %% Store data for final optimization
     tic
     co = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp,...
                 v, A_v, [], [], q, A_q );
 	triOptim.stackObservation( co );
-    if 0 % Deprecated, use new classes
-        lab = [1 2 3];
-        co(nobs).complete = CompleteCO;
-        co(nobs).thereis_line = thereis_line; % Line - rotation correspondence
-        co(nobs).lab_line = lab(thereis_line);
-        co(nobs).thereis_corner = thereis_corner; % Corner - translation correspondence
-        co(nobs).lab_corner = lab(thereis_corner);
-        
-        % For rotation optimization
-        co(nobs).R_c_w   = R_c_w; % Normal vectors to world planes (in Camera SR)
-        co(nobs).A_R_c_w = A_R_c_w;
-        co(nobs).l       = l; % Direction vector of LIDAR segments (in LIDAR SR)
-        co(nobs).A_l     = A_l;
-        
-        % For translation optimization
-        co(nobs).N_repr  = N_repr; % Normal vectors to reprojection planes (in Camera SR)
-        co(nobs).L_P2    = L_P2;
-        co(nobs).A_lh    = A_lh;
-        co(nobs).q       = q; % 2D (XY) Corner points (in LIDAR SR)
-        co(nobs).A_q     = A_q;
-        
-        % For final checking and debug
-        check(nobs).cam_frame  = nobs;
-        check(nobs).scan_frame = nobs;
-        check(nobs).scan_inPts = inPts;
-        check(nobs).scan_track = scantrack;
-        check(nobs).img_track  = imgtrack;
-    end
     fprintf('STORAGE TIME: %f\n',toc)
     
 end
@@ -227,32 +150,79 @@ save( fullfile( path, 'cache',...
       strcat('preoptimization',stereoLabel,hokuyoLabel) ),...
       'triOptim' )
 keyboard
+triOptim.showSamplingSphere;
 
 %% Final optimization with triOptim object
-WITHRANSAC = false;
+% WITHRANSAC = false;
+% WITHRANSAC = true;
 if WITHRANSAC
     triOptim.filterRotationRANSAC;
 else % Give initial estimate
-    triOptim.setInitialRotation( gt.R_c_s );
+%     triOptim.setInitialRotation( gt.R_c_s );
+    triOptim.setInitialRotation( [ 0 -1 0;
+                                   0 0 -1;
+                                   +1 0 0] );
 end
 triOptim.disp_N_R_inliers;
-R_c_s_w  = triOptim.optimizeRotation_Weighted;
+R_ort = triOptim.optimizeRotation_Weighted;
 
 if WITHRANSAC
-    triOptim.filterTranslationRANSAC( R_c_s_w );
+    triOptim.filterTranslationRANSAC( R_ort );
 else
-    triOptim.setInitialTranslation( gt.t_c_s );
+%     triOptim.setInitialTranslation( gt.t_c_s );
+    triOptim.setInitialTranslation( [ 0.4 0 0.15 ]' );
 end
 triOptim.disp_N_t_inliers;
 % triOptim.setInitialTranslation( Rig.t_c_s + 0.05*randn(3,1) );
 % t_3D_nw = triOptim.optimizeTranslation_3D_NonWeighted( R_c_s_w );
-t_3D_w  = triOptim.optimizeTranslation_3D_Weighted( R_c_s_w );
+t_3D = triOptim.optimizeTranslation_3D_Weighted( R_ort );
 % t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted( R_c_s_w );
 % t_2D_w = triOptim.optimizeTranslation_2D_Weighted( R_c_s_w );
 
-[R_global, t_global] = triOptim.optimizeGlobal_Ort_3D( R_c_s_w, t_3D_w );
+[R_global, t_global] = triOptim.optimizeGlobal_Ort_3D( R_ort, t_3D );
+[R_global_3D, t_global_3D] = triOptim.optimizeGlobal_3D( R_ort, t_3D );
 
+% Code to reproject LRF to img
+T = [ 0 -1 0 ; 0 0 -1 ; 1 0 0 ];
+R_m = RotationY(deg2rad(-20)) * T;
+% t_m = -R_m * [0 0.54 0]';
+t_m = [ 0.5 -0.05 0.20 ]';
+Rt_m = [ R_m t_m ];
+
+disp( [R_ort t_3D] )
+% if exist('gt','var')
+%    disp( [gt.R_c_s gt.t_c_s] )
+% end
+disp( Rt_m )
+disp( [R_global_3D, t_global_3D] )
+
+if stereoStore % Save stereo results for later comparison and study
+    filename = fullfile(pwd,'Stereo_Comp',stereoLabel);
+    save(filename, 'R_ort', 't_3D', 'R_global_3D', 't_global_3D');
+end
+
+if 0
+    keyboard
+    im_gt = imread(fullfile(pwd,'GT',strcat('CAM',stereoLabel,'_1.jpg')));
+    xy_gt = load(fullfile(pwd,'GT','XY1.mat'),'XY');
+    xy_gt = xy_gt.XY;
+    K = [	248.321289 0 319.416809 ;
+	0 248.321289 249.839676 ;
+	0 0 1 ];
+    reprojectScan2Img( im_gt, xy_gt, K, [R_m t_m] );
+    reprojectScan2Img( im_gt, xy_gt, K, [R_ort t_3D] );
+    reprojectScan2Img( im_gt, xy_gt, K, [R_global_3D t_global_3D] );
+%     [gt.R_c_s gt.t_c_s]
+end
+if 0 % Check GT images
+    im_gt = imread('/media/storage/Research/Corner_Blender/Corner_Comercio_GT/Im1.png');
+    xy_gt = loadBlenderPCD('/media/storage/Research/Corner_Blender/Corner_Comercio_GT/Scan1.pcd');
+    reprojectScan2Img( im_gt, xy_gt, Cam.K, [R_m t_m] );
+    reprojectScan2Img( im_gt, xy_gt, Cam.K, [R_ort t_3D], false );
+    reprojectScan2Img( im_gt, xy_gt, Cam.K, [R_global_3D t_global_3D], false );
+end
 return
+
 % Code below is deprecated!
 
 %% Final optimization
