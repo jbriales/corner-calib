@@ -29,7 +29,8 @@ if ~exist('ptime','var')
 end
 for nobs=1:length(scans)
     try
-        fprintf('Frame %d\n',img_idxs(1)+nobs);
+        fprintf('Frame %d\n',frames(nobs).file_idx);
+        title(sprintf('Frame %d\n',frames(nobs).file_idx));
         Cam.setFrame( frames(nobs) );
         %     Cam.visualize; % Current image with previous lines
         obj_xi = Cam.computeXi;
@@ -41,6 +42,15 @@ for nobs=1:length(scans)
         if upper(kbhit) == 'L' % To stop after pressing 'L' key
             Cam.fixFrame( frames(nobs) );
         end
+        title(sprintf('Frame %d\n',frames(nobs).file_idx));
+    % frames(nobs).deleteImg;
+    catch exception
+        warning(exception.message)
+        keyboard
+        Cam.fixFrame( frames(nobs) );
+    end
+end
+
 %         kh = upper(kbhit);
 %         if ~isempty(kh)
 %             switch kh
@@ -54,10 +64,3 @@ for nobs=1:length(scans)
 %             clc
 %             figure(gcf)
 %         end
-    % frames(nobs).deleteImg;
-    catch exception
-        warning(exception.message)
-        keyboard
-        Cam.fixFrame( frames(nobs) );
-    end
-end
