@@ -36,7 +36,16 @@ classdef CFrame < handle
         function img = loadImg( obj )
             img = imread( fullfile(obj.path,'img',obj.file) );
         end
-        
+        function deleteImg( obj )
+            file = fullfile(obj.path,'img',obj.file);
+            if exist( file, 'file' )
+                answer = input('The image will be deleted: (y/n)','s');
+                if strcmpi(answer,'Y')
+                    delete( file );
+                    warning('Image %s removed',file);
+                end
+            end
+        end
         
     end
     
