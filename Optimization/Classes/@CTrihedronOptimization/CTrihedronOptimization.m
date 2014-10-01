@@ -689,7 +689,7 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         t = optimizeTranslation_3D_NonWeighted( obj, R )
         t = optimizeTranslation_3D_Weighted( obj, R )
         
-        function showSamplingSphere( obj )
+        function showSamplingSphere( obj, col )
             N = obj.cam_N;
             L = obj.LRF_V;
             
@@ -701,9 +701,12 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
                 J_n_y = J_n_y(:,1:2);
                 vecL(:,i) = J_n_y * L(:,i);
             end
-            figure('Name','Sampling map'), hold on
-            scatter3( N(1,:), N(2,:), N(3,:), 'r' )
-            quiver3( N(1,:), N(2,:), N(3,:), vecL(1,:), vecL(2,:), vecL(3,:), 0.1, 'b' )
+            
+            if ~exist('col','var')
+                col = 'k';
+            end
+            scatter3( N(1,:), N(2,:), N(3,:), col )
+            quiver3( N(1,:), N(2,:), N(3,:), vecL(1,:), vecL(2,:), vecL(3,:), 0.1, col )
             axis equal, rotate3d on
         end
         
@@ -757,6 +760,16 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         end
         function mask_RANSAC_t_outliers = get.mask_RANSAC_t_outliers( obj )
             mask_RANSAC_t_outliers = [obj.obs(1:obj.Nobs).is_t_outlier];
+        end
+        function set.mask_RANSAC_R_outliers( obj, mask_outliers_1 )
+            N = numel(mask_outliers_1);
+            mask_outliers_1 = mat2cell(mask_outliers_1,1,repmat(3,1,N/3));
+            [obj.obs(1:obj.Nobs).is_R_outlier] = deal(mask_outliers_1{:});
+        end
+        function set.mask_RANSAC_t_outliers( obj, mask_outliers_1 )
+            N = numel(mask_outliers_1);
+            mask_outliers_1 = mat2cell(mask_outliers_1,1,repmat(3,1,N/3));
+            [obj.obs(1:obj.Nobs).is_t_outlier] = deal(mask_outliers_1{:});
         end
         
         % More functions
