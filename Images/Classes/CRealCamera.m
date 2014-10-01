@@ -12,8 +12,12 @@ classdef CRealCamera < CConfigCamera & handle
         hImg
         hLines
         
+        % Optional sub-object: GOptimizer
+        GOptimizer
+        
         % Boolean options
         tracking
+        linesToEnd
     end
     
     methods
@@ -21,6 +25,21 @@ classdef CRealCamera < CConfigCamera & handle
             % obj = CRealCamera( config )
             obj = obj@CConfigCamera( in1 );
             
+            % Boolean variables, default values
+            obj.tracking = true;
+            obj.linesToEnd = [true true true];
+            
+            obj.GOptimizer = [];
+        end
+        
+        function fixFrame( obj, frame )
+            % Useful function to easily fix bad scan segmentation when
+            % first detected in automated tracking
+            obj.tracking = false;
+            obj.deleteMeta;
+            obj.setFrame( frame );
+            obj.computeXi;
+            obj.visualize;
             obj.tracking = true;
         end
         
@@ -29,9 +48,13 @@ classdef CRealCamera < CConfigCamera & handle
             if obj.meta.optimized % If result is already optimized
                 xi = obj.meta.xi;
             else % Optimizes TO xi from current metadata
-                Goptimizer = CGoptimizer( obj.frame.loadImg, obj.meta );
+                if ~isempty(obj.GOptimizer)
+                    delete( obj.GOptimizer )
+                end
+                obj.GOptimizer = CGoptimizer( obj.frame.loadImg, obj.meta );
+                obj.GOptimizer.expandLines = obj.linesToEnd;
                 
-                [xi,meta] = Goptimizer.compute;
+                [xi,meta] = obj.GOptimizer.compute;
                 while isempty(xi) % Sth went wrong and corner is lost, manually set
                     subplot( obj.hFig )
                     delete( obj.hImg ); % Update only if necessary to improve speed
@@ -39,8 +62,8 @@ classdef CRealCamera < CConfigCamera & handle
                     obj.showImage;
 
                     obj.meta.manualHint;
-                    Goptimizer = CGoptimizer( obj.frame.loadImg, obj.meta );
-                    [xi,meta] = Goptimizer.compute;
+                    obj.GOptimizer = CGoptimizer( obj.frame.loadImg, obj.meta );
+                    [xi,meta] = obj.GOptimizer.compute;
                 end
                 obj.meta = meta;
                 obj.saveMeta( meta );
@@ -49,6 +72,7 @@ classdef CRealCamera < CConfigCamera & handle
         
         function setFrame( obj, frame )
             obj.frame = frame;
+            obj.loadImage; % Find other location to save computation if not necessary
             % Try to load metadata
             meta = obj.loadMeta;
             if isempty(meta) % No metadata exists for current image
@@ -125,7 +149,10 @@ classdef CRealCamera < CConfigCamera & handle
 %             delete( obj.hLines )
             col = 'rgb';
             for k=1:3
-                xy = [obj.meta.c , obj.meta.q{k}];
+                xy = [ obj.meta.c , ...
+                       obj.meta.c + obj.meta.r{k} * obj.meta.xi.v(k).X ];
+                % Use exact direction v
+%                 xy = [obj.meta.c , obj.meta.q{k}];
                 obj.hLines(k) = line( xy(1,:), xy(2,:), 'color', col(k) );
             end
         end

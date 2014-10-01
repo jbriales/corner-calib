@@ -1,4 +1,4 @@
-classdef CGoptimizer
+classdef CGoptimizer < handle
     %CGoptimizer Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -6,9 +6,20 @@ classdef CGoptimizer
         img
         Gmag    % Image gradient magnitude
         Gdir    % Image gradient direction
+        img_size
         
         meta
         xi      % Object to be optimized
+        
+        % Parameters
+        lambda_ini
+        
+        % Control parameters and behavior
+        expandLines
+        
+        % Debug data
+        pts
+        w
     end
     
     methods
@@ -19,35 +30,21 @@ classdef CGoptimizer
             obj.img = img;
             obj.meta = meta;
             
-%             [obj.Gmag,obj.Gdir] = imgradient( img );
+            % Compute image gradients once
+            [obj.Gmag,obj.Gdir] = imgradient( img );
+            obj.img_size = size( img );
+            
+            % Select thresholds
+            obj.lambda_ini = 10;
+            
+            % Choose behavior with boolean properties
+            obj.expandLines = [true, true, true]; % Search until image borders by default
             
 %             obj.xi = meta.xi;
         end
         
         function [obj_xi, meta] = compute( obj )
-            % Temporal interface to old function corner_calib
-            meta = obj.meta;
-            img  = obj.img;
-            
-            imgtrack.x = [meta.xi.c.X
-                meta.xi.v(1).x
-                meta.xi.v(2).x
-                meta.xi.v(3).x];
-            if ~isempty(meta.mag_th)
-                imgtrack.mag_th = meta.mag_th;
-            else
-                imgtrack.mag_th = [0 0 0];
-            end
-            if ~isempty(meta.ang_th)
-                imgtrack.ang_th = meta.ang_th;
-            else
-                imgtrack.ang_th = [0 0 0];
-            end
-            imgtrack.q = cell2mat( meta.q );
-            
-            debug = 0;
-            [xi, A_xi, imgtrack, CHECK_IMAGE] = ...
-                corner_calib(imgtrack, img, debug);
+            [xi, A_xi, imgtrack, CHECK_IMAGE] = obj.optimize;
             
             % Bridge to meta
             c = xi(1:2);
@@ -65,6 +62,8 @@ classdef CGoptimizer
             obj_xi.setMinimalCov( A_xi ); % MinimalCov is 5x5 (2+1+1+1)
             meta.xi = obj_xi; % To store with covariance
         end
+        
+        [x, A_x, imgtrack, checkImage] = optimize( obj )
         
         function Gcoarse( obj, seg )
             % [x, Cell_pts, Cell_w, Cell_mask, mag_th, debug_out] = coarseTrack(x, mu_ini, mu_end, R_k, img_grad_mag, img_grad_dir, mag_th, dir_th, Q, debug)
@@ -156,6 +155,50 @@ classdef CGoptimizer
             Cell_w{i}   = w;
             Cell_dir{i} = dir;
             Cell_mask{i} = mask;
+        end
+        
+        % Auxiliar functions for debug and plotting
+        % Auxiliar function
+        function h = plotInlierPts( obj )
+            color = 'rgb';
+            hold on
+            for k=1:3
+                h(k) = plot( obj.pts{k}(1,:), obj.pts{k}(2,:), ['.',color(k)] );
+            end
+        end
+        
+        function h = plotWeightPts( obj )
+            hold on
+            for k=1:3
+                % X,Y vectors
+                % C a Nx3 matrix with each row the color of corresponding
+                % point XY
+                w = obj.w{k};
+                wmax = max( w );
+                N = size( obj.pts{k}, 2 );
+                C = zeros(N,3);
+                C(:,k) = w / wmax;
+                h(k) = scatter( obj.pts{k}(1,:), obj.pts{k}(2,:), [], C); %#ok<AGROW>
+            end
+        end
+        function h = plotXi( obj )
+            hold on
+            col = 'rgb';
+            h = zeros(1,3);
+            for k=1:3
+                h(k) = plotHomLineWin( obj.xi.l(k), col(k) );
+            end
+        end
+        
+        function plotGradPts( pts, n, dir_ang )
+            % Function for plotting gradient vector field and line normal in
+            % given points
+            vdir = [ -cos(dir_ang) , +sin(dir_ang) ]';
+            hp = debugPlotPts( pts, 'r.' ); %#ok<NASGU>
+            hv = quiver( pts(1,:), pts(2,:), vdir(1,:), vdir(2,:), 0.05, 'w' ); %#ok<NASGU>
+            N = length(pts);
+            nn = repmat( n, 1, N );
+            hn = quiver( pts(1,:), pts(2,:), nn(1,:), nn(2,:), 0.05, 'r' ); %#ok<NASGU>
         end
     end
     
