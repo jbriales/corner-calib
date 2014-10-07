@@ -1,4 +1,4 @@
-function reprojectScan2Img( im, xy, K, T_c_s, withImg )
+function reprojectScan2ImgCol( im, xy, K, T_c_s, col )
 % reprojectScan2Img( im, xy, K, T_c_s )
 %   im - RGB image
 %   xy - 2xN array of 2D points in LIDAR plane
@@ -8,24 +8,11 @@ function reprojectScan2Img( im, xy, K, T_c_s, withImg )
 [uv, d] = reproject( im, xy, K, T_c_s );
 
 % Show image with superimposed LIDAR points
-if ~exist('withImg','var')
-    withImg = true;
-end
-if withImg
-    figure
-    title('Image with superimposed x-coloured LIDAR points')
-    imshow( im ); hold on
-end
-res = 512;
-colors = jet( res );
-scaled_d = round( res * (d - min(d) + 1) / (max(d) - min(d) + 1) ); % +1 to correct Matlab indexes from 1 instead of 0
 for k=1:size(uv,2)
-    plot(uv(1,k),uv(2,k), 'Color',colors(scaled_d(k),:), 'Marker','.', 'MarkerSize',5);
+    plot(uv(1,k),uv(2,k), 'Color',col, 'Marker','.',...
+        'LineWidth',1, 'MarkerSize',5);
 %     pause
 end
-colormap(colors)
-colorbar
-
 end
 
 function [uv, d] = reproject( im, xy, K, T_c_s )

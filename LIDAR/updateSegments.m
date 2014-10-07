@@ -22,6 +22,10 @@ min_inliers2 = 5; % For secundary pieces of line
 % Input data
 pts = scan.xy;
 
+% Prefilter scan
+% r = sum(pts.^2,1);
+% figure, plot( r, '.k' );
+
 seg_pts = cell(1,3);
 lost = false(1,3);
 lin = cell(1,3);
