@@ -17,12 +17,20 @@ classdef CRealLidar < CScan & CConfigLidar & handle
         tracking
     end
     
+    properties (Dependent)
+        xy
+    end
+    
     methods
         function obj = CRealLidar( in1 )
             % obj = CRealLidar( config )
             obj = obj@CConfigLidar( in1 );
             
             obj.tracking = true;
+        end
+        
+        function xy = get.xy( obj )
+            xy = obj.v .* repmat(obj.r,2,1);
         end
         
         function setObs( obj, scan )
@@ -67,10 +75,11 @@ classdef CRealLidar < CScan & CConfigLidar & handle
         function setFrame( obj, frame )
             obj.frame = frame;
             
-            if isempty(obj.frame.xy)
+            if isempty(obj.frame.r)
                 obj.frame.loadScan;
             end
-            obj.xy = obj.frame.xy; % Set xy points in LRF object
+%             obj.xy = obj.frame.xy; % Set xy points in LRF object
+            obj.r = obj.frame.r; % Set xy points in LRF object
             
             % Try to load metadata
             meta = obj.loadMeta;
@@ -160,6 +169,7 @@ classdef CRealLidar < CScan & CConfigLidar & handle
                     plotHomLineWin( hlines{k}, col(k) );
                 end
             end
+            camroll(90); % Rotates view to put LRF pointing forwards
             
             % OLD CODE:
             % TODO: Put as option in a new class CLRF
@@ -184,17 +194,23 @@ classdef CRealLidar < CScan & CConfigLidar & handle
         function plotLIDARframe( obj )
             xlabel('X [m]')
             ylabel('Y [m]')
-            plot(0,0,'>', 'MarkerSize',10, 'LineWidth',3)
+            plot(0,0,'^', 'MarkerSize',10, 'LineWidth',3)
             plotHomLineWin( [1 0 0], 'k' );
             plotHomLineWin( [0 1 0], 'k' );
         end
         
-        function h = plotPolar( obj )
-            h(1) = plot( obj.theta, obj.r, '.k' );
+        function h = plotPolar( obj, format )
+            if ~exist('format','var')
+                format = '.k';
+            end
+            h(1) = plot( obj.theta, obj.r, format );
         end
         
-        function h = plotPts( obj )
-            h(1) = plot( obj.xy(1,:), obj.xy(2,:), '.k' );
+        function h = plotPts( obj, format )
+            if ~exist('format','var')
+                format = '.k';
+            end
+            h(1) = plot( obj.xy(1,:), obj.xy(2,:), format );
         end
 
     end

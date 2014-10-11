@@ -152,7 +152,9 @@ else
 %     end
     
     % Load LIDAR
-    scans = loadLidarData(typeOfSource, path, LIDAR_tag);
+%     scans = loadLidarData(typeOfSource, path, LIDAR_tag);
+    rawlogLRF = CRawlogLRF( fullfile(path,'laser') );
+    scans = rawlogLRF.scans;
     
     % TODO: Improve LIDAR-cam synchronisation
     % Remove images before and after scan limits:
@@ -180,7 +182,7 @@ else
         close
     end
     
-    scans  = CScan( scans );
+%     scans  = CScan( scans ); % Not needed if using CRawlogLRF
     frames = CFrame( imgs );
 % %     % User input: Set initial points in image for tracking
 % % %     Cam.setFrame( frames(1) );
