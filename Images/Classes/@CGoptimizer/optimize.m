@@ -62,7 +62,7 @@ p0 = p0(:); % Assure column vector
 
 % [img_grad_mag, img_grad_dir] = imgradient(img_gray);
 img_grad_mag = obj.Gmag;
-img_grad_dir = obj.Gdir;
+img_grad_dir = obj.Gang;
 % H = fspecial('gaussian',[5, 5], 0.5);
 % img_gray_filtered = imfilter(img_gray, H);
 % [~, img_grad_dir_filtered] = imgradient(img_gray_filtered);
@@ -76,7 +76,7 @@ count = 1;
 xi0 = Cxi( x0 ); obj.xi = Cxi( x0 );
 while check_repeat && count < 10
     [x, pts, w, mask, ~, debug_out] = ...
-        coarseTrack(x0, lambda_ini, lambda_end, R_k,...
+        coarseTrack(obj, x0, lambda_ini, lambda_end, R_k,...
         img_grad_mag, img_grad_dir, mag_th, dir_th,...
         Q0, debug);
     if debug
@@ -276,7 +276,7 @@ end
 end
 
 function [x, Cell_pts, Cell_w, Cell_mask, mag_th, debug_out] = ...
-    coarseTrack(x, mu_ini, mu_end, R_k,...
+    coarseTrack(obj, x, mu_ini, mu_end, R_k,...
     img_grad_mag, img_grad_dir, mag_th, dir_th,...
     Q, debug)
 
@@ -329,32 +329,39 @@ for i = 1:3
             warning('pts is empty in image tracking');
             [pts, corners] = findClosePoints( p_0, q, [h 10*h], n, mu_ini, size_img); %#ok<NASGU>
         end
-        % TODO: look for best proportional constant
-%         d = ( l' * makehomogeneous( pts ) )';
-        X = pts(1,:)';
-        Y = pts(2,:)';
         
-        % Extract gradient data
-        ind = sub2ind( size_img, Y(:), X(:) );
-        % Gradient magnitude filtering (on trapezoidal window points):
-        mag = double( img_grad_mag( ind ) );
-        mask_mag = mag > mag_th(i);
-        % Gradient angle filtering (on mag-filtered points):
-        dir = double( img_grad_dir( ind( mask_mag ) ) );
-        dir = deg2rad(dir);
-        grad_dir = [ -cos(dir) , +sin(dir) ]'; % IMP: why cos need to be negative?
-        R_im_dir = [ [0 1 ; -1 0]*v v ]; % Convert direction vectors to SR aligned with n
-        grad_dir_ = R_im_dir' * grad_dir;
-        th_ang = atan( grad_dir_(2,:)./grad_dir_(1,:) );
-        med_ang = median( th_ang ); % Use median to obtain a characteristic value of gradient angle
-        diff_ang = th_ang - med_ang;
-        mask_ang = abs(diff_ang) < pi/16; % Filter directions farther than 11.25deg
-        
-        % Set final mask concatenating filters:
-        idx_mag = find( mask_mag );
-        idx_ang = idx_mag( mask_ang );
-        mask = false(length(mask_mag),1);
-        mask(idx_ang) = true;
+        if 1
+            mask_mag = obj.filterMag(pts, mag_th(i));
+            mask_dir = obj.filterDir(pts, v, pi/16);
+            mask = mask_mag & mask_dir;
+        else
+            % TODO: look for best proportional constant
+            %         d = ( l' * makehomogeneous( pts ) )';
+            X = pts(1,:)';
+            Y = pts(2,:)';
+            
+            % Extract gradient data
+            ind = sub2ind( size_img, Y(:), X(:) );
+            % Gradient magnitude filtering (on trapezoidal window points):
+            mag = double( img_grad_mag( ind ) );
+            mask_mag = mag > mag_th(i);
+            % Gradient angle filtering (on mag-filtered points):
+            dir = double( img_grad_dir( ind( mask_mag ) ) );
+            dir = deg2rad(dir);
+            grad_dir = [ -cos(dir) , +sin(dir) ]'; % IMP: why cos need to be negative?
+            R_im_dir = [ [0 1 ; -1 0]*v v ]; % Convert direction vectors to SR aligned with n
+            grad_dir_ = R_im_dir' * grad_dir;
+            th_ang = atan( grad_dir_(2,:)./grad_dir_(1,:) );
+            med_ang = median( th_ang ); % Use median to obtain a characteristic value of gradient angle
+            diff_ang = th_ang - med_ang;
+            mask_ang = abs(diff_ang) < pi/16; % Filter directions farther than 11.25deg
+            
+            % Set final mask concatenating filters:
+            idx_mag = find( mask_mag );
+            idx_ang = idx_mag( mask_ang );
+            mask = false(length(mask_mag),1);
+            mask(idx_ang) = true;
+        end
         Npts = sum(mask);
         
         % Update parameters

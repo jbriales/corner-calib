@@ -32,7 +32,7 @@ classdef CConfigLidar < handle
     
     properties (SetAccess = protected)
         theta
-        dir
+        v
         lines
     end
     
@@ -56,9 +56,9 @@ classdef CConfigLidar < handle
             obj.d_range = d_range;
             
             obj.theta = linspace( -deg2rad(FOVd)/2, +deg2rad(FOVd)/2, N );
-            obj.dir   = [ cos( obj.theta )
+            obj.v     = [ cos( obj.theta )
                           sin( obj.theta ) ];
-            obj.lines = [ [0 -1; 1 0] * obj.dir
+            obj.lines = [ [0 -1; 1 0] * obj.v
                           zeros(1,N) ];
         end
                 
