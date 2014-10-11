@@ -66,8 +66,22 @@ else
                      'WindowStyle',WindowStyle,...
                      'Visible', win_visibility);
 end
-hLidar = subplot(1,2,1);
-hImg = subplot(1,2,2);
+if videoFigure
+%     hLidar = subplot(2,2,4);
+%     hLidar = subplot_tight(3,3,[3 6]);
+    hLidar = subplot(6,3,[3 6 9]);
+    title('Camera capture')
+%     hImg   = subplot(2,2,[1]);
+%     hImg   = subplot_tight(3,3,[1 2 4 5]);
+    hImg   = subplot(6,3,[1 2 4 5 7 8 10 11]);
+    
+    hVid   = subplot(6,3,[12 15 18]);
+    title('LRF 2D scan')
+    set(gcf,'color','w');
+else
+    hLidar = subplot(1,2,1);
+    hImg = subplot(1,2,2);
+end
 
 if ~USER_INITIALISE
     tic
@@ -155,7 +169,7 @@ else
     %scans = cropScansArray( scans, imgs );
     % Set image-scan synchronised pairs by finding scan closest to each image and assign:
 %     plotTs( scans, imgs )
-    [scans, imgs] = filterClosest( scans, imgs, 0.05 );
+    [scans, imgs] = filterClosest( scans, imgs, syncr_gap );
 %     [imgs, delta_ts] = filterClosestFrames( scans, imgs );
 %     [scans, delta_ts] = filterClosestScans( scans, imgs );
     
@@ -228,6 +242,7 @@ out.path = path;
 out.hWin = hWin;
 out.hLidar = hLidar;
 out.hImg = hImg;
+out.hVid = hVid;
 out.WITHGT = WITHGT;
 out.gt = gt;
 out.Cam = Cam;
@@ -259,6 +274,7 @@ end
 function [scans_, imgs_] = filterClosest( scans, imgs, threshold )
 scan_ts = [scans.ts];
 counter = 1;
+% threshold = 1;
 for i=1:length(imgs)
     diff = scan_ts - imgs(i).ts;
     [delta_ts,I] = min( abs(diff) );

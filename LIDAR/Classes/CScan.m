@@ -3,13 +3,19 @@ classdef CScan < handle
     %   Detailed explanation goes here
     
     properties
+        % Minimal data (as stored in Rawlog)
+        r   % Range data (in m)
+        ts  % timesample
+        
         % Scan data
         xy
         mask
         
+        % Some extra options
+        crop
+        
         % Timesample
-        ts
-        delta_ts
+        delta_ts % Difference with associated data (camera)
         
         % Storage information
         path
@@ -17,9 +23,28 @@ classdef CScan < handle
     end
     
     methods
-        function obj = CScan( S )
+        function obj = CScan( in1, ts )
+            % obj = CScan( S )
+            % obj = CScan( r, ts )
             if nargin~=0
-                if isstruct( S )
+                switch nargin
+                    case 1
+                        S = in1;
+                    case 2
+                        r = in1; %#ok<*PROP>
+                end
+                if exist('r','var')
+                    % Array constructor
+                    if iscell( r )
+                        obj(1,numel(ts)) = CScan;
+                        [obj.r] = deal( r{:} );
+                        [obj.ts] = deal( ts{:} );
+                    else
+                        obj.r = r;
+                        obj.ts = ts;
+                    end
+                    
+                elseif exist( 'S', 'var' )
                     % Array constructor
                     obj(1,numel(S)) = CScan;
                     C = fieldnames( S );
@@ -39,8 +64,7 @@ classdef CScan < handle
         function loadScan( obj )
             % Blender case
             obj.xy = loadBlenderPCD( obj.path );
-        end
-            
+        end 
     end
     
 end

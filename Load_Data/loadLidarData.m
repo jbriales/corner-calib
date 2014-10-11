@@ -57,9 +57,23 @@ y = repmat(scan.sth, Nobs,1) .* R;
 
 % Remove zero entries (mask 1 for correct values)
 mask_zero = R > 0;
-% Crop scan with given angle (mask 1 for values inside)
+% Crop scan with given angles (mask 1 for values inside)
+if isfield(scan,'crop')
+    if ~isempty(scan.crop)
+        mask_crop = scan.theta < deg2rad(scan.crop(1)) | ...
+            scan.theta > deg2rad(scan.crop(2));
+        % Set to 0 to act as outlier (improve)
+        x(:,mask_crop) = 0;
+        y(:,mask_crop) = 0;
+    else 
+        mask_crop = mask_zero;
+    end
+else
+    mask_crop = mask_zero;
+end
+ 
 % mask_crop = abs(scan.theta) < deg2rad( scan.crop / 2 );
-mask_crop = mask_zero;
+% mask_crop = mask_zero;
 
 % Output mask (mask 1 for valid values (columns) in x_scan and y_scan)
 % mask = mask_zero( :, mask_crop );
@@ -81,6 +95,9 @@ for i=1:Nobs
     scans(i).delta_ts = [];
     scans(i).metafile = fullfile(path,'meta_laser',...
         strcat(tag(end),num2str(ts(i),'%.6f')));
+    if isfield(scan,'crop')
+        scans(i).crop = scan.crop;
+    end
 end
 
 end

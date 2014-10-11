@@ -32,7 +32,9 @@ for nobs=1:length(scans)
         fprintf('Frame %d\n',frames(nobs).file_idx);
         title(sprintf('Frame %d\n',frames(nobs).file_idx));
         Cam.setFrame( frames(nobs) );
-        %     Cam.visualize; % Current image with previous lines
+        Cam.visualize; % Current image with previous lines
+        Cam.trackImage;
+        Cam.visualize; % Current image with previous lines
         obj_xi = Cam.computeXi;
         Cam.visualize;
         % Optional for debug:

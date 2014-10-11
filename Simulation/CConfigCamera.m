@@ -11,6 +11,7 @@ classdef CConfigCamera < handle
     
     properties (SetAccess = protected ) % Only changeable through constructor
         K       % Intrinsic calibration matrix
+        distortion % NL distortion parameters
         res     % Image resolution (width x height)
         f       % Focal length
         sd      % Standard Deviation in image pixels
@@ -30,7 +31,7 @@ classdef CConfigCamera < handle
        
     methods
         % Constructor
-        function obj = CConfigCamera( in1, res,f, sd  )
+        function obj = CConfigCamera( in1, res,f, sd, distortion  )
             % CConfigCamera( K, res,f, sd )
             % CConfigCamera( S )
             if isa(in1,'CConfigCamera')
@@ -43,6 +44,9 @@ classdef CConfigCamera < handle
                 K = in1; %#ok<PROP>
             end
             obj.K  = K; %#ok<PROP>
+            if exist( 'distortion', 'var' )
+                obj.distortion = distortion;
+            end
             obj.res = res;
             obj.f  = f;
             obj.sd = sd;

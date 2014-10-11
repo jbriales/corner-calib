@@ -24,7 +24,9 @@ pts = all_pts( :, inliers_all );
 [lin, inliers_red] = ransacfitline2D(pts, thres, 0);
 
 % Remove biased points of head and tail of inliers:
-inliers_red = removeHeadTail( pts, inliers_red, lin, thres, debug );
+if 0
+    inliers_red = removeHeadTail( pts, inliers_red, lin, thres, debug );
+end
 
 % Final selection of inliers in complete scan
 inliers_all = inliers_all(inliers_red); % Take good inliers of incremented initial set

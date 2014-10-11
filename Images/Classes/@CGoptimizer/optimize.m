@@ -203,13 +203,15 @@ checkImage = false;
 % if any(cov_angle > 0.10)
 % if any(cov_angle > pi/8)
 % if any(cov_angle > 0.750)
-if any(cov_angle > 0.90)
-    warning('Check image segment angle')
-    checkImage = true;
-    keyboard
-    
-    J = [];
-    Q = [];
+if 0
+    if any(cov_angle > 0.90)
+        warning('Check image segment angle')
+        checkImage = true;
+        keyboard
+        
+        J = [];
+        Q = [];
+    end
 end
 
 % Check segments are not over the same line

@@ -157,7 +157,7 @@ triOptim.showSamplingSphere;
 % WITHRANSAC = false;
 % WITHRANSAC = true;
 
-if 1 % Code to filter obs for R and t from different datasets
+if 0 % Code to filter obs for R and t from different datasets
     mask_data1 = kron([frames.ts]<1412150000, ones(1,3));
     triOptim.mask_RANSAC_t_outliers = mask_data1;
     mask_data2 = kron([frames.ts]>1412150000, ones(1,3));
@@ -176,6 +176,22 @@ end
 triOptim.disp_N_R_inliers;
 R_ort = triOptim.optimizeRotation_Weighted;
 
+counter = 0; dist = +inf;
+while dist > 1e-2 && counter < 10
+    triOptim.resetRotationRANSAC;
+    triOptim.filterRotation_R0( R_ort );
+    triOptim.disp_N_R_inliers;
+    disp(R_ort)
+    R_ort_0 = R_ort;
+    R_ort = triOptim.optimizeRotation_Weighted;
+    dist = angularDistance( R_ort, R_ort_0 );
+    
+    counter = counter + 1;
+end
+if counter==10
+    warning('Counter %d reached in rotation',counter);
+end
+
 if WITHRANSAC
     triOptim.filterTranslationRANSAC( R_ort );
 else
@@ -188,6 +204,22 @@ triOptim.disp_N_t_inliers;
 t_3D = triOptim.optimizeTranslation_3D_Weighted( R_ort );
 % t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted( R_c_s_w );
 % t_2D_w = triOptim.optimizeTranslation_2D_Weighted( R_c_s_w );
+
+counter = 0; dist = +inf;
+while dist > 1e-3 && counter < 10
+    triOptim.resetTranslationRANSAC;
+    triOptim.filterTranslation_t0( R_ort, t_3D );
+    triOptim.disp_N_t_inliers;
+    disp(t_3D)
+    t_3D_0 = t_3D;
+    t_3D = triOptim.optimizeTranslation_3D_Weighted( R_ort );
+    dist = norm( t_3D-t_3D_0 );
+    
+    counter = counter + 1;
+end
+if counter==10
+    warning('Counter %d reached in translation',counter);
+end
 
 [R_global, t_global] = triOptim.optimizeGlobal_Ort_3D( R_ort, t_3D );
 [R_global_3D, t_global_3D] = triOptim.optimizeGlobal_3D( R_ort, t_3D );
@@ -213,9 +245,10 @@ end
 
 if 0
     keyboard
-    im_gt = imread(fullfile(pwd,'GT',strcat('CAM',stereoLabel,'_1.jpg')));
-    xy_gt = load(fullfile(pwd,'GT','XY1.mat'),'XY');
-    xy_gt = xy_gt.XY;
+    im_gt = imread(fullfile(pwd,'GT',strcat('CAM',stereoLabel,'_2.jpg')));
+%     xy_gt = load(fullfile(pwd,'GT','XY1.mat'),'XY');
+%     xy_gt = xy_gt.XY;
+    meanLRF % Extracts GT data
     K = [	248.321289 0 319.416809 ;
 	0 248.321289 249.839676 ;
 	0 0 1 ];
@@ -232,67 +265,3 @@ if 0 % Check GT images
     reprojectScan2Img( im_gt, xy_gt, Cam.K, [R_global_3D t_global_3D], false );
 end
 return
-
-% Code below is deprecated!
-
-%% Final optimization
-% Plot map of sampled regions
-N = [co.R_c_w];
-mask_rot = [co.thereis_line];
-N = N(:,mask_rot);
-L = cell2mat([co.l]);
-% Represent L 2D vectors in sphere normals tangent space
-showSamplingSphere(N,L)
-
-%% Set input variables for optimization process
-co0 = co;
-% precondwithRotDist
-precondwithErrFun
-
-%% Optimize rotations
-[ R_c_s_w, cov_w, cov_eps_w, err_w, ~, ~ ] = optimRotation( rot_input, R0, true, all_label );
-[ R_c_s_nw, cov_nw, cov_eps_nw, err_nw, ~, ~ ] = optimRotation( rot_input, R0, false, all_label );
-
-fprintf('Optimized (weighted) solution R:\n')
-disp(R_c_s_w)
-fprintf('Optimized (non weighted) solution R:\n')
-disp(R_c_s_nw)
-fprintf('Angular distance (w and nw): %f\n',angularDistance(R_c_s_w,R_c_s_nw))
-if WITHGT
-    fprintf('\nGroundtruth value R:\n')
-    disp(gt.R_c_s)
-end
-
-%% Optimize translations
-% TODO: Solve translation fails when triples are not complete
-% solveTranslation
-% solveTranslation_3D
-
-%% Plot some results
-fprintf('Cov of weighted: %f\n', max(eig(cov_w)));
-disp( cov_w );
-fprintf('Cov of non weighted: %f\n', max(eig(cov_nw)));
-disp (cov_nw );
-
-%% Save calibration results
-[path_datasets, datasetname]  = fileparts( path );
-fbase = fullfile(path_datasets, 'Results');
-fext = strcat(typeOfSource,'_',datasetname,...
-    stereoLabel,hokuyoLabel,'_',datestr(now,'mm_dd_HH_MM'));
-save( strcat(fbase,'R_c_s_W'), 'R_c_s_w', '-ascii' )
-save( strcat(fbase,'R_c_s_NW'), 'R_c_s_nw', '-ascii' )
-% save( fullfile(path, 't_c_s_w'), 't_c_s_w', '-ascii' )
-% save( fullfile(path, 't_c_s_nw'), 't_c_s_nw', '-ascii' )
-% saveConfigFile( fullfile(fbase,strcat('W_',fext,'.out')),...
-%     struct('R',R_c_s_w,'cov',cov_w,'cov_eps',cov_eps_w ));
-% saveConfigFile( fullfile(fbase,strcat('NW_',fext,'.out')),...
-%     struct('R',R_c_s_nw,'cov',cov_nw,'cov_eps',cov_eps_nw ));
-indexes = [imgs.file_idx];
-saveConfigFile( fullfile(fbase,strcat('W_',fext,'.out')),...
-    R_c_s_w, cov_w, cov_eps_w, datasetname, stereoLabel, hokuyoLabel, indexes );
-saveConfigFile( fullfile(fbase,strcat('NW_',fext,'.out')),...
-    R_c_s_nw,cov_nw,cov_eps_nw, datasetname, stereoLabel, hokuyoLabel, indexes );
-
-% plotCalibration( imgs, scans, gt );
-
-% s7_checkResults

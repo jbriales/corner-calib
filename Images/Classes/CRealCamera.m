@@ -4,7 +4,8 @@ classdef CRealCamera < CConfigCamera & handle
     
     properties
         frame
-        img
+        img     % Current image
+        img0    % Previous image, stored for tracking
         meta
         
         % Previous interesting data
@@ -46,6 +47,59 @@ classdef CRealCamera < CConfigCamera & handle
             obj.tracking = true;
         end
         
+        function trackImage( obj )
+            if obj.meta.optimized % If result is already optimized, skip this step
+                return
+            end
+            
+            if isempty(obj.img) || isempty(obj.img0)
+                warning('img and img0 have to exist in Cam');
+                return
+            end
+            par = struct( 'levels', 3,...
+                          'iterations',5,...
+                          'transform','euclidean' );
+%             [ECCWarp]=iat_ecc(obj.img0,obj.img,par);
+            [ECCWarp]=iat_ecc(obj.img,obj.img0,par);
+            
+            % Update tracking points
+%             H = ECCWarp;
+            R = ECCWarp(:,1:2);
+            t = ECCWarp(:,3);
+%             c_est = makeinhomogeneous( H * makehomogeneous(obj.meta.c) );
+            c_est = R * obj.meta.c + t;
+            for k=1:3
+%                 q_est{k} = makeinhomogeneous( H * makehomogeneous(obj.meta.q{k}) );
+                q_est{k} = R * obj.meta.q{k} + t;
+                v_est{k} = snormalize( q_est{k} - c_est );
+            end
+            if 0
+                col = 'rgb';
+                for k=1:3
+                    hold on
+                    plot(obj.meta.q{k}(1), obj.meta.q{k}(2), ['.',col(k)]);
+                    plot(q_est{k}(1), q_est{k}(2), ['.',col(k)]);
+                end
+                plot(c_est(1),c_est(2),'.k');
+            end
+            obj.meta.xi = Cxi( c_est, v_est{1}, v_est{2}, v_est{3} );
+            obj.meta.c = c_est;
+            obj.meta.q = q_est;
+            
+%             NX = size(obj.img,2);
+%             NY = size(obj.img,1);
+%             
+%             % Compute the warped image and visualize the error
+%             [wimageECC, supportECC] = iat_inverse_warping(obj.img0, ECCWarp, par.transform,1:NX,1:NY);
+%             
+%             %plot the warped image
+%             figure;imshow(uint8(wimageECC)); title('Warped image by ECC', 'Fontsize', 14);
+%             
+%             % draw mosaic
+%             ECCMosaic = iat_mosaic(obj.img,obj.img0,[ECCWarp; 0 0 1]);
+%             figure;imshow(uint8(ECCMosaic));title('Mosaic after ECC','Fontsize',14);
+        end
+        
         function xi = computeXi( obj )
             % Takes current data loaded in Cam and tries to obtain Xi
             if obj.meta.optimized % If result is already optimized
@@ -54,27 +108,28 @@ classdef CRealCamera < CConfigCamera & handle
                 if ~isempty(obj.GOptimizer)
                     delete( obj.GOptimizer )
                 end
-                % Try to improve initial estimate with xi estimation
-                xi0 = obj.meta.xi;
-                if ~isempty(obj.prev_ts) && ~isempty(obj.meta.v_c)
-                    inc_t = obj.frame.ts - obj.prev_ts;
-                    c_est = xi0.c.X + inc_t * obj.meta.v_c;
-                    for k=1:3
-                        rot = RotationZ( obj.meta.v_ang(k) * inc_t );
-                        rot = rot(1:2,1:2);
-                        v_est{k} = rot * xi0.v(k).X;
-                    end
-                    obj.meta.xi = Cxi( c_est, v_est{1}, v_est{2}, v_est{3} );
-                end
+%                 % Try to improve initial estimate with xi estimation
+%                 xi0 = obj.meta.xi;
+%                 if ~isempty(obj.prev_ts) && ~isempty(obj.meta.v_c) && ...
+%                         all(isfinite(obj.meta.v_c)) % Rare cases with inf?
+%                     inc_t = obj.frame.ts - obj.prev_ts;
+%                     c_est = xi0.c.X + inc_t * obj.meta.v_c;
+%                     for k=1:3
+%                         rot = RotationZ( obj.meta.v_ang(k) * inc_t );
+%                         rot = rot(1:2,1:2);
+%                         v_est{k} = rot * xi0.v(k).X;
+%                     end
+%                     obj.meta.xi = Cxi( c_est, v_est{1}, v_est{2}, v_est{3} );
+%                 end
                 obj.GOptimizer = CGoptimizer( obj.frame.loadImg, obj.meta );
                 obj.GOptimizer.expandLines = obj.linesToEnd;
                 
                 [xi,meta] = obj.GOptimizer.compute; % Compute new xi from initial estimate
                 % Store xi velocity information for next frame
-                if ~isempty(obj.prev_ts)
-                    inc_t = obj.frame.ts - obj.prev_ts;
-                    [meta.v_c, meta.v_ang] = xi.velocity( xi0, inc_t );
-                end
+%                 if ~isempty(obj.prev_ts)
+%                     inc_t = obj.frame.ts - obj.prev_ts;
+%                     [meta.v_c, meta.v_ang] = xi.velocity( xi0, inc_t );
+%                 end
                 while isempty(xi) % Sth went wrong and corner is lost, manually set
                     subplot( obj.hFig )
                     delete( obj.hImg ); % Update only if necessary to improve speed
@@ -152,16 +207,23 @@ classdef CRealCamera < CConfigCamera & handle
         end
         
         function showImage( obj )
-            if ~isempty(obj.frame)
-                obj.hImg = imshow( obj.frame.loadImg );
+            if ~isempty(obj.img)
+                obj.hImg = imshow( obj.img );
             else
-                warning('No frame is loaded');
+                warning('No image was loaded yet');
             end
         end
         
         function loadImage( obj )
             if ~isempty(obj.frame)
+                if ~isempty(obj.img)
+                    obj.img0 = obj.img; % Backup previous image
+                end
                 obj.img = obj.frame.loadImg;
+                if ~isempty(obj.distortion)
+                    % If exists distortion, undistort
+                    obj.img = cv.undistort( obj.img, obj.K, obj.distortion );
+                end
             else
                 warning('No frame is loaded');
             end

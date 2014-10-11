@@ -1,10 +1,11 @@
-classdef CRealLidar < CConfigLidar & handle
+classdef CRealLidar < CScan & CConfigLidar & handle
     %CRealCamera Summary of this class goes here
     %   Detailed explanation goes here
     
-    properties
+    properties        
+        % Old properties
         frame
-        xy
+%         xy % Defined by CScan
         meta
         
         % Figure handle for visualization
@@ -22,6 +23,11 @@ classdef CRealLidar < CConfigLidar & handle
             obj = obj@CConfigLidar( in1 );
             
             obj.tracking = true;
+        end
+        
+        function setObs( obj, scan )
+            obj.r  = scan.r;
+            obj.ts = scan.ts;
         end
         
         function fixFrame( obj, frame )
@@ -130,13 +136,16 @@ classdef CRealLidar < CConfigLidar & handle
             end
         end
         
-        function visualize( obj )
+        function visualize( obj, borders )
             subplot( obj.hFig )
             cla
             
 %             delete( obj.hScan ) % Update only if necessary to improve speed
             obj.showScan;
             
+            if exist('borders','var')
+                axis(borders);
+            end
             obj.plotLIDARframe;
             
 %             delete( obj.hLines )
@@ -145,8 +154,8 @@ classdef CRealLidar < CConfigLidar & handle
             xy = obj.xy;
             for k=1:3
                 if ~isempty(hlines{k})
-                    inl = obj.meta.scantrack(k).inliers;
-                    inl = inl{:};
+                    inl = cell2mat( obj.meta.scantrack(k).inliers );
+%                     inl = inl{:};
                     plot( xy(1,inl), xy(2,inl), [col(k),'.'] );
                     plotHomLineWin( hlines{k}, col(k) );
                 end
@@ -178,6 +187,14 @@ classdef CRealLidar < CConfigLidar & handle
             plot(0,0,'>', 'MarkerSize',10, 'LineWidth',3)
             plotHomLineWin( [1 0 0], 'k' );
             plotHomLineWin( [0 1 0], 'k' );
+        end
+        
+        function h = plotPolar( obj )
+            h(1) = plot( obj.theta, obj.r, '.k' );
+        end
+        
+        function h = plotPts( obj )
+            h(1) = plot( obj.xy(1,:), obj.xy(2,:), '.k' );
         end
 
     end
