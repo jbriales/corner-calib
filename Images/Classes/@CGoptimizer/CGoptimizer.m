@@ -5,6 +5,7 @@ classdef CGoptimizer < handle
     properties
         img
         Gmag    % Image gradient magnitude
+        Gang    % Image gradient angle
         Gdir    % Image gradient direction
         img_size
         
@@ -13,6 +14,7 @@ classdef CGoptimizer < handle
         
         % Parameters
         lambda_ini
+        h   % Segment window size
         
         % Control parameters and behavior
         expandLines
@@ -31,7 +33,10 @@ classdef CGoptimizer < handle
             obj.meta = meta;
             
             % Compute image gradients once
-            [obj.Gmag,obj.Gdir] = imgradient( img );
+            [obj.Gmag,obj.Gang] = imgradient( img );
+            ang = deg2rad( obj.Gang(:) );
+            % Gdir is stored with linear indexing to avoid 3rd dimension
+            obj.Gdir = [ -cos(ang) , +sin(ang) ]'; % Check sign! Image coordinates?
             obj.img_size = size( img );
             
             % Select thresholds
@@ -199,6 +204,95 @@ classdef CGoptimizer < handle
             N = length(pts);
             nn = repmat( n, 1, N );
             hn = quiver( pts(1,:), pts(2,:), nn(1,:), nn(2,:), 0.05, 'r' ); %#ok<NASGU>
+        end
+        
+        %% Useful modular tools
+        function pts  = findWindow( obj, c, q )
+            % pts  = findWindow( obj, c, q )
+            % c is the vertex point in image
+            % q is the segment vector end point in image
+            % pts is a 2xN array of points coordinates inside image
+            % Some object-specific properties are used when computed this
+            % window:
+            % h - the window width
+            % lambda - the min distance of points to vertex
+            
+            h = obj.h; %#ok<*PROP>
+            
+            % Recover vector data from extreme points c and q
+            v = snormalize( q-c );
+            n = [-v(2), +v(1)]';
+            
+            corners = zeros(2,4);
+            corners(:,1) = c + h * n;
+            corners(:,2) = c - h * n;
+            corners(:,3) = q + h * n;
+            corners(:,4) = q - h * n;
+            
+            % Find container rectangle (within image size)
+            ymin = max( floor( min( corners(2,:) ) ), 1 );
+            ymax = min(  ceil( max( corners(2,:) ) ), size_img(1) );
+            xmin = max( floor( min( corners(1,:) ) ), 1 );
+            xmax = min(  ceil( max( corners(1,:) ) ), size_img(2) );
+            vx = xmin:xmax;
+            vy = ymin:ymax;
+            [X,Y] = meshgrid( vx, vy );
+            pts = [ X(:) Y(:) ]';
+            
+            % Filter wrt points normal distance to segment line
+            l = cross( makehomogeneous(c), makehomogeneous(q) );
+            d = l' * makehomogeneous( pts );
+            mask_d = abs(d) < h;
+            pts = pts(:,mask_d);
+        end
+        function mask = filterMag( obj, pts, thres )
+            % mask = filterMag( obj, pts )
+            % pts is a 2xN array with pixel locations (indexes)
+            % thres is the minimum gradient magnitude allowed
+            % mask is a 1xN logical array 1 for pixels with ||G|| above
+            % threshold
+            
+            % X is horizontal right (column, J index)
+            % Y is vertical down (row, I index)
+            X = pts(1,:)';
+            Y = pts(2,:)';
+            
+            ind = sub2ind( obj.img_size, Y, X );
+            mask = obj.Gmag(ind) > thres;
+            % Make column
+            mask = mask(:);
+        end
+        function dtheta = angularDiff( obj, pts, v )
+            % dtheta = angularDiff( obj, pts, v )
+            % pts is a 2xN array with pixel locations (indexes)
+            % v is a 2x1 S1 direction vector for image segment
+            % This function computes the absolute angular difference
+            % from 'unsigned' segment normal to grad directions
+            % for each specified point in image
+            
+            % X is horizontal right (column, J index)
+            % Y is vertical down (row, I index)
+            X = pts(1,:)';
+            Y = pts(2,:)';
+            
+            ind = sub2ind( obj.img_size, Y, X );
+            sindtheta = v' * obj.Gdir(:,ind);
+            dtheta = asin( abs(sindtheta) );
+        end
+        function mask = filterDir( obj, pts, v, thres )
+            % mask = filterMag( obj, pts )
+            % pts is a 2xN array with pixel locations (indexes)
+            % v is a 2x1 S1 with segment direction
+            % thres is the maximum angle difference permitted
+            % mask is a 1xN logical array 1 for pixels with dtheta below
+            % threshold
+            
+            % Obtain angular distance for gradient in points
+            dtheta = obj.angularDiff( pts, v );
+            
+            mask = dtheta < thres;
+            % Make column
+            mask = mask(:);
         end
     end
     
