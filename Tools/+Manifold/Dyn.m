@@ -1,11 +1,11 @@
 classdef Dyn < Manifold.Base
-    %CDyn Class for storage of dynamic manifold, structure formed
+    %CDyn Class for storage of cartesian product manifold, structure formed
     %by several manifold variables
     %   Detailed explanation goes here
     
     properties
         vars    % Variables composing the manifold
-        Nvars   % Number of variables in composed manifold
+        Nvars   % Number of variables in manifold product
         
         idxs    % Cell array with indexes corresponding to minimal repr.
         IDXS    % Cell array with indexes corresponding to complete repr.
@@ -86,7 +86,9 @@ classdef Dyn < Manifold.Base
                     eval( strcat('out_ob(i) = ',class(obj),'(c{:});') );
 %                     out_ob(i) = Manifold.Dyn(c{:});
                     % Set same cov as input to avoid errors in input functions
-                    out_ob(i).setMinimalCov(obj.A_x);
+                    if ~isempty( obj.A_x ) % This should be done elsewhere
+                        out_ob(i).setMinimalCov(obj.A_x);
+                    end
                 end
             end
         end
