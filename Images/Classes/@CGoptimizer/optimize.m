@@ -125,21 +125,38 @@ obj.pts = pts; % Store inlier points data in object for debug
 obj.w   = w;   % Store weights for points in object for debug
 
 Fun = @(x) Corner_Fun( x, pts, w );
-[ x, err ] = LM_Man_optim(Fun, x0, 'space', 'Rn', 'weighted', true, 'debug',0);
+% [ x, err ] = LM_Man_optim(Fun, x0, 'space', 'Rn', 'weighted', true, 'debug',0);
+[ xi, err ] = LM_Man_optim(Fun, xi0, 'space', 'Manifold',...
+                           'weighted', true, 'debug',0);
+obj.xi = xi;
+% obj.xi = Cxi( x );
+
 % Final xi:
 % For debug:
 % hInlPts = obj.plotInlierPts
 % hInlW   = obj.plotWeightPts
 % hXiLines = obj.plotXi
-% Create xi object and compare distances
-obj.xi = Cxi( x );
 
-% Covariance estimation
-[~, J, W, U] = Corner_Fun( x, pts, w );
-J = J';
+% Covariance estimation (TODO: With generic LSQ cov propagation)
+[~, J, W] = Corner_Fun( xi, pts, w );
+% It's difficult to take a source for the error when optimizing
+% the segment. Since the optimization here is mainly done
+% based on gradient magnitude, the noise should be applied
+% to this variable.
+% We need to stablish thus a photometric covariance for this value,
+% and decide here to try 
+% Old way, non-sense in using current W as covariance matrix!?
+% i_W = diag( 1./diag(W) );
+% A_x1 = inv( J' * i_W * J );
 
-i_W = diag( 1./diag(W) );
-A_x = inv( J * i_W * J' );
+% Current proposal: Set noise in vector error function
+% In this case F is vector of signed distances
+% It continues to make non-sense, but it's temporal
+% The noise should come propagated from pixel uncertainty (position)
+% and gradient uncertainty (value, propagable from intensity values?)
+A_g = eye( size(W) ); % Set non-correlated identity covariance matrix in distances (1 pixel typical deviation)
+J_xi_F = (J'*W*J) \ J'*W;
+A_x = J_xi_F * A_g * J_xi_F';
 
 % Set output tracking structure
 imgtrack.x = x;
@@ -224,7 +241,46 @@ if abs(x(3)-x(4)) < ang_dist_thres ||...
 end
 end
 
-function [E, J, W, U] = Corner_Fun( x, Cpts, Cw )
+function [E, J, W, U] = Corner_Fun( xi, Cpts, Cw )
+% Extract elements of product manifold
+c = xi.c.X; % Value of c in xi
+v{1} = xi.v(1).X;
+v{2} = xi.v(2).X;
+v{3} = xi.v(3).X;
+
+R90 = [ 0 -1 ;
+        1  0 ];
+for k=1:3
+    % Extract block auxiliary variables
+    pts = Cpts{k};
+    Npts = size(pts,2);
+    w   = Cw{k};
+    n   = R90 * v{k}; % Normal vector
+    cc  = repmat(c,1,Npts);
+    
+    e = ( n' * (pts - cc) )'; % Converted to column vector
+    Jc   = - repmat( n, 1, Npts )';
+    Jang = - (pts - cc)' * v{k};
+    
+    % Store blocks in cells
+    Cell_E{k} = e'; % Stored as row for cell2mat later operation
+    Cell_Jc{k}   = Jc';
+    Cell_Jang{k} = Jang';
+    Cell_w{k} = w; % Weights: Gradient magnitude
+end
+% The data was stored in transposed order
+% to ease concatenation with cell2mat
+E = cell2mat( Cell_E )';
+
+J = cell2mat(Cell_Jc);
+J = [ J
+    blkdiag( Cell_Jang{:} ) ];
+J = J';
+
+W = diag( cell2mat( Cell_w ) );
+end
+
+function [E, J, W, U] = Corner_Fun_OLD( x, Cpts, Cw )
 
 p_0 = x(1:2);
 
@@ -330,7 +386,7 @@ for i = 1:3
             [pts, corners] = findClosePoints( p_0, q, [h 10*h], n, mu_ini, size_img); %#ok<NASGU>
         end
         
-        if 1
+        if 0
             mask_mag = obj.filterMag(pts, mag_th(i));
             mask_dir = obj.filterDir(pts, v, pi/16);
             mask = mask_mag & mask_dir;
@@ -372,8 +428,12 @@ for i = 1:3
     h = h0; % Recover last values of h
     
     % Adjust line to chosen points by SVD
-    w = mag';
-    l = svdAdjust( pts(:,mask), w(mask) );
+    if 0
+        
+    else
+        w = mag';
+        l = svdAdjust( pts(:,mask), w(mask) );
+    end
     
     % Remove points farther than selected segment width (outliers)
     idx_prev = find( mask );
