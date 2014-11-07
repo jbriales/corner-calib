@@ -151,6 +151,10 @@ classdef CRealLidar < CScan & CConfigLidar & handle
             
 %             delete( obj.hScan ) % Update only if necessary to improve speed
             obj.showScan;
+            % figure;
+            % camroll(90);
+            % axis off
+            % set(gcf,'color','w');
             
             if exist('borders','var')
                 axis(borders);
@@ -166,10 +170,12 @@ classdef CRealLidar < CScan & CConfigLidar & handle
                     inl = cell2mat( obj.meta.scantrack(k).inliers );
 %                     inl = inl{:};
                     plot( xy(1,inl), xy(2,inl), [col(k),'.'] );
-                    plotHomLineWin( hlines{k}, col(k) );
+                    hHL(k) = plotHomLineWin( hlines{k}, col(k) );
                 end
             end
-            camroll(90); % Rotates view to put LRF pointing forwards
+            % Commented because it should be done only once (not in every
+            % call)
+%             camroll(90); % Rotates view to put LRF pointing forwards
             
             % OLD CODE:
             % TODO: Put as option in a new class CLRF
