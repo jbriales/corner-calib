@@ -18,6 +18,26 @@ classdef CBaseLidar < CPlane3D & CConfigLidar
             obj = obj@CConfigLidar( N, FOVd, sd, d_range );
         end
         
+        function pts = samplePolarGrid( obj, inc_ang_deg, inc_r )
+            angles = -obj.FOVd/2 : inc_ang_deg : +obj.FOVd/2;
+            ranges = obj.d_min : inc_r : obj.d_max;
+            
+            xx = cosd(angles)' * ranges;
+            yy = sind(angles)' * ranges;
+            pts = [ xx(:), yy(:) ]';
+        end
+        function pts = sampleCartGrid( obj, inc_x )
+            [X,Y] = meshgrid( -obj.d_max : inc_x : +obj.d_max );
+            pts = [X(:), Y(:)]';
+            rr  = sqrt(sum(pts.^2,1));
+            ang = atan2( Y, X );
+            ang = ang(:)';
+            
+            pts( :, rr < obj.d_min | ...
+                    rr > obj.d_max | ...
+                    abs(ang) > obj.FOVr/2 ) = [];
+        end
+        
         function h = plot2_LidarRays( obj )
             z = zeros(1,obj.N);
             h = quiver( z,z, obj.dir(1,:), obj.dir(2,:) );

@@ -18,6 +18,24 @@ classdef CBaseCamera < CPose3D & CConfigCamera
             obj = obj@CConfigCamera( K, res, f, sd );
         end
         
+        function mask_out = isInsideFrustum( obj, pts_cam )
+            mask_out = zeros(1,size(pts_cam,2));
+            
+            good_idxs = find( pts_cam(3,:) > 0 );
+            pts_cam = pts_cam( :, good_idxs ); %#ok<FNDSB>
+%             pos_mask = (pts_cam(3,:) > 0);
+%             pts_cam(:,~pos_mask) = [];
+            if isempty( pts_cam )
+                warning('No valid input points')
+                return
+            end
+            normalised = makeinhomogeneous( pts_cam );
+            mask_inside = abs(normalised(1,:)) < tan( obj.FOVh/2 ) & ...
+                          abs(normalised(2,:)) < tan( obj.FOVv/2 );
+            good_idxs(~mask_inside) = [];
+            mask_out(good_idxs) = true;
+        end
+        
         function h = plot3_CameraFrustum( obj, color )
             if ~exist('color','var')
                 color = 'k';

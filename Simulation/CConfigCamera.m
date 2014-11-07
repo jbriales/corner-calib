@@ -62,5 +62,9 @@ classdef CConfigCamera < handle
             obj.FOVhd = rad2deg( obj.FOVh );
             obj.FOVvd = rad2deg( obj.FOVv );
         end
+        
+        function setImageBorder( obj )
+            axis(obj.ax);
+        end
     end
 end

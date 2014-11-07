@@ -45,7 +45,7 @@ classdef CSimLidar < CBaseLidar
             % Check negative direction intersections and set infinity
 %             dir  = obj.getSamplingVectors;
 %             dir_sign = dot( dir, xy, 1 );
-            dir_sign = dot( obj.dir, xy, 1 );
+            dir_sign = dot( obj.v, xy, 1 );
             in_mask( dir_sign < 0 ) = false;
             
             % Return measurements data inside polygon
@@ -57,7 +57,7 @@ classdef CSimLidar < CBaseLidar
             range = sqrt( sum( xy.^2, 1 ) );
             % Add generated gaussian noise to Lidar measurements and update
             range = range + obj.sd * randn(1,length(range));
-            xy = obj.dir(:,in_mask) .* repmat(range,2,1);
+            xy = obj.v(:,in_mask) .* repmat(range,2,1);
         end
         
         % Plotting functions
