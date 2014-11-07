@@ -28,16 +28,11 @@ classdef CRawlogLRF
             files = dir(folder);
             files(1:2) = [];
             
-			if ~exist('typeOfSource','var')
+            if ~exist('typeOfSource','var')
                 typeOfSource = 'Rawlog';
             end
-
-            % Extract filename parts of range file (basename) and use to take the rest:
-            [~,name,ext] = fileparts( files(1).name );
-            file_range = fullfile( folder, strcat( name, ''      , ext ) );
-            file_times = fullfile( folder, strcat( name, '_times', ext ) );
             
-			switch typeOfSource
+            switch typeOfSource
                 case 'Rawlog'
                     % Extract filename parts of range file (basename) and use to take the rest:
                     [~,name,ext] = fileparts( files(1).name );
@@ -72,8 +67,8 @@ classdef CRawlogLRF
                         pts = double(loadpcd( fullfile(folder,name) ));
                         % Scanner-to-World coordinates in Blender
                         R_s_b = [ 0 0 -1
-                                 -1 0  0
-                                  0 1  0 ];
+                            -1 0  0
+                            0 1  0 ];
                         pts = R_s_b * pts(1:3,:);
                         pts(3,:) = [];
                         
@@ -91,19 +86,19 @@ classdef CRawlogLRF
                         r = zeros(1, config.N);
                         r(Iread) = sqrt( sum( pts.^2, 1 ) );
                         % Iempty values are kept zero
-
+                        
                         obj.scans(i) = CScan( r, ts );
                     end
             end
-
-			% Assign metafile path for every scan
+            
+            % Assign metafile path for every scan
             folder_meta = fileparts( folder );
             for i=1:length(obj.scans)
                 obj.scans(i).metafile = fullfile( ...
                     folder_meta, 'meta_laser',...
                     strcat(num2str(obj.scans(i).ts),'.mat') );
             end
-
+            
         end
         
     end
