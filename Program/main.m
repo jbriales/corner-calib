@@ -238,6 +238,15 @@ disp( [R_ort t_3D] )
 disp( Rt_m )
 disp( [R_global_3D, t_global_3D] )
 
+R = R_ort;
+t = t_3D;
+
+%% Check test error metric and choose best next suggestion
+keyboard
+SimRig.R_c_s = R;
+SimRig.t_c_s = t;
+[newR, newt, calibErr] = triOptim.suggestBestObs( SimRig );
+
 if stereoStore % Save stereo results for later comparison and study
     filename = fullfile(pwd,'Stereo_Comp',stereoLabel);
     save(filename, 'R_ort', 't_3D', 'R_global_3D', 't_global_3D');
