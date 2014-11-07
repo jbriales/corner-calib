@@ -3,6 +3,7 @@ classdef SO3 < Manifold.Base
     %   Detailed explanation goes here
     
     properties
+        R   % Property to store 3x3 matrix
     end
     
     methods
@@ -11,6 +12,7 @@ classdef SO3 < Manifold.Base
                 m = size(R,3); % Number of inputs in 3rd dimension
                 if m == 1
                     % This case is maintaned for the sake of clarity
+                    % TODO: X should be only column vector for uniformity with other manifolds
                     obj.X = R;
                     obj.x = obj.log( R );
                     obj.dim = 3;
@@ -47,9 +49,13 @@ classdef SO3 < Manifold.Base
             eps = Manifold.SO3.sminus( R1, R2 );
         end
         
-        function R = plus( obj, inc_eps )
+        function [R, obj_out] = plus( obj, inc_eps )
             R0 = obj.X;
-            R = splus_l( R0, inc_eps );
+            R = obj.splus_l( R0, inc_eps );
+            
+            if nargout == 2
+                obj_out = Manifold.SO3( R );
+            end
         end
         
         function J_R_eps = Dexp( obj )

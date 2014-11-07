@@ -66,6 +66,9 @@ else
                      'WindowStyle',WindowStyle,...
                      'Visible', win_visibility);
 end
+if ~exist('videoFigure','var')
+    videoFigure = false;
+end
 if videoFigure
 %     hLidar = subplot(2,2,4);
 %     hLidar = subplot_tight(3,3,[3 6]);
@@ -164,7 +167,14 @@ else
     
     % Load LIDAR
 %     scans = loadLidarData(typeOfSource, path, LIDAR_tag);
-    rawlogLRF = CRawlogLRF( fullfile(path,'laser') );
+    % Check if processed LRF data is stored
+    if exist(fullfile(path,'laser','_LRF.mat'),'file')
+        load(fullfile(path,'laser','_LRF.mat'));
+    else
+        rawlogLRF = CRawlogLRF( fullfile(path,'laser'),...
+            CConfigLidar(SConfigLRF), typeOfSource );
+        save(fullfile(path,'laser','_LRF.mat'),'rawlogLRF');
+    end
     scans = rawlogLRF.scans;
     
     % TODO: Improve LIDAR-cam synchronisation
@@ -255,7 +265,9 @@ out.path = path;
 out.hWin = hWin;
 out.hLidar = hLidar;
 out.hImg = hImg;
-out.hVid = hVid;
+if exist('hVid','var')
+    out.hVid = hVid;
+end
 out.WITHGT = WITHGT;
 out.gt = gt;
 out.Cam = Cam;

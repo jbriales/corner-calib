@@ -173,6 +173,7 @@ end
         end
         
         % TODO: Measure paramChange in manifold
+        % Study Riemannian metrics in product manifolds
         paramChange = norm( param - prevParam, 2 );
         errorChange = prevErrNorm - errNorm;
         if errorChange < 0
@@ -199,6 +200,9 @@ end
         epsInc = JtJN \ JtErr;
         % WARNING: COULD NEED NEGATIVE SIGN (DEPENDING ON ERROR DEFINITION)
         switch opt.space
+            case 'Manifold'
+                % Use general framework for manifolds
+                [~,param] = plus( prevParam, epsInc );
             case 'SE(3)'
                 rotInc = rotation_angle_axis( epsInc(1:3) );
                 tInc = epsInc(4:6);

@@ -67,10 +67,12 @@ classdef CConfigLidar < handle
             FOVr  = deg2rad( obj.FOVd );
         end
         function resolution_d = get.resolution_d(obj)
-            resolution_d = obj.FOVd / obj.N ;
+            resolution_d = obj.FOVd / (obj.N-1) ;
+            % The number of steps is one less than points!
         end
         function resolution_r = get.resolution_r(obj)
-            resolution_r = obj.FOVr / obj.N ;
+            resolution_r = obj.FOVr / (obj.N-1) ;
+            % The number of steps is one less than points!
         end
         function d_min = get.d_min(obj)
             d_min = obj.d_range(1);
