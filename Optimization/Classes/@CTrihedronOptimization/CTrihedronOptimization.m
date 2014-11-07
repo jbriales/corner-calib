@@ -13,10 +13,8 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
     
     properties (SetAccess=private)
         % Optimized variables
-        R0
         R
         A_R % Manifold covariance of rotation
-        t0
         t
         A_t % Covariance of translation
     end
@@ -63,9 +61,9 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         
         %% Filter correspondences with RANSAC
         obj = filterRotationRANSAC( obj )
-        obj = filterRotation_R0( obj, R0 )
+        obj = filterRotation_R( obj, R )
         obj = filterTranslationRANSAC( obj, R )
-        obj = filterTranslation_t0( obj, R0, t0 )
+        obj = filterTranslation_t( obj, R, t )
         % Functions to set all outlier masks to false
         function obj = resetRotationRANSAC( obj )
             Nobs = length( obj.obs );
@@ -81,12 +79,12 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         end
         
         %% Compute initial estimate
-        function obj = setInitialRotation( obj, R0 )
-            obj.R0 = R0;
+        function obj = setInitialRotation( obj, R )
+            obj.R = R;
         end
         
-        function obj = setInitialTranslation( obj, t0 )
-            obj.t0 = t0;
+        function obj = setInitialTranslation( obj, t )
+            obj.t = t;
         end
         
         function obj = computeTranslationLinear( obj )
@@ -97,7 +95,7 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             A = L';
             t_lin = A \ b;
             
-            obj.t0 = t_lin;
+            obj.t = t_lin;
         end
         % TODO: Automate from complete poses
         
@@ -245,10 +243,15 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             jacobian = - H \ D;
         end
         function cov = FCov_R_W( obj, R )
+            if ~exist('R','var')
+                R = obj.R;
+            end
             A_NV = obj.FCov_data_Ort( );
             
             J = obj.FJac_R_W( R );
             cov = J * A_NV * J';
+            
+            obj.A_R = cov;
         end
         
         R = optimizeRotation_NonWeighted( obj )
@@ -258,6 +261,10 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         
         % TODO: Implement optimizeRotation_Covariance from optimRotation.m
         function h = plotRotationCostFunction( obj, R )
+            if ~exist('R','var')
+                R = obj.R;
+            end
+            
             gv  = obj.get_plot_gv( obj.plot_dist_R );
             
             FE = @(R)obj.FErr_Orthogonality( R );
@@ -277,6 +284,13 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             % N - (3x...) 3D normals to reprojection planes from camera center
             % through image lines
             % Q - (2x...) 2D LRF intersection points
+            if ~exist('R','var')
+                R = obj.R;
+            end
+            if ~exist('t','var')
+                t = obj.t;
+            end
+            
             N = obj.cam_reprN;
             Q = obj.LRF_Q;
             
@@ -292,6 +306,13 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         weights = FWeights_3D_PlaneDistance( obj, R, t )
         function H = FHes_3D_PlaneDistance( obj, R, t )
             % Linear approximation to hessian in LM method
+            if ~exist('R','var')
+                R = obj.R;
+            end
+            if ~exist('t','var')
+                t = obj.t;
+            end
+            
             jacobian = obj.FJac_3D_PlaneDistance( R, t );
             weights  = obj.FWeights_3D_PlaneDistance( R, t );
             H = jacobian' * weights * jacobian;
@@ -372,10 +393,19 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             jacobian = - H \ D;
         end
         function cov = FCov_t_3D_W( obj, R, t )
+            if ~exist('R','var')
+                R = obj.R;
+            end
+            if ~exist('t','var')
+                t = obj.t;
+            end
+            
             A_NQ = obj.FCov_data_3D;
             
             J = obj.FJac_t_3D_W( R, t );
             cov = J * A_NQ * J';
+            
+            obj.A_t = cov;
         end
         
         function h = plotTranslation_3D_CostFunction( obj, R, t )
@@ -446,13 +476,13 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         
         function t = optimizeTranslation_2D_NonWeighted( obj, R )
             Fun = @(t) deal( obj.FErr_2D_LineDistance(R,t) , obj.FJac_2D_LineDistance(R,t) );
-            t = obj.optimize( Fun, obj.t0, 'Rn', false );
+            t = obj.optimize( Fun, obj.t, 'Rn', false );
         end
         function t = optimizeTranslation_2D_Weighted( obj, R )
             Fun = @(t) deal( obj.FErr_2D_LineDistance(R,t) ,...
                              obj.FJac_2D_LineDistance(R,t) ,...
                              obj.FWeights_2D_LineDistance(R,t) );
-            t = obj.optimize( Fun, obj.t0, 'Rn', true );
+            t = obj.optimize( Fun, obj.t, 'Rn', true );
         end
 
         % For global optimization (R+t)
@@ -580,7 +610,7 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             Fun = @(Rt) deal( obj.FErr_Global_Ort_3D(Rt(1:3,1:3),Rt(1:3,4)) ,...
                              obj.FJac_Global_Ort_3D(Rt(1:3,1:3),Rt(1:3,4)) ,...
                              obj.FWeights_Global_Ort_3D(Rt(1:3,1:3),Rt(1:3,4)) );
-%             Rt = obj.optimize( Fun, [obj.R0, obj.t0], 'SE(3)', true );
+%             Rt = obj.optimize( Fun, [obj.R, obj.t], 'SE(3)', true );
             Rt = obj.optimize( Fun, [R, t], 'SE(3)', true );
             R = Rt(1:3,1:3); t = Rt(1:3,4);
         end
@@ -680,7 +710,7 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             Fun = @(Rt) deal( obj.FErr_Global_3D(Rt(1:3,1:3),Rt(1:3,4)) ,...
                              obj.FJac_Global_3D(Rt(1:3,1:3),Rt(1:3,4)) ,...
                              obj.FWeights_Global_3D(Rt(1:3,1:3),Rt(1:3,4)) );
-%             Rt = obj.optimize( Fun, [obj.R0, obj.t0], 'SE(3)', true );
+%             Rt = obj.optimize( Fun, [obj.R, obj.t], 'SE(3)', true );
             Rt = obj.optimize( Fun, [R, t], 'SE(3)', true );
             R = Rt(1:3,1:3); t = Rt(1:3,4);
         end

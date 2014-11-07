@@ -1,14 +1,14 @@
-function obj = filterTranslation_t0( obj, R, t0 )
+function obj = filterTranslation_t( obj, R, t )
 
 % Mask of existing correspondences
 mask_exist = obj.mask_LRF_Q;
 idxs_exist = find( mask_exist );
 
-res = obj.FErr_3D_PlaneDistance( R, t0 );
+res = obj.FErr_3D_PlaneDistance( R, t );
 inliers = find( abs(res) < obj.RANSAC_Translation_threshold );
 
-% t0 can be used as initial estimate for optimization process
-obj.t0 = t0;
+% t can be used as initial estimate for optimization process
+obj.t = t;
 
 % Find indexes of outliers in complete set of 3xN correspondences
 idxs_inliers  = idxs_exist( inliers ); %#ok<FNDSB>

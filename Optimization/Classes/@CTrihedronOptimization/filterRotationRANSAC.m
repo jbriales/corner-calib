@@ -6,9 +6,9 @@ idxs_exist = find( mask_exist );
 
 corresps = [ obj.cam_N ; obj.LRF_V ];
 feedback = obj.debug_level;
-[R0, inliers, dist] = ransacFitTransNormals(corresps, obj.RANSAC_Rotation_threshold, feedback);
-% R0 can be used as initial estimate for optimization process
-obj.R0 = R0;
+[R, inliers, dist] = ransacFitTransNormals(corresps, obj.RANSAC_Rotation_threshold, feedback);
+% R can be used as initial estimate for optimization process
+obj.R = R;
 
 % Find indexes of outliers in complete set of 3xN correspondences
 idxs_inliers  = idxs_exist( inliers );

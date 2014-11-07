@@ -133,6 +133,7 @@ if WITHTRIHEDRON
         triOptim.disp_N_R_inliers;
     end
     R_c_s_w  = triOptim.optimizeRotation_Weighted;
+    A_R_ort  = triOptim.FCov_R_W;
 
     if WITHRANSAC
         triOptim.filterTranslationRANSAC( Rig.R_c_s ); % Should receive some estimated rotation
@@ -143,6 +144,7 @@ if WITHTRIHEDRON
     R0_for_t = R_c_s_w;
     triOptim.setInitialTranslation( Rig.t_c_s + 0.05*randn(3,1) );
     t_3D_w  = triOptim.optimizeTranslation_3D_Weighted( R0_for_t );
+    A_t_3D = triOptim.FCov_t_3D_W;
     
     [R_global, t_global] = triOptim.optimizeGlobal_Ort_3D( R_c_s_w, t_3D_w );
     [R_global_3D, t_global_3D] = triOptim.optimizeGlobal_3D( R_c_s_w, t_3D_w );

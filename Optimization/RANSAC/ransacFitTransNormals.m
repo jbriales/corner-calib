@@ -81,12 +81,12 @@ function [R, inliers, dist] = ransacFitTransNormals(corresps, thres, feedback)
 function R = rotadjust(X)
     N = X(1:3,:);
     L = X(4:5,:);
-    R0 = [ 0 -1  0
+    R = [ 0 -1  0
            0  0 -1
            1  0  0 ];
     
     Lev_Fun = @(R) Fun( R, N, L );
-    [ R, err, errNorm, W ] = LM_Man_optim(Lev_Fun,R0,'space','SO(3)','debug',0, 'maxIters', 200);
+    [ R, err, errNorm, W ] = LM_Man_optim(Lev_Fun,R,'space','SO(3)','debug',0, 'maxIters', 200);
     
 function [residual,J] = Fun( R, N, L )
 residual = dot( N, R(1:3,1:2) * L, 1 )';

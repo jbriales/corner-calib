@@ -1,6 +1,6 @@
 % Solve the translation problem calculating the uncertainty
 %-----------------------------------------------------------
-R  = R0; % Initial estimate employed for rotation optimization
+R  = R; % Initial estimate employed for rotation optimization
 %R  = R_c_s_w;
 %R  = R_c_s_nw;
 
@@ -29,7 +29,7 @@ A_q = A_q( [co.thereis_corner] ); % Pre-filter A_q (to meet q)
 %w = w + rand([3 1])*0.01;
 %R = fast_skewexp(rand(3)*0.01);
 % R = R * fast_skewexp(rand(3,1)*0.001);
-% t0 = t0.*rand(3,1)*0.001;
+% t = t.*rand(3,1)*0.001;
 %clc
 % Linear solution
 % for i = 1:N
@@ -44,20 +44,20 @@ A_q = A_q( [co.thereis_corner] ); % Pre-filter A_q (to meet q)
 b = - dot( L, R(:,1:2) * q, 1 )';
 A = L';
 t_lin = A \ b;
-t0 = zeros(3,1);
-% t0 = [0.16 0.01 -0.02]';
+t = zeros(3,1);
+% t = [0.16 0.01 -0.02]';
 % LM optimisation without weighting
 F_Lev                               = @(t)f_Corner_2D( t, R, L, q, K);
-[ t_c_s_nw, err_nw, errNorm, ~ ]    = LM_Man_optim(F_Lev, t0,'space','Rn','debug',2, 'maxIters', 200);
+[ t_c_s_nw, err_nw, errNorm, ~ ]    = LM_Man_optim(F_Lev, t,'space','Rn','debug',2, 'maxIters', 200);
 % LM optimisation with weighting
 F_Lev_w                             = @(t)f_Corner_2D_W( t, R, L, q, K, A_lh, A_q);
-[ t_c_s_w, err_w, errNorm, ~ ]      = LM_Man_optim(F_Lev_w, t0,'space','Rn','debug',2, 'maxIters', 200,'weighted',true);
+[ t_c_s_w, err_w, errNorm, ~ ]      = LM_Man_optim(F_Lev_w, t,'space','Rn','debug',2, 'maxIters', 200,'weighted',true);
 % LM optimisation without weighting and ERODE
 F_Lev_w                             = @(t)f_Corner_2D( t, R, L, q, K);
-[ t_c_s_enw, err_enw, errNorm, ~ ]  = LM_Man_optim(F_Lev, t0,'space','Rn','debug',2, 'maxIters', 200,'erode',true);
+[ t_c_s_enw, err_enw, errNorm, ~ ]  = LM_Man_optim(F_Lev, t,'space','Rn','debug',2, 'maxIters', 200,'erode',true);
 % LM optimisation with weighting and ERODE
 F_Lev_w                             = @(t)f_Corner_2D_W( t, R, L, q, K, A_lh, A_q);
-[ t_c_s_ew, err_ew, errNorm, ~ ]    = LM_Man_optim(F_Lev_w, t0,'space','Rn','debug',2, 'maxIters', 200,'erode',true,'weighted',true);
+[ t_c_s_ew, err_ew, errNorm, ~ ]    = LM_Man_optim(F_Lev_w, t,'space','Rn','debug',2, 'maxIters', 200,'erode',true,'weighted',true);
 
 % % Filter the outliers and refine (does not work)
 % k = 1;
@@ -74,7 +74,7 @@ F_Lev_w                             = @(t)f_Corner_2D_W( t, R, L, q, K, A_lh, A_
 %     
 % end
 % F_Lev_w = @(t)f_Corner_2D_W( t, R, L_e, q_e, K, A_lh_e, A_q_e);
-% [ t_e1, err_e1, errNorm, ~ ] = LM_Man_optim(F_Lev_w, t0,'space','Rn','debug',2, 'maxIters', 200,'erode',true);
+% [ t_e1, err_e1, errNorm, ~ ] = LM_Man_optim(F_Lev_w, t,'space','Rn','debug',2, 'maxIters', 200,'erode',true);
 
 fprintf('Linear (weighted) solution t:\n');
 disp(t_lin');

@@ -1,5 +1,5 @@
-function [ R, cov, cov_eps, err, errNorm, W ] = optimRotation( rot_input, R0, weighted, all_label, gt )
-% R = optimRotation( rot_input, R0, weighted, gt )
+function [ R, cov, cov_eps, err, errNorm, W ] = optimRotation( rot_input, R, weighted, all_label, gt )
+% R = optimRotation( rot_input, R, weighted, gt )
 % 
 % rot_input is a array of structs where each element of the array
 % corresponds to an single observation of a corner and each struct
@@ -22,7 +22,7 @@ n_cam = [rot_input.N];
 line_LRF = [rot_input.l];
 if ~weighted
     Lev_Fun = @(R) Fun( n_cam, line_LRF, R );
-    [ R, err, errNorm, W ] = LM_Man_optim(Lev_Fun,R0,'space','SO(3)','debug',2, 'maxIters', 200);
+    [ R, err, errNorm, W ] = LM_Man_optim(Lev_Fun,R,'space','SO(3)','debug',2, 'maxIters', 200);
     
     % Compute R covariance
     Jac = optimDer( rot_input, R );
@@ -58,7 +58,7 @@ if ~weighted
     end
 else
     Lev_Fun = @(R) FunW( rot_input, R );
-    [ R, err, errNorm, W ] = LM_Man_optim(Lev_Fun,R0,'space','SO(3)','weighted',true,'debug',2, 'maxIters', 200);   
+    [ R, err, errNorm, W ] = LM_Man_optim(Lev_Fun,R,'space','SO(3)','weighted',true,'debug',2, 'maxIters', 200);   
     
     cov_eps = [];
     cov = []; % TODO: Compute covariance
@@ -71,7 +71,7 @@ end
             N = reshape(X0(1:n*3),3,n);
             L = reshape(X0(n*3+1:end),2,n);
             Lev_Fun = @(R) Fun( N, L, R );
-            [ R, ~,~,~ ] = LM_Man_optim(Lev_Fun,R0,'space','SO(3)','debug',2, 'maxIters', 200);
+            [ R, ~,~,~ ] = LM_Man_optim(Lev_Fun,R,'space','SO(3)','debug',2, 'maxIters', 200);
         end
 
         A_N_man = blkdiag(rot_input.A_eps);

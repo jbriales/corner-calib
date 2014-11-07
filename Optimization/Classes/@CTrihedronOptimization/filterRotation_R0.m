@@ -1,14 +1,14 @@
-function obj = filterRotation_R0( obj, R0 )
+function obj = filterRotation_R( obj, R )
 
 % Mask of existing correspondences
 mask_exist = obj.mask_LRF_V;
 idxs_exist = find( mask_exist );
 
 % Compute error and check inliers
-res = obj.FErr_Orthogonality( R0 );
+res = obj.FErr_Orthogonality( R );
 inliers = find( abs(res) < obj.RANSAC_Rotation_threshold );
 
-obj.R0 = R0;
+obj.R = R;
 
 % Find indexes of outliers in complete set of 3xN correspondences
 idxs_inliers  = idxs_exist( inliers ); %#ok<FNDSB>

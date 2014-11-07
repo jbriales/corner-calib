@@ -98,11 +98,11 @@ end
 
 % Average of calibration rotation matrices
 if isfield(co,'R_c_s')
-    R0 = sum( reshape([co.R_c_s],3,3,[]), 3 );
-    [U,~,V] = svd( R0 );
-    R0 = U*V';
+    R = sum( reshape([co.R_c_s],3,3,[]), 3 );
+    [U,~,V] = svd( R );
+    R = U*V';
 else
-    R0 = [ 0 -1  0
+    R = [ 0 -1  0
               0  0 -1
               1  0  0 ];
 end

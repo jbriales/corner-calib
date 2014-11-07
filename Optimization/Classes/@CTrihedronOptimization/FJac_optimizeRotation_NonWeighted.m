@@ -1,6 +1,11 @@
 function J = FJac_optimizeRotation_NonWeighted( obj, R )
 % Compute Jacobian of R wrt input parameters n and l by implicit function
 % theorem
+
+if ~exist('R','var')
+    R = obj.R;
+end
+
 % The size will be 3x(5N) where N is the number of correspondences
 n_cam = obj.cam_N;
 v_LRF = obj.LRF_V;

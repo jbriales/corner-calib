@@ -10,8 +10,8 @@ classdef CCornerOptimization < handle & CBaseOptimization
     
     properties (SetAccess=private)
         % Optimized variables
-        R0
-        t0
+        R
+        t
     end
     
     properties (Dependent) % Array values collected from set of observations
@@ -23,7 +23,7 @@ classdef CCornerOptimization < handle & CBaseOptimization
         cam_C_L
         LRF_C_Q
         
-        Rt0
+        Rt
         
         Ncorresp
         Ncorresp_C
@@ -42,12 +42,12 @@ classdef CCornerOptimization < handle & CBaseOptimization
         end
                         
         %% Compute initial estimate
-        function obj = setInitialRotation( obj, R0 )
-            obj.R0 = R0;
+        function obj = setInitialRotation( obj, R )
+            obj.R = R;
         end
         
-        function obj = setInitialTranslation( obj, t0 )
-            obj.t0 = t0;
+        function obj = setInitialTranslation( obj, t )
+            obj.t = t;
         end
         
         %% Optimization functions and methods
@@ -105,7 +105,7 @@ classdef CCornerOptimization < handle & CBaseOptimization
         
         function [R,t] = optimizeRt_NonWeighted( obj )
             Fun = @(Rt) deal( obj.FErr_2D_LineDistance( Rt ) , obj.FJac_2D_LineDistance( Rt ) );
-            Rt = obj.optimize( Fun, obj.Rt0, 'SE(3)', false );
+            Rt = obj.optimize( Fun, obj.Rt, 'SE(3)', false );
             R = Rt(1:3,1:3);
             t = Rt(1:3,4);
         end
@@ -113,30 +113,30 @@ classdef CCornerOptimization < handle & CBaseOptimization
             Fun = @(Rt) deal( obj.FErr_2D_LineDistance( Rt ) ,...
                               obj.FJac_2D_LineDistance( Rt ) ,...
                               obj.FWeights_2D_LineDistance( Rt ) );
-            Rt = obj.optimize( Fun, obj.Rt0, 'SE(3)', true );
+            Rt = obj.optimize( Fun, obj.Rt, 'SE(3)', true );
             R = Rt(1:3,1:3);
             t = Rt(1:3,4);
         end
         function [R,t] = optimizeRt_ConstWeighted( obj )
             [R,t] = obj.optimizeRt_NonWeighted;
-            Rt0 = [R,t];
-            weights = obj.FWeights_2D_LineDistance( Rt0 );
+            Rt = [R,t];
+            weights = obj.FWeights_2D_LineDistance( Rt );
             
             Fun = @(Rt) deal( obj.FErr_2D_LineDistance( Rt ) ,...
                               obj.FJac_2D_LineDistance( Rt ) ,...
                               weights );
-            Rt = obj.optimize( Fun, Rt0, 'SE(3)', true );
+            Rt = obj.optimize( Fun, Rt, 'SE(3)', true );
             R = Rt(1:3,1:3);
             t = Rt(1:3,4);
         end
         function [R,t] = optimizeRt_PreWeighted( obj )
             [R,t] = obj.optimizeRt_NonWeighted;
-            Rt0 = [R,t];
+            Rt = [R,t];
             
             Fun = @(Rt) deal( obj.FErr_2D_LineDistance( Rt ) ,...
                               obj.FJac_2D_LineDistance( Rt ) ,...
                               obj.FWeights_2D_LineDistance( Rt ) );
-            Rt = obj.optimize( Fun, Rt0, 'SE(3)', true );
+            Rt = obj.optimize( Fun, Rt, 'SE(3)', true );
             R = Rt(1:3,1:3);
             t = Rt(1:3,4);
         end
@@ -214,7 +214,7 @@ classdef CCornerOptimization < handle & CBaseOptimization
         
         function [R,t] = optimizeRt_C_NonWeighted( obj )
             Fun = @(Rt) deal( obj.FErr_C_2D_LineDistance( Rt ) , obj.FJac_C_2D_LineDistance( Rt ) );
-            Rt = obj.optimize( Fun, obj.Rt0, 'SE(3)', false );
+            Rt = obj.optimize( Fun, obj.Rt, 'SE(3)', false );
             R = Rt(1:3,1:3);
             t = Rt(1:3,4);
         end
@@ -270,8 +270,8 @@ classdef CCornerOptimization < handle & CBaseOptimization
             LRF_C_Q = cell2mat( LRF_C_Q(1,:) );
         end
 
-        function Rt0 = get.Rt0( obj )
-            Rt0 = [ obj.R0, obj.t0 ];
+        function Rt = get.Rt( obj )
+            Rt = [ obj.R, obj.t ];
         end
         function Ncorresp = get.Ncorresp( obj )
             Ncorresp = 3 * length(obj.obs(1:obj.Nobs));

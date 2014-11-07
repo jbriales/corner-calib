@@ -10,8 +10,8 @@ classdef CCheckerboardOptimization < handle & CBaseOptimization
     
     properties (SetAccess=private)
         % Optimized variables
-        R0
-        t0
+        R
+        t
         
         inliers     % Field to store inliers found by Vasconcelos to use them in Zhang
     end
@@ -34,17 +34,17 @@ classdef CCheckerboardOptimization < handle & CBaseOptimization
         end
                         
         %% Compute initial estimate
-        function obj = setInitialRotation( obj, R0 )
-            obj.R0 = R0;
+        function obj = setInitialRotation( obj, R )
+            obj.R = R;
         end
         
-        function obj = setInitialTranslation( obj, t0 )
-            obj.t0 = t0;
+        function obj = setInitialTranslation( obj, t )
+            obj.t = t;
         end
         
         %% Optimization functions and methods
         function [R,t] = optimizeRt_Vasc(obj)
-            Ti = [obj.R0, obj.t0];
+            Ti = [obj.R, obj.t];
             % Convert from Cam frame to LRF frame (t in [mm])
             Ti = [Ti(1:3,1:3)', -1000*Ti(1:3,1:3)'*Ti(1:3,4)];
             [T, ~, obj.inliers,~,~] = lccMinSol(obj.plane_T,obj.LRF_pts,Ti); % Added initial estimate to save time
@@ -61,7 +61,7 @@ classdef CCheckerboardOptimization < handle & CBaseOptimization
             if isempty(obj.inliers)
                 error('Zhang: No inliers. Vasconcelos has to be applied fist to get inliers');
             end
-            Ti = [obj.R0, obj.t0];
+            Ti = [obj.R, obj.t];
             % Convert from Cam frame to LRF frame (t in [mm])
             Ti = [Ti(1:3,1:3)', -1000*Ti(1:3,1:3)'*Ti(1:3,4)];
             [T, ~,~,~,~] = lccZhang(obj.plane_T,obj.LRF_pts, Ti,obj.inliers);

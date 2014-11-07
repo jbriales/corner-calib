@@ -175,6 +175,7 @@ else % Give initial estimate
 end
 triOptim.disp_N_R_inliers;
 R_ort = triOptim.optimizeRotation_Weighted;
+A_R_ort = triOptim.FCov_R_W;
 
 counter = 0; dist = +inf;
 while dist > 1e-2 && counter < 10
@@ -202,6 +203,7 @@ triOptim.disp_N_t_inliers;
 % triOptim.setInitialTranslation( Rig.t_c_s + 0.05*randn(3,1) );
 % t_3D_nw = triOptim.optimizeTranslation_3D_NonWeighted( R_c_s_w );
 t_3D = triOptim.optimizeTranslation_3D_Weighted( R_ort );
+A_t_3D = triOptim.FCov_t_3D_W;
 % t_2D_nw = triOptim.optimizeTranslation_2D_NonWeighted( R_c_s_w );
 % t_2D_w = triOptim.optimizeTranslation_2D_Weighted( R_c_s_w );
 

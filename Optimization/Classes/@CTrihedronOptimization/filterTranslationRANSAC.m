@@ -16,10 +16,10 @@ fittingfn = @computeTranslation_3D;
 distfn    = @correspdist;
 degenfn   = @isdegenerate;
 
-[t0, inliers] = ransac(corresps, fittingfn, distfn, degenfn, s, obj.RANSAC_Translation_threshold, obj.debug_level);
+[t, inliers] = ransac(corresps, fittingfn, distfn, degenfn, s, obj.RANSAC_Translation_threshold, obj.debug_level);
    
-% R0 can be used as initial estimate for optimization process
-obj.t0 = t0;
+% R can be used as initial estimate for optimization process
+obj.t = t;
 
 % Find indexes of outliers in complete set of 3xN correspondences
 idxs_inliers  = idxs_exist( inliers );
