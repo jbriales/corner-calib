@@ -14,11 +14,11 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
     properties (SetAccess=private)
         % Optimized variables
         R0
-        % R % R is not a property to avoid confusion with results of
-        % different methods
+        R
+        A_R % Manifold covariance of rotation
         t0
-        % t % t is not a property to avoid confusion with results of
-        % different methods
+        t
+        A_t % Covariance of translation
     end
     
     properties (Dependent) % Array values collected from set of observations
@@ -691,6 +691,51 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
         t = optimizeTranslation_3D_NonWeighted( obj, R )
         t = optimizeTranslation_3D_Weighted( obj, R )
         
+        % Optimized suggestions
+        function [R_cam,t_cam, err] = suggestBestObs( obj, Rig )
+            % [R_cam,t_cam] = suggestBestObs( obj, Rig )
+            % Gives next observation pose which optimizes some criterium
+            % Currently: Minimize max pixel covariance in a test set
+            
+            R = Rig.R_c_s;
+            t = Rig.t_c_s;
+            
+            % Previous Calibration Error
+            A_R = obj.FCov_R_W( R );
+            A_t = obj.FCov_t_3D_W( R, t );
+            A_p = 0;
+            currentCalibErr = Rig.calibError( A_R, A_t, A_p );
+            
+            % Generate a coarse grid of feasible poses for camera observing
+            % the trihedron
+            [CR, Ct] = generate_poses_grid( 1, 50, 1.5, 1, 3, 0.25, Rig );
+            % TODO: Problem with simulating correspondence, visually check poses
+            
+            % Check best suggestion by computing calibration error (with
+            % certain metric)
+            % TODO: Pattern size
+            trihedron = CTrihedron( 5, eye(3), 0*[0 0 1]' );
+            N = length(CR);
+            calibErrVec = zeros(1,N);
+            for i=1:N
+                Rig.updateCamPose( CR{i}, Ct{i} );
+                %     trihedron.plotScene(Rig.Camera, Rig.Lidar);
+                SimCorr = trihedron.getCorrespondence( Rig );
+                SimTriOptim = obj; % Create new optimization object from real one
+                SimTriOptim.stackObservation( SimCorr );
+                A_R = SimTriOptim.FCov_R_W( R );
+                A_t = SimTriOptim.FCov_t_3D_W( R, t );
+                A_p = 0;
+                
+                % Compute error metric for current rig configuration
+                calibErrVec(i) = Rig.calibError( A_R, A_t, A_p );
+            end
+            [err, id] = min(calibErrVec);
+            R_cam = CR{id};
+            t_cam = Ct{id};
+        end
+        
+        % Representation
         function showSamplingSphere( obj, col )
             N = obj.cam_N;
             L = obj.LRF_V;
