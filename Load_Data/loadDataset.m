@@ -82,6 +82,9 @@ else
     hLidar = subplot(1,2,1);
     hImg = subplot(1,2,2);
 end
+% Roll LRF axis
+% subplot( hLidar );
+% camroll(90);
 
 if ~USER_INITIALISE
     tic
@@ -98,7 +101,6 @@ if ~USER_INITIALISE
     plot( scans(1).xy(1,:), scans(1).xy(2,:), '.k' );
     axis equal
     plotLIDARframe();
-    
 else
     %% AUTOMATED DATASET SELECTION AND CONFIG
     % TODO: Change signOfAxis and signOfCam by automated
@@ -125,10 +127,19 @@ else
     Cam = CRealCamera( SConfigCam );
     SConfigLRF = readConfigFile( fullfile(path,'rig.ini'),'[LRF]' );
     LRF = CRealLidar( SConfigLRF );
+    % Create simulated object with given configuration:
+    CConfigCam = struct2cell( SConfigCam );
+    CConfigLRF = struct2cell( SConfigLRF );
+    SimRig = CSimRig( eye(3), zeros(3,1),... % Extrinsic options
+               eye(3), zeros(3,1),...
+               CConfigLRF{:},... % Lidar options
+               CConfigCam{:} ); % Camera options 
     
     % Set handle for figure
     Cam.hFig = hImg;
     LRF.hFig = hLidar;
+    subplot( LRF.hFig );
+    camroll(90);
     
     % Load images
     blur = false;
@@ -249,6 +260,7 @@ out.WITHGT = WITHGT;
 out.gt = gt;
 out.Cam = Cam;
 out.LRF = LRF;
+out.SimRig = SimRig;
 out.frames = frames;
 end
 
