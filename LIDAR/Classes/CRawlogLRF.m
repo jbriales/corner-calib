@@ -48,6 +48,14 @@ classdef CRawlogLRF
             cell_rr = num2cell( rr, 2 );
             cell_ts = num2cell( ts );
             obj.scans = CScan( cell_rr, cell_ts );
+            
+            % Assign metafile path for every scan
+            folder_meta = fileparts( folder );
+            for i=1:length(obj.scans)
+                obj.scans(i).metafile = fullfile( ...
+                    folder_meta, 'meta_laser',...
+                    strcat(num2str(obj.scans(i).ts),'.mat') );
+            end
         end
         
     end
