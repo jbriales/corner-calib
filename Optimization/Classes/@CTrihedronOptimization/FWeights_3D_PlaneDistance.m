@@ -60,11 +60,13 @@ for i=1:N_obs
     end
 end
 % Compute all residues derivative wrt R and covariance
-keyboard
+% TODO: Not being block diagonal all could be done at once without FOR
 N = obj.cam_reprN;
 Q = obj.LRF_Q;
 dg_dR = cross( R(:,1:2)*Q, N, 1 )';
-A_g_R = dg_dR * obj.A_R * dg_dR';
-
-weights = blkdiag( W{:} );
+A_g_R    = dg_dR * obj.A_R * dg_dR';
+A_g_data = blkdiag( C_A{:} );
+A_g_all  = A_g_R + A_g_data;
+weights  = pinv( A_g_all );
+% weights = blkdiag( W{:} );
 end
