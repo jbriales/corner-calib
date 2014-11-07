@@ -52,9 +52,19 @@ for i=1:N_obs
         else
             W{i} = eye(length(A_i));
         end
+        
+        % Construct complete matrix to take R into account
+        C_A{i} = A_i;
     else
         W{i} = []; % Observation does not appear
     end
 end
+% Compute all residues derivative wrt R and covariance
+keyboard
+N = obj.cam_reprN;
+Q = obj.LRF_Q;
+dg_dR = cross( R(:,1:2)*Q, N, 1 )';
+A_g_R = dg_dR * obj.A_R * dg_dR';
+
 weights = blkdiag( W{:} );
 end

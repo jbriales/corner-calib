@@ -9,6 +9,9 @@ R0 = obj.R0;
             'minChange', obj.minParamChange,...
             'minErrorChange', obj.minErrorChange);
         
+% Update result in optimization object
+obj.R = R;
+        
     function [residual, jacobian, weights] = LM_Fun( R )
         residual = obj.FErr_Orthogonality( R );
         jacobian = obj.FJac_Orthogonality( R );
