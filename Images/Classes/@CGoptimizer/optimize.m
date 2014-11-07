@@ -330,7 +330,7 @@ for i = 1:3
             [pts, corners] = findClosePoints( p_0, q, [h 10*h], n, mu_ini, size_img); %#ok<NASGU>
         end
         
-        if 1
+        if 0
             mask_mag = obj.filterMag(pts, mag_th(i));
             mask_dir = obj.filterDir(pts, v, pi/16);
             mask = mask_mag & mask_dir;
