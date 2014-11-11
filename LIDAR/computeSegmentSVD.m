@@ -18,7 +18,9 @@ n = V(:,2); % Min eigenvector, line normal
 
 % Uncertainty propagation in direction angle
 A_pts = kron( eye(Npts), sigma^2*eye(2) );
-J = J_alpha_p( pts );
+% J = J_alpha_p( pts );
+% cov_angle2 = J * A_pts * J';
+J = JMan_n_p( pts );
 cov_angle = J * A_pts * J';
 
 % Homogeneous line
@@ -26,11 +28,21 @@ lin = [ n', -n'*c ]';
 
 %% Compute MonteCarlo simulation from X0 with estimated gaussian distribution: From oa,ob,oc and o to R
 global WITH_MONTECARLO
-if WITH_MONTECARLO
-    Nsamples = 1e4;
-    A_l = cov_angle;
-    MonteCarlo_simulate( pts, A_pts, A_l, Nsamples )
+if WITH_MONTECARLO       
+    % Set manifold framework inputs
+    ob_pts = Manifold.Rn( pts(:) );
+    ob_pts.setMinimalCov( A_pts );
+    ob_v = Manifold.S1( v );
+    ob_v.setMinimalCov( cov_angle );
+    out = Manifold.MonteCarloSim( ...
+        @(X)Fun_MC(X),...
+        ob_pts, 'Ref', ob_v, 'N', 1e4 );
 end
+    function ob_v = Fun_MC( ob_X )
+        pts = reshape( ob_X.X,2,[] );
+        v = adjustSegmentDir( pts );
+        ob_v = Manifold.S1( v );
+    end
 
 if debug
     fig_title = 'RANSAC Line Segmentation';
@@ -79,6 +91,36 @@ J_l_n = [0 -1; 1 0];
 J_a_l = l' * [0 1 ; -1 0];
 J = J_a_l * J_l_n * J_n_Phi * J_Phi_M * J_M_p;
 
+end
+
+function J = JMan_n_p( L0 )
+% Jacobian of l tangent space angle alpha wrt set of initial points p_i
+% The complete chain is:
+% alpha <- l <- n <- Phi <- M <- p_i
+% Input:
+%   L0 is a 2xN array where each column is a point
+
+N = size(L0,2);
+
+c  = mean(L0,2);
+L = L0 - repmat(c,1,N); % Points displaced to centroid
+M = L*L'; % Scatter matrix of displaced points
+[~,~,V] = svd(M);
+v = V(:,1);
+n = V(:,2);
+
+% Jacobian of n wrt p_i
+J_M_p = cell(1,N);
+for k=1:N
+    J_M_p{k} = kron(L(:,k),eye(2)) + kron(eye(2),L(:,k));
+end
+J_M_p = cell2mat( J_M_p );
+
+% Implicit Function Theorem
+Hess_C_nn = -n'*M'*M*n + v'*M'*M*v;
+Jac_C_nM  = (M*n)' * kron( -v',eye(2) ) + ...
+            (-M*v)'* kron( +n',eye(2) );
+J = - Hess_C_nn \ ( Jac_C_nM * J_M_p );
 end
 
 function MonteCarlo_simulate( pts, A_pts, A_l, Nsamples ) 

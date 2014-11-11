@@ -1,88 +1,79 @@
-function Slin = SegmentLinesRANSAC(x,y,threshold,min_inliers,sigma,debug)
+function S_segs = SegmentLinesRANSAC(pts,label_0,threshold,min_inliers,sigma)
+% S_segs = SegmentLinesRANSAC(pts,threshold,min_inliers,sigma)
+% SegmentLinesRANSAC take an input array of scan points and other
+% parameters to recursively find a set of different segments in the scan,
+% giving their parameters of interest
 
-    if ~exist('debug','var')
-        debug = 0;
-    end
+    global WITH_MONTECARLO
     if ~exist('sigma','var')
         sigma = 0.01;
     end
-    
-    xyz = [x;y;zeros(1,size(x,2))];
-    if debug
-        fig_title = ['RANSAC Line Segmentation'];
-        fig = figure('units','normalized','outerposition',[0 0 1 1]), hold on, axis equal, xlabel('x'), ylabel('y'), title(fig_title)
-        plot(xyz(1,:),xyz(2,:),'.'); plot(0,0,'>')      
-        colors =   {'g.','r.','c.','m.','y.','w.',[0.5 0.8 0.8],'k'};        
+    if ~exist('label_0','var')
+        label_0 = 0;
     end
     
-    it = 1;
-    remaining_pts = size(x,2);
-    Slin = struct('dir',[],...
-                  'A_dir',  [],...
-                  'p',   [],...
-                  'A_p',  [] );
-    while it < 5 && remaining_pts > min_inliers        
+    % Backup variable
+%     pts_0 = pts;
+    % Remove non-valid points from scan
+    % TODO: Do from object construction
+    pts(:, sum(pts.^2,1)==0) = [];
+    Npts = size(pts,2);
+    
+    it = 1;    
+	label = label_0;
+    while it < 15 && Npts > min_inliers        
         
-        [~, ~, inliers] = ransacfitline(xyz,threshold, 0); % Why is type single instead of double?
+        [~, inliers] = ransacfitline2D(pts,threshold, 0); % Why is type single instead of double?
         
-        if size(inliers,1) < min_inliers
+        Ninl = numel(inliers);
+        if Ninl < min_inliers
             break
         end
-        Ninl = size(inliers,1);
         
-        line_pts = double( xyz(1:2,inliers) );
-        c = mean(line_pts, 2);
-        cov_c = sigma^2*eye(2) / Ninl;
+        line_pts = pts(1:2,inliers);
+        p = mean(line_pts, 2);
+        A_p = sigma^2*eye(2) / Ninl;
         
-        [~, ~, V] = svd(cov(line_pts')); % Row is single observation
-        l = V(:,1); % Max eigenvector, line direction
+        [~, D, V] = svd(cov(line_pts')); % Row is single observation
+        v = V(:,1); % Max eigenvector, line direction
         n = V(:,2); % Min eigenvector, line normal
+        l = [ n; -n'*p ];
         
         % Uncertainty propagation in direction angle
         A_pts = kron( eye(Ninl), sigma^2*eye(2) );
-        J = J_alpha_p( line_pts );
+        J = JMan_n_p( line_pts );
         cov_angle = J * A_pts * J';
         
         %% Compute MonteCarlo simulation from X0 with estimated gaussian distribution: From oa,ob,oc and o to R
-        global WITH_MONTECARLO
         if WITH_MONTECARLO
             Nsamples = 1e4;
             A_l = cov_angle;
             MonteCarlo_simulate( line_pts, A_pts, A_l, Nsamples ) 
         end
         
-        Slin(it) = struct('dir', l,...
-                          'A_dir',cov_angle,...
-                          'p',   c,...
-                          'A_p',  cov_c );
-
-    
-        if debug
-            %plot(V(1,1:2),V(2,1:2),'r*')
-            plot(xyz(1,inliers),xyz(2,inliers),colors{it})
-            plot([c(1)-2*l(1),c(1)+2*l(1)],[c(2)-2*l(2),c(2)+2*l(2)],'k-','linewidth',1)
-        end  
-        
-        remaining_pts = remaining_pts - size(inliers,1);
-        xyz = xyz(:,setdiff(1:size(xyz,2),inliers)');
+        color = 0.5 + 0.5*rand(1,3); % Brighter colours
+        S_segs(it) = struct('v',   v,...
+                            'A_v', cov_angle,...
+                            'p',   p,...
+                            'A_p', A_p,...
+                            'l',   l,...
+                            'eig', diag(D),...
+                            'cond',D(1,1)/D(2,2),...
+                            'inl', inliers,...
+                            'pts', line_pts,...
+                            'lab', label,...
+                            'col', color); %#ok<AGROW>
+                
+        pts(:,inliers) = [];
+        Npts = size(pts,2);
         
         it = it + 1;
+        label = label + 1;
     end
-    
-    % Arrange segments wrt Y-coordinate (negative to positive -> right to
-    % left)
-    p = [Slin(:).p];
-    [~,ind_l] = sort(p(2,:));
-    Slin = Slin(ind_l);
-    
-    if debug
-        pause;
-        close(fig)
-    end  
 end
 
 %% Additional functions defined for uncertainty propagation and MonteCarlo simulation
-function J = J_alpha_p( L0 )
+function J = JMan_n_p( L0 )
 % Jacobian of l tangent space angle alpha wrt set of initial points p_i
 % The complete chain is:
 % alpha <- l <- n <- Phi <- M <- p_i
@@ -95,24 +86,21 @@ c  = mean(L0,2);
 L = L0 - repmat(c,1,N); % Points displaced to centroid
 M = L*L'; % Scatter matrix of displaced points
 [~,~,V] = svd(M);
-l = V(:,1);
+v = V(:,1);
 n = V(:,2);
 
 % Jacobian of n wrt p_i
-J_M_p = zeros(4,2*N);
-for i=1:N
-    J_M_p(:,(1:2)+(2*(i-1))) = [ 2*L(1,i)    0
-                                L(2,i)  L(1,i)
-                                L(2,i)  L(1,i)
-                                 0     2*L(2,i) ];
+J_M_p = cell(1,N);
+for k=1:N
+    J_M_p{k} = kron(L(:,k),eye(2)) + kron(eye(2),L(:,k));
 end
-% J_M_p   = chol( Mp )'; % To get equivalent jacobian from one general point
-J_Phi_M = kron( n', eye(2) );
-J_n_Phi = pinv(M);
-J_l_n = [0 -1; 1 0];
-J_a_l = l' * [0 1 ; -1 0];
-J = J_a_l * J_l_n * J_n_Phi * J_Phi_M * J_M_p;
+J_M_p = cell2mat( J_M_p );
 
+% Implicit Function Theorem
+Hess_C_nn = -n'*M'*M*n + v'*M'*M*v;
+Jac_C_nM  = (M*n)' * kron( -v',eye(2) ) + ...
+            (-M*v)'* kron( +n',eye(2) );
+J = - Hess_C_nn \ ( Jac_C_nM * J_M_p );
 end
 
 function MonteCarlo_simulate( pts, A_pts, A_l, Nsamples ) 

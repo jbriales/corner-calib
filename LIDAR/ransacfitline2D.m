@@ -1,6 +1,6 @@
-% RANSACFITLINE - fits line to 2D array of points using RANSAC
+% RANSACFITLINE2D - fits line to 2D array of points using RANSAC
 %
-% Usage  [L, inliers] = ransacfitline(XYZ, t, feedback)
+% Usage  [L, inliers] = ransacfitline(XY, t, feedback)
 %
 % This function uses the RANSAC algorithm to robustly fit a line
 % to a set of 2D data points.

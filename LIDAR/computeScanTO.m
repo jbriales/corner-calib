@@ -47,6 +47,17 @@ A_lin = cell(1,3);
 T = [ 0 -1 ; 1 0 ];
 for i = 1:3
     if ~isempty( p{i} ) && ~isempty( lin{i} ) 
+        % Homogeneous line computation can be done all out of SVD
+%         if 0 % Perform Monte Carlo simulation
+%             keyboard
+%             FunMC = @(X)
+%             Manifold.Dyn
+%             out = Manifold.MonteCarloSim( ...,
+%                 @(X)computeBackprojectedNormals( X, Rig.Camera.K ),...
+%                 obj_xi, 'Ref', obj_Nbp, 'N', 1e3 );
+%             keyboard
+%         end
+        
         % Refactor AND there was a mistake in J_l computation (depend on v)
 %         J_lin_v = [0 -1; 1 0; -p{i}(2) p{i}(1)];
         J_lin_v = [ eye(2) ; -p{i}' ] * T;
