@@ -8,7 +8,7 @@ global WITH_MONTECARLO %#ok<NUSED>
 
 % Previous assertions:
 clear
-% close all
+close all
 dbstop if error % Set debug mode on if error occurs
 kbhit('stop')
 kbhit('init') % Track keyboard hits
@@ -104,10 +104,18 @@ for nobs=1:length(scans)
     %% Go from LIDAR information to Corner Observation
     % Set algorithm input
     LRF.setFrame( scans(nobs) );
-    [v,A_v,q,A_q] = LRF.compute;
-    if strcmp( win_visibility, 'on' )
-        LRF.visualize;
+    if LRF.AUTOMATED
+        % Nothing yet
+        if strcmp( win_visibility, 'on' )
+            LRF.visualize_segmentation;
+        end
+    else
+        [v,A_v,q,A_q] = LRF.compute;
+        if strcmp( win_visibility, 'on' )
+            LRF.visualize;
+        end
     end
+    
     
     % User reallocation of LIDAR segments
     if upper(kbhit) == 'L' % To stop after pressing 'L' key
@@ -140,9 +148,16 @@ for nobs=1:length(scans)
         
     %% Store data for final optimization
     tic
-    co = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp,...
-                v, A_v, [], [], q, A_q );
-	triOptim.stackObservation( co );
+    if LRF.AUTOMATED
+%         co = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp,...
+%             [], [], [], [], [], [] );
+        C_segs{nobs} = LRF.segs;
+        C_Rtri{nobs} = obj_Rtri.X;
+    else
+        co = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp,...
+            v, A_v, [], [], q, A_q );
+        triOptim.stackObservation( co );
+    end
     fprintf('STORAGE TIME: %f\n',toc)
     
 end
@@ -150,7 +165,7 @@ save( fullfile( path, 'cache',...
       strcat('preoptimization',stereoLabel,hokuyoLabel) ),...
       'triOptim' )
 keyboard
-figure('Name','Sampling map'), hold on
+lfigure('Name','Sampling map'), hold on
 triOptim.showSamplingSphere;
 
 %% Final optimization with triOptim object
@@ -163,6 +178,9 @@ if 0 % Code to filter obs for R and t from different datasets
     mask_data2 = kron([frames.ts]>1412150000, ones(1,3));
     triOptim.mask_RANSAC_R_outliers = mask_data2;
 end
+
+% RANSAC to detect good correspondences in automated analysis
+filterRotationRANSAC_Automated( C_Rtri, C_segs )
 
 if WITHRANSAC
     triOptim.filterRotationRANSAC;
