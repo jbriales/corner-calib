@@ -8,6 +8,9 @@ classdef CPose3D < handle
     properties
         R   % 3x3 rotation matrix of Polygon seen from World
         t   % 3x1 translation vector of Polygon seen from World
+        
+        % For representation only
+        frameSize   % Length of ploted system of reference
     end
     
     properties (SetAccess = protected, Dependent) % (Read-only)
@@ -19,6 +22,9 @@ classdef CPose3D < handle
         function obj = CPose3D( R, t )
             obj.R  = R;
             obj.t  = t;
+            
+            % For representation
+            obj.frameSize = 0.1;
         end
         
         % Get methods
@@ -29,7 +35,7 @@ classdef CPose3D < handle
         % Plotting methods
         % Plot object frame in 3D space
         function h = plotFrame( obj, label, color ) 
-            h = plotframe( obj.T, 1, label, color );
+            h = plotframe( obj.T, obj.frameSize, label, color );
         end
         % Plot reference frame in 3D space (World)
         % Not working?

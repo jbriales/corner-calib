@@ -82,12 +82,15 @@ classdef (Abstract) CPattern < CPose3D
                 switch class(sensor)
                     case 'CSimLidar'
                         color = 'g';
-                        sensor.plotFrame('S',color);
+%                         sensor.plotFrame('S',color);
+                        sensor.plotFrame(NaN,color);
                         obj.plotScan( sensor, color );
+                        sensor.plot3_ScanFOV( color );
 %                         obj.plotScanFeatures( sensor );
                     case 'CSimCamera'
                         color = 'r';
-                        sensor.plotFrame('C',color);
+%                         sensor.plotFrame('C',color);
+                        sensor.plotFrame(NaN,color);
                         sensor.plot3_PatternProjection( obj,color );
                         sensor.plot3_CameraFrustum( color );
                 end

@@ -73,5 +73,18 @@ classdef CSimLidar < CBaseLidar
                 h = [];
             end
         end
+        
+        function h = plot3_ScanFOV( obj, color )
+            vectors2D = obj.v;
+            vectors3D = obj.R(:,1:2) * vectors2D;
+            
+            tt = repmat( obj.t, 1, obj.N );
+            h = quiver3( tt(1,:), tt(2,:), tt(3,:),...
+                         vectors3D(1,:), vectors3D(2,:), vectors3D(3,:),...
+                         0.25 * obj.frameSize,...
+                         'Color', color );
+%             h = quiver3( , 'Color', color )
+%             pts3D = obj.transform2Dto3D( xy );
+        end
     end
 end

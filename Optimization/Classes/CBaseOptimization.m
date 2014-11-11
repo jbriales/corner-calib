@@ -47,12 +47,14 @@ classdef CBaseOptimization < handle % handle for compatibility with C...Optimiza
             obj.minErrorChange = minErrorChange;
             
             if ~exist('plot_dist_t','var')
-                plot_dist_t = 1 / 100;
+%                 plot_dist_t = 1 / 100;
+                plot_dist_t = 1 / 10;
             end
             obj.plot_dist_t = plot_dist_t;
             
             if ~exist('plot_dist_R','var')
-                plot_dist_R = deg2rad( 3 );
+%                 plot_dist_R = deg2rad( 3 );
+                plot_dist_R = deg2rad( 20 );
             end
             obj.plot_dist_R = plot_dist_R;
             

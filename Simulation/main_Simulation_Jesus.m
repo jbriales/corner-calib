@@ -103,17 +103,30 @@ for i=1:Nobs
     
     if WITHPLOTSCENE
         % Need to update Rig poses for plotting
+        nroffigures = WITHTRIHEDRON + WITHCORNER + WITHZHANG;
         figure
-        subplot(131)
-        Rig.updateCamPose( R_w_Cam_Trihedron{i}, t_w_Rig_Trihedron{i} );
-        trihedron.plotScene(Rig.Camera, Rig.Lidar);
-        subplot(132)
-        Rig.updateLRFPose( R_w_LRF_Corner{i}, t_w_Rig_Corner{i} );
-        corner.plotScene(Rig.Camera, Rig.Lidar);
-        subplot(133)
-        Rig.updateLRFPose( R_w_LRF_Checkerboard{i}, t_w_Rig_Checkerboard{i} );
-        checkerboard.plotScene(Rig.Camera, Rig.Lidar);
+        count = 1;
+        if WITHTRIHEDRON
+            subplot(1,nroffigures,count)
+            Rig.updateCamPose( R_w_Cam_Trihedron{i}, t_w_Rig_Trihedron{i} );
+            trihedron.plotScene(Rig.Camera, Rig.Lidar);
+            count = count + 1;
+        end
+        if WITHCORNER
+            subplot(1,nroffigures,count)
+            Rig.updateLRFPose( R_w_LRF_Corner{i}, t_w_Rig_Corner{i} );
+            corner.plotScene(Rig.Camera, Rig.Lidar);
+            count = count + 1;
+        end
+        if WITHZHANG
+            subplot(1,nroffigures,count)
+            Rig.updateLRFPose( R_w_LRF_Checkerboard{i}, t_w_Rig_Checkerboard{i} );
+            checkerboard.plotScene(Rig.Camera, Rig.Lidar);
+            count = count + 1;
+        end
+        clear count
         set(gcf,'units','normalized','position',[0 0 1 1]);
+        set(gcf,'color','w'); % Set figure background white
         keyboard
         close
     end

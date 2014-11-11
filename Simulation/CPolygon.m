@@ -41,8 +41,9 @@ classdef CPolygon < CPlane3D
             p3D = obj.p3D;
             p3D(:,end+1) = p3D(:,1); % Close polygon to plot
             plot3( p3D(1,:), p3D(2,:), p3D(3,:), 'o-' );
-            quiver3( obj.t(1),obj.t(2),obj.t(3),...
-                     obj.n(1),obj.n(2),obj.n(3) );
+            % Plot plane normal
+%             quiver3( obj.t(1),obj.t(2),obj.t(3),...
+%                      obj.n(1),obj.n(2),obj.n(3) );
         end
     end    
 end
