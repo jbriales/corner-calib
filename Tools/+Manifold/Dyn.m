@@ -71,7 +71,7 @@ classdef Dyn < Manifold.Base
             for k=1:obj.Nvars
                 X = obj.vars{k} + inc_eps(obj.idxs{k},:);
                 out_X = [out_X ; X];
-                eval(strcat('ob=',class(obj.vars{k}),'(X)'));
+                eval(strcat('ob=',class(obj.vars{k}),'(X);'));
                 temp{k} = ob;
             end
 
