@@ -80,6 +80,23 @@ for nobs=1:length(scans)
     % Compute trihedron planes normals from xi parameter
     tic
     obj_Rtri = computeTrihedronNormals( obj_xi, Cam.K, obj_Nbp );
+    tic
+    [rho, OmU, D] = computeTrihedronNormals2( reshape(obj_Nbp.X,3,3) );
+    rho = chooseTrihedronNormals( rho, OmU, obj_xi, Cam.K );
+    toc
+    tic
+    rho = refineGenericTrihedronNormals( D, [0.1 -0.2 0.3], rho );
+    toc
+    V_tri = zeros(3,3);
+    for k=1:3
+        V_tri(:,k) = OmU{k} * rho(:,k);
+    end
+    N_tri = zeros(3,3);
+    N_tri(:,1) = cross( V_tri(:,2), V_tri(:,3) );
+    N_tri(:,2) = cross( V_tri(:,3), V_tri(:,1) );
+    N_tri(:,3) = cross( V_tri(:,1), V_tri(:,2) );
+    N_tri = snormalize(N_tri);
+    
     fprintf('R_c_w optimization TIME: %f\n',toc)
     if WITHGT
         disp('Compare computed R_c_w to GT')
