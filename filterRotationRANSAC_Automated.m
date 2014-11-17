@@ -5,13 +5,19 @@ function obj = filterRotationRANSAC_Automated( C_Rtri, C_segs )
 %     segs = C_segs{i};
 %     C = combnk( 1:length(segs), 3 )';
 % end
+
+R0 = [-0.5046   -0.8623    0.0428
+   -0.0921    0.0045   -0.9957
+    0.8584   -0.5064   -0.0817];
+
 Nobs = length(C_Rtri);
 S_corresps = struct( 'N', [],...
                      'V', [],...
                      'X', [],...
                    'idx', [] );
-decimation = 10;
-for i=1:decimation:Nobs % Decimation is used to reduce the number of correspondences
+% decimation = 10;
+decimation = floor( Nobs/5 );
+for i=1:Nobs % Decimation is used to reduce the number of correspondences
     N = C_Rtri{i};
     segs = C_segs{i};
     Nsegs = length(segs);
@@ -24,19 +30,26 @@ for i=1:decimation:Nobs % Decimation is used to reduce the number of corresponde
                       repmat( V, 1, 3 ) ];
 end
 
-corresps = [S_corresps.X];
+corresps = [S_corresps(1:decimation:Nobs).X];
 feedback = true;
 RANSAC_Rotation_threshold = 0.02;
 [R, inliers, dist] = ransacFitTransNormals(corresps, RANSAC_Rotation_threshold, feedback);
 % R can be used as initial estimate for optimization process
 
-% Find within each observation the best three options:
-for i=1:decimation:Nobs
+% Find within each observation the possible matches:
+C_corresps = cell(3,Nobs);
+for i=1:Nobs
     d = dot(S_corresps(i).N, R(:,1:2)*S_corresps(i).V,1);
     mask = abs(d) < RANSAC_Rotation_threshold;
-    S_corresps(i).idx(:,mask)
+    matches = S_corresps(i).idx(:,mask);
+    for j=1:size(matches,2);
+        C_corresps{matches(1,j),i} = ...
+            [C_corresps{matches(1,j),i}, matches(2,j)];
+    end
+    
+    % Reorder C_segs elements giving image label to them
+    segs = C_segs{i};
 end
-
 hold on,
 h_(1) = plot(segs(4).pts(1,:),segs(4).pts(2,:),'.r');
 h_(2) = plot(segs(6).pts(1,:),segs(6).pts(2,:),'.g');
