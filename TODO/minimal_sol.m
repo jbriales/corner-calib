@@ -44,6 +44,9 @@ B  = Na'*Nb;
 Da = U' * Qa * U; 
 Db = U' * Qb * U;
 Bd = U' * B  * U;
+% GT value: rho such that lam = U * rho
+rho = U' * lam;
+
 % Symbols
 Srho = sym('r%d',[1 3])';
 % sym( 'Srho', 'real' )
