@@ -24,9 +24,14 @@ for k=1:3
     Q{j,i} = Om{j}'*Om{i};
 end
 % Diagonalize bilinear forms
+U = cell(1,3);
 [U{1},~,~] = svd( Q{1,2} );
 [U{2},~,~] = svd( Q{2,3} );
 [U{3},~,~] = svd( Q{3,1} );
+% Make each base dextrorotatory
+for k=1:3
+    U{k} = U{k} * diag( [1 det(U{k})] );
+end
 %             [U_{1},~,~] = svd( Q{1,3} );
 %             [U_{2},~,~] = svd( Q{2,1} );
 %             [U_{3},~,~] = svd( Q{3,2} );
