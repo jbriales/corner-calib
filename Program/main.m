@@ -182,8 +182,10 @@ save( fullfile( path, 'cache',...
       strcat('preoptimization',stereoLabel,hokuyoLabel) ),...
       'triOptim' )
 keyboard
-lfigure('Name','Sampling map'), hold on
-triOptim.showSamplingSphere;
+if ~LRF.AUTOMATED
+    figure('Name','Sampling map'), hold on
+    triOptim.showSamplingSphere;
+end
 
 %% Final optimization with triOptim object
 % WITHRANSAC = false;
@@ -197,7 +199,9 @@ if 0 % Code to filter obs for R and t from different datasets
 end
 
 % RANSAC to detect good correspondences in automated analysis
-filterRotationRANSAC_Automated( C_Rtri, C_segs )
+if LRF.AUTOMATED
+    filterRotationRANSAC_Automated( C_Rtri, C_segs )
+end
 
 if WITHRANSAC
     triOptim.filterRotationRANSAC;
