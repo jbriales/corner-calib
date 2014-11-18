@@ -219,9 +219,15 @@ for idx_sd=1:cam_sd_N
             first_time = toc;
         end
         % Remove classes instances
-        delete( triOptim );
-        delete( cornerOptim );
-        delete( checkerOptim );
+        if WITHTRIHEDRON
+            delete( triOptim );
+        end
+        if WITHCORNER
+            delete( cornerOptim );
+        end
+        if WITHZHANG
+            delete( checkerOptim );
+        end
     end
 end
     
