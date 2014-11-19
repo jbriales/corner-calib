@@ -9,7 +9,7 @@ classdef CComparison < handle & CStaticComp
         Checkerboard    % Checkerboard methods
     end
     
-    properties (Access = protected)
+    properties %(Access = protected)
         cam_sd_n        % Camera noise levels
         scan_sd_n       % Lidar noise levels
         N_co_n          % Number of correspondences levels
@@ -306,8 +306,6 @@ classdef CComparison < handle & CStaticComp
             set(objh,'linewidth',3);   
             set(gca,'XTick',pos_aux);
             set(gca,'XTickLabel',Clab);           
-                        
-
         end        
         
         function obj = plot( obj, field, cam_sd_vals, scan_sd_vals, Nobs_vals )

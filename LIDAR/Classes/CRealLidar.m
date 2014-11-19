@@ -368,7 +368,7 @@ classdef CRealLidar < CScan & CConfigLidar & handle
                     inl = cell2mat( obj.meta.scantrack(k).inliers );
 %                     inl = inl{:};
                     plot( xy(1,inl), xy(2,inl), [col(k),'.'] );
-                    hHL(k) = plotHomLineWin( hlines{k}, col(k) );
+                    plotHomLineWin( hlines{k}, col(k) );
                 end
             end
             % Commented because it should be done only once (not in every
