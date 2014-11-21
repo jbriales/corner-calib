@@ -1,5 +1,5 @@
 % load sim_sd_1.mat
-% plotNoiseData( comp, cam_sd_n, scan_sd_n, Nobs )
+% plotNoiseData( comp, cam_sd_vals, scan_sd_vals, Nobs )
 
 function obj = plotNoiseData( obj, cam_sd_vals, scan_sd_vals, Nobs_vals, N_sim )           
 
@@ -10,9 +10,9 @@ function obj = plotNoiseData( obj, cam_sd_vals, scan_sd_vals, Nobs_vals, N_sim )
     clear plotOpts;
     
     % Check if the scan_sd value is correct
-    cam_idxs  = obj.getIndexes('cam_sd_n',cam_sd_vals);
-    scan_idxs = obj.getIndexes('scan_sd_n',scan_sd_vals);
-    Nobs_idxs = obj.getIndexes('N_co_n',Nobs_vals);
+    cam_idxs  = obj.getIndexes('cam_sd_vals',cam_sd_vals);
+    scan_idxs = obj.getIndexes('scan_sd_vals',scan_sd_vals);
+    Nobs_idxs = obj.getIndexes('Nobs_vals',Nobs_vals);
     Nx = size(cam_idxs,2);
     imax = 1;
 
@@ -66,8 +66,8 @@ function obj = plotNoiseData( obj, cam_sd_vals, scan_sd_vals, Nobs_vals, N_sim )
             N_met = N_met+1;
         end
     end
-%     err.xtick = num2str( obj.cam_sd_n );
-    %err.xtick = num2str( obj.cam_sd_n );
+%     err.xtick = num2str( obj.cam_sd_vals );
+    %err.xtick = num2str( obj.cam_sd_vals );
 
     % Parameters to control the position in X label
     Npos    = 5;    % gap between samples in X label
