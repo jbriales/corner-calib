@@ -11,6 +11,7 @@ classdef CTrihedronObservation
         cam_A_l     % TODO: In process in getCalibratedCornerData
         cam_reprN   % 3(3x1) vectors normal to reprojection planes from camera center
         cam_A_reprN % 9x9 (rank ?) Uncertainty matrix of correlated 3 normals
+        cam_c_ray   % Direction vector pointing towards trihedron vertex
         
         % LRF properties
         LRF_v       % 3(2x1) direction of scan segments
@@ -31,7 +32,7 @@ classdef CTrihedronObservation
     end
     
     methods
-        function obj = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp,...
+        function obj = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp, c_ray,...
                 LRF_v, LRF_A_v, LRF_l, LRF_A_l, LRF_q, LRF_A_q )
 
             obj.cam_R_c_w = obj_Rtri.X;
@@ -40,6 +41,7 @@ classdef CTrihedronObservation
             obj.cam_A_l = obj_LP2.A_X;
             obj.cam_reprN = obj_Nbp.arr;
             obj.cam_A_reprN = obj_Nbp.A_X;
+            obj.cam_c_ray = c_ray;
             
             obj.LRF_v = LRF_v;
             obj.LRF_A_v = LRF_A_v;

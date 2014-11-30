@@ -1,4 +1,4 @@
-classdef CTrihedronOptimization < handle & CBaseOptimization
+classdef CTrihedronOptimization2 < handle & CBaseOptimization
     %CTrihedronOptimization Class to store observations and later process
     %and optimize them
     %   Detailed explanation goes here
@@ -6,7 +6,10 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
     properties
         % Auxiliar variables
         K   % Camera intrinsic matrix (for translation optimization)
-        end
+        
+        RANSAC_Rotation_threshold % Threshold for rotation error function
+        RANSAC_Translation_threshold % Threshold for translation error function
+    end
     
     properties (SetAccess=private)
         % Optimized variables
@@ -17,11 +20,13 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
     end
     
     properties (Dependent) % Array values collected from set of observations
-        cam_tri_n
-        cam_bp_n
+        cam_N
+        cam_L
+        cam_reprN
         
-        LRF_v
-        LRF_q
+        LRF_V
+        LRF_L
+        LRF_Q
         
         mask_LRF_V
         mask_LRF_Q
@@ -31,7 +36,7 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
     
     methods
         %% Constructor
-        function obj = CTrihedronOptimization( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold,...
+        function obj = CTrihedronOptimization2( K, RANSAC_Rotation_threshold, RANSAC_Translation_threshold,...
                 debug_level,maxIters, minParamChange, minErrorChange ) % COptimization inputs
             % Set optimization parameters through parent class
             obj = obj@CBaseOptimization( debug_level, maxIters, minParamChange, minErrorChange );
@@ -53,14 +58,46 @@ classdef CTrihedronOptimization < handle & CBaseOptimization
             % Commented because is dependent now
 %             obj.mask_RANSAC_R_outliers = []; % Initialize as empty
         end
-                
+        
+        %% Filter correspondences with RANSAC
+        obj = filterRotationRANSAC( obj )
+        obj = filterRotation_R( obj, R )
+        obj = filterTranslationRANSAC( obj, R )
+        obj = filterTranslation_t( obj, R, t )
+        % Functions to set all outlier masks to false
+        function obj = resetRotationRANSAC( obj )
+            Nobs = length( obj.obs );
+            for i=1:Nobs
+                obj.obs(i).is_R_outlier = false(1,3);
+            end
+        end
+        function obj = resetTranslationRANSAC( obj )
+            Nobs = length( obj.obs );
+            for i=1:Nobs
+                obj.obs(i).is_t_outlier = false(1,3);
+            end
+        end
+        
         %% Compute initial estimate
         function obj = setInitialRotation( obj, R )
             obj.R = R;
         end
+        
         function obj = setInitialTranslation( obj, t )
             obj.t = t;
         end
+        
+        function obj = computeTranslationLinear( obj )
+            L = obj.cam_L;
+            q = obj.LRF_Q;
+            
+            b = - dot( L, obj.R(:,1:2) * q, 1 )';
+            A = L';
+            t_lin = A \ b;
+            
+            obj.t = t_lin;
+        end
+        % TODO: Automate from complete poses
         
         %% Optimization functions and methods
         % For Rotation

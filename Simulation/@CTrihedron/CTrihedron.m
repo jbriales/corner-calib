@@ -162,6 +162,9 @@ classdef CTrihedron < CPattern
                     keyboard
                 end
                 
+                % Compute trihedron vertex back-projection ray vector
+                c_ray = snormalize( Rig.Camera.K \ makehomogeneous( img_pts(:,1) ) );
+                
                 [obj_Nbp, obj_LP2] = computeBackprojectedNormals( obj_xi, Rig.Camera.K );
                 % Put Monte Carlo simulation here        
 %                 if 1
@@ -206,7 +209,7 @@ classdef CTrihedron < CPattern
                 obj.computeScanCorner( Rig.Lidar, 0 ); % Debug = 0
             % Newer version in LIDAR/computeScanTO, try to make compatible
 
-            co = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp,...
+            co = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp, c_ray,...
                 v, A_v, [], [], q, A_q );
         end
         

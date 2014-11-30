@@ -10,9 +10,9 @@ classdef CComparison < handle & CStaticComp
     end
     
     properties %(Access = protected)
-        cam_sd_n        % Camera noise levels
-        scan_sd_n       % Lidar noise levels
-        N_co_n          % Number of correspondences levels
+        cam_sd_vals        % Camera noise levels
+        scan_sd_vals       % Lidar noise levels
+        Nobs_vals          % Number of correspondences levels
         
         Rt_gt           % Store groundtruth Rt for this specific comparison
         N_sim
@@ -21,11 +21,11 @@ classdef CComparison < handle & CStaticComp
     methods
                
         % Constructor TODO: add property GTComp if the GT change every it
-        function obj = CComparison( Rt_gt, N_sim, cam_sd_n, scan_sd_n, N_co_n )
+        function obj = CComparison( Rt_gt, N_sim, cam_sd_vals, scan_sd_vals, Nobs_vals )
             
-            obj.dim_cam_sd( size(cam_sd_n,2) );
-            obj.dim_scan_sd( size(scan_sd_n,2) );
-            obj.dim_N_co( size(N_co_n,2) );
+            obj.dim_cam_sd( size(cam_sd_vals,2) );
+            obj.dim_scan_sd( size(scan_sd_vals,2) );
+            obj.dim_N_co( size(Nobs_vals,2) );
             obj.dim_N_sim( N_sim );
             obj.N_sim = N_sim;
             
@@ -35,9 +35,9 @@ classdef CComparison < handle & CStaticComp
             
             obj.Rt_gt = Rt_gt; % Store groundtruth transformation
             
-            obj.cam_sd_n        = cam_sd_n;
-            obj.scan_sd_n       = scan_sd_n;
-            obj.N_co_n          = N_co_n;
+            obj.cam_sd_vals        = cam_sd_vals;
+            obj.scan_sd_vals       = scan_sd_vals;
+            obj.Nobs_vals          = Nobs_vals;
         end
         
         % Show object information
@@ -54,18 +54,18 @@ classdef CComparison < handle & CStaticComp
             end
             fprintf('Number of simulations for each tuple: %d\n', obj.N_sim);
             fprintf('Vector of camera noises (pixels):\n');
-            disp(obj.cam_sd_n);
+            disp(obj.cam_sd_vals);
             fprintf('Vector of LRF noises (m):\n');
-            disp(obj.scan_sd_n);
+            disp(obj.scan_sd_vals);
             fprintf('Vector of N of observations:\n');
-            disp(obj.N_co_n);
+            disp(obj.Nobs_vals);
             fprintf('Complete lines for .ini\n');
             fprintf('cam_sd_vals  = [ ');
-            fprintf('%f ',obj.cam_sd_n); fprintf(']\n');
+            fprintf('%f ',obj.cam_sd_vals); fprintf(']\n');
             fprintf('scan_sd_vals = [ ');
-            fprintf('%f ',obj.scan_sd_n); fprintf(']\n');
+            fprintf('%f ',obj.scan_sd_vals); fprintf(']\n');
             fprintf('Nobs_vals    = [ ');
-            fprintf('%f ',obj.N_co_n); fprintf(']\n');
+            fprintf('%f ',obj.Nobs_vals); fprintf(']\n');
             fprintf('==========================================\n\n');
         end
         function patterns = getPatterns( obj )
@@ -123,9 +123,9 @@ classdef CComparison < handle & CStaticComp
             xlab = xlabels{imax};
             
             % Check if the scan_sd value is correct
-            cam_idxs  = obj.getIndexes('cam_sd_n',cam_sd_vals);
-            scan_idxs = obj.getIndexes('scan_sd_n',scan_sd_vals);
-            Nobs_idxs = obj.getIndexes('N_co_n',Nobs_vals);
+            cam_idxs  = obj.getIndexes('cam_sd_vals',cam_sd_vals);
+            scan_idxs = obj.getIndexes('scan_sd_vals',scan_sd_vals);
+            Nobs_idxs = obj.getIndexes('Nobs_vals',Nobs_vals);
 
             % Extract dim x Nsim matrices for representation
             all_R_err = [];
@@ -159,7 +159,7 @@ classdef CComparison < handle & CStaticComp
                     N_met = N_met+1;
                 end
             end
-            err.xtick = num2str( obj.cam_sd_n );
+            err.xtick = num2str( obj.cam_sd_vals );
             
             % TODO: Complete options (color, grouping, etc.)
             color = repmat(rand(N_met,3),Nx,1);
@@ -202,9 +202,9 @@ classdef CComparison < handle & CStaticComp
             xlab = xlabels{imax};
             
             % Check if the scan_sd value is correct
-            cam_idxs  = obj.getIndexes('cam_sd_n',cam_sd_vals);
-            scan_idxs = obj.getIndexes('scan_sd_n',scan_sd_vals);
-            Nobs_idxs = obj.getIndexes('N_co_n',Nobs_vals);
+            cam_idxs  = obj.getIndexes('cam_sd_vals',cam_sd_vals);
+            scan_idxs = obj.getIndexes('scan_sd_vals',scan_sd_vals);
+            Nobs_idxs = obj.getIndexes('Nobs_vals',Nobs_vals);
 
             % Extract dim x Nsim matrices for representation
             all_R_err = [];
@@ -240,7 +240,7 @@ classdef CComparison < handle & CStaticComp
                     N_met = N_met+1;
                 end
             end
-            err.xtick = num2str( obj.cam_sd_n );
+            err.xtick = num2str( obj.cam_sd_vals );
             
             % Parameters to control the position in X label
             Npos    = 5;    % gap between samples in X label
@@ -331,9 +331,9 @@ classdef CComparison < handle & CStaticComp
             xlab = xlabels{imax};
             
             % Check if the scan_sd value is correct
-            cam_idxs  = obj.getIndexes('cam_sd_n',cam_sd_vals);
-            scan_idxs = obj.getIndexes('scan_sd_n',scan_sd_vals);
-            Nobs_idxs = obj.getIndexes('N_co_n',Nobs_vals);
+            cam_idxs  = obj.getIndexes('cam_sd_vals',cam_sd_vals);
+            scan_idxs = obj.getIndexes('scan_sd_vals',scan_sd_vals);
+            Nobs_idxs = obj.getIndexes('Nobs_vals',Nobs_vals);
 
             % Extract dim x Nsim matrices for representation
             all_val_plot = [];
@@ -365,7 +365,7 @@ classdef CComparison < handle & CStaticComp
                     N_met = N_met+1;
                 end
             end
-%             err.xtick = num2str( obj.cam_sd_n );
+%             err.xtick = num2str( obj.cam_sd_vals );
             
             % TODO: Complete options (color, grouping, etc.)
             color = repmat(rand(N_met,3),Nx,1);
