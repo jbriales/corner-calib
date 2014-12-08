@@ -65,6 +65,7 @@ classdef CConfigCamera < handle
         
         function setImageBorder( obj )
             axis(obj.ax);
+            axis ij
         end
     end
 end
