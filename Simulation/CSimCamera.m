@@ -37,6 +37,24 @@ classdef CSimCamera < CBaseCamera
             uv_proj   = obj.K \ makehomogeneous( uv_pixels );
         end
         
+        function [uv_pixels, uv_S2] = projectPoints( obj, points )
+            p3D = obj.T \ makehomogeneous( points );
+            p3D(end,:) = [];
+            
+            % Normalize points to f=1 distance
+            p3D = hnormalise( p3D );
+            
+            uv_pixels = makeinhomogeneous( obj.K * p3D );
+            
+            % Apply gaussian noise to pixels
+            uv_pixels = uv_pixels + obj.sd * randn(2,size(p3D,2));
+            
+            % Update canonical projection space with noise
+            if nargout > 1
+                uv_S2 = snormalize( obj.K \ makehomogeneous( uv_pixels ) );
+            end
+        end
+        
         function mask = isInside( obj, pts_img )
             pts_img = round(pts_img); % To avoid eps-order errors
             mask = pts_img(1,:) >= 1 & ...
