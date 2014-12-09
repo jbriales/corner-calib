@@ -6,10 +6,15 @@ classdef CTrihedronSolver < handle
         % Input
         Nbp % Back-projected planes normals
         K   % Camera intrinsic calibration
+        c   % Cos of angles among trihedron directions
         
         % Intermediate variables
         rho
+        lam
+        Om
+        U
         OmU
+        B
         D
         
         % Solution selection variables
@@ -18,9 +23,16 @@ classdef CTrihedronSolver < handle
     end
     
     methods
-        function this = CTrihedronSolver( Nbp, K )
+        function this = CTrihedronSolver( Nbp, K, c )
             this.Nbp = Nbp;
             this.K   = K;
+            if ~exist('c','var')
+                c = zeros(3,1);
+            end
+            this.c = c;
+            
+            % Intermediate variables
+            this.B = cell(1,3);
             
             % Auxiliar variables
             this.Dproj = cell(1,3);
@@ -41,7 +53,7 @@ classdef CTrihedronSolver < handle
         end
         
         % Solver functions
-        function [rho, OmU, D] = solveReducedParams( this )
+        function [rho, OmU, D] = getReducedParams( this )
             % [rho, OmU, D] = CTrihedronSolver.solveReducedParams
             % Solve the system of equations for trihedron directions
             % in reduced bases
@@ -60,6 +72,11 @@ classdef CTrihedronSolver < handle
                 B{i,j} = Om{i}' * Om{j};
                 B{j,i} = Om{j}' * Om{i};
             end
+            
+            % Store bilinear forms in object
+            this.B{3} = B{1,2};
+            this.B{1} = B{2,3};
+            this.B{2} = B{3,1};
             
             % Diagonalize bilinear forms
             U = cell(1,3);
@@ -172,6 +189,8 @@ classdef CTrihedronSolver < handle
             
             % Store class intermediate results
             this.rho = rho;
+            this.Om  = Om;
+            this.U   = U;
             this.OmU = OmU;
             this.D   = D;
         end
@@ -207,6 +226,55 @@ classdef CTrihedronSolver < handle
             this.rho = rho; % Store good solution
         end
         
+        function rho = refineReducedSystem( ~, B, c, rho0 )
+            
+            % Definition of necessary functions
+            null2 = @(x)[-x(2); x(1)]; % Compute orthogonal vector in positive orientation
+            function [F,JF] = Fun( rho )
+                rho = mat2cell( rho, 2,[1 1 1] );
+                F  = [ rho{1}'*B{3}*rho{2} - c(3)
+                       rho{2}'*B{1}*rho{3} - c(1)
+                       rho{3}'*B{2}*rho{1} - c(2) ];
+                JF = [ rho{2}'*B{3}*null2(rho{1}') , rho{1}'*B{3}*null2(rho{2}') , 0
+                       0 , rho{3}'*B{1}*null2(rho{2}') , rho{2}'*B{1}*null2(rho{3}')
+                       rho{3}'*B{2}*null2(rho{1}') , 0 , rho{1}'*B{2}*null2(rho{3}') ];
+            end
+            
+            obj_rho = Manifold.Dyn( Manifold.S1(rho0{1}),...
+                                    Manifold.S1(rho0{2}),...
+                                    Manifold.S1(rho0{3}) );
+            
+            [ obj_rho, Err ] = Newton_solve( @(var)Fun(reshape(var.X,2,3)),...
+                obj_rho, 'space', 'Manifold', 'debug', false );
+            rho = reshape( obj_rho.X, 2,3 );
+            rho = mat2cell( rho, 2,[1 1 1] );
+        end
+        
+        function rho2lam( this )
+            % rho2lam( this )
+            % Undo simultaneous diagonalization
+            for k=1:3
+                this.lam{k} = this.U{k} * this.rho(:,k);
+            end
+        end
+        
+        function V_tri = lam2v( this )
+            % V_tri = lam2v( this )
+            % Recover solution in original complete basis
+            V_tri = zeros(3,3);
+            for k=1:3
+                V_tri(:,k) = this.Om{k} * this.lam{k};
+            end
+        end
+        
+        function v2lam( this, V_tri )
+            % v2lam( this, V_tri )
+            % Recover solution in original complete basis
+            for k=1:3
+                this.lam{k} = this.Om{k}' * V_tri(:,k);
+            end
+        end
+        
         function V_tri = rho2v( this )
             % V_tri = rho2v( this )
             % Recover solution in original complete basis
@@ -218,9 +286,25 @@ classdef CTrihedronSolver < handle
         
         % Complete method
         function V_tri = solve( this )
-            this.solveReducedParams;
+            this.getReducedParams;
             this.chooseTrihedronNormals;
-            V_tri = this.rho2v;
+            
+            % Refine in non-diagonal basis (for most general case)
+            this.rho2lam;
+            this.lam = this.refineReducedSystem( this.B, this.c, this.lam );
+            V_tri = this.lam2v;
+            
+%             V_tri = this.rho2v;
+        end
+        
+        function V_tri = solve_withGT( this, V_gt )
+            this.getReducedParams;
+%             this.chooseTrihedronNormals;
+            
+            % Refine in non-diagonal basis (for most general case)
+            this.v2lam( V_gt );
+            this.lam = this.refineReducedSystem( this.B, this.c, this.lam );
+            V_tri = this.lam2v;
         end
     end
     
