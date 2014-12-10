@@ -41,6 +41,31 @@ classdef CTrihedronSolver < handle
         end
         
         % Solver functions
+        function solveThirdDirection( this )
+            % Compute intersection point
+            cell_Nbp = mat2cell(this.Nbp,3,[1 1 1]);
+            t = snormalize( cross( cell_Nbp{1}, cell_Nbp{2} ) );
+            Om_t = null(t');
+            
+            % Obtain null spaces (Om) for orthogonal bases
+            Om{1} = [ t, cross(t,cell_Nbp{1}) ];
+            Om{2} = [ t, cross(t,cell_Nbp{2}) ];
+%             Om{3} = [ t, cross(t,cell_Nbp{3}) ];
+
+            % delta is the reduced vector for n3 direction,
+            % n3 = null(t') * delta
+            % Define new bilinear form
+            n1 = cell_Nbp{1};
+            n2 = cell_Nbp{2};
+            nm = cell_Nbp{3};
+            M = ( nm' * (t * t') * nm ) / ( n1' * skew(t) * skew(t) * n2 )...
+                * ( skew(t) * n2 * n1' * skew(t) ) + nm*nm';
+            M = Om_t' * skew(t) * M * skew(t) * Om_t;
+            delta = null(M);
+            n3 = Om_t * delta;
+            
+        end
+        
         function [rho, OmU, D] = solveReducedParams( this )
             % [rho, OmU, D] = CTrihedronSolver.solveReducedParams
             % Solve the system of equations for trihedron directions
