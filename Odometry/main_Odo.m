@@ -1,8 +1,11 @@
 close all
 
-WITH_ELQURSH = false;
-% WITH_ELQURSH = true;
+% WITH_ELQURSH = false;
+WITH_ELQURSH = true;
 WITH_TRIHEDRON = true;
+
+% WITH_PLOT = false;
+WITH_PLOT = true;
 
 % Read camera options
 rig_config_file = fullfile( pwd, 'rig.ini' );
@@ -16,15 +19,17 @@ poseFactory = CRandomPoses( readConfigFile( gen_conf_F,'[Vanishing]' ) );
 
 % Create simulated camera
 % TEMPORAL: cam_sd
-cam_sd = 0;
+cam_sd = 0.1;
 Cam = CSimCamera( R_w_c, t_w_c, K, res, f, cam_sd );
 
 % Create pattern
 cube = CHalfCube( 1, eye(3), zeros(3,1) );
 
 % Plot scene
+if WITH_PLOT
 hF_scene = figure;
 cube.plotScene(Cam);
+end
 
 % Compute projection of points and lines
 % [uv_proj, uv_pixels] = cube.getProjection( Cam );
@@ -45,12 +50,16 @@ hF_image = figure; hold on;
 for k=1:Nprim
     prim = primitives{k};
     
+    if WITH_PLOT
     figure(hF_scene);
     h_prim = cube.plot_prim( prim );
+    end
 
     prim2D = prim.project(Cam);
+    if WITH_PLOT
     figure(hF_image);
     prim2D.plot;
+    end
     
     for ii=1:3
         line{ii} = prim(ii).projectLine( Cam );
@@ -96,8 +105,10 @@ for k=1:Nprim
     cell_v{k} = R(:,[dir1 dir2]); % Equivalent to inv(K)*K*rk
 end
 % Set camera image borders
+if WITH_PLOT
 figure(hF_image);
 Cam.setImageBorder;
+end
 
 D1 = [cell_d{:}];
 D2 = [cell_v{:}];
@@ -110,7 +121,7 @@ fprintf('Elqursh Procrustes error: %f\n', angularDistance(R_pro,R_gt));
 figure
 hist( err_elqursh );
 
-keyboard
+% keyboard
 end
 
 
@@ -123,9 +134,12 @@ K = Cam.K;
 err_trihedron = cell(1,length(primitives));
 cell_d = cell(1,Nprim);
 cell_v = cell(1,Nprim);
+if WITH_PLOT
 hF_image = figure; hold on;
-% for k=1:Nprim
-for k=14
+end
+for k=1:Nprim
+% for k=[4 14 18 20]
+% for k=14
     prim = primitives{k};
     % Take care of segments orientation
     % (building a dextrorotatory system)
@@ -136,12 +150,16 @@ for k=14
         end
     end
     
+    if WITH_PLOT
     figure(hF_scene);
     h_prim = cube.plot_prim( prim );
+    end
 
     prim2D = prim.project(Cam);
+    if WITH_PLOT
     figure(hF_image);
     prim2D.plot;
+    end
     
     for ii=1:3
         C_Nbp{ii} = snormalize( K' * prim(ii).projectLine( Cam ) );
@@ -154,7 +172,8 @@ for k=14
 %     if rank(Nbp) == 2 || abs(det(Nbp)) < 1e-2
         trihedronSolver = CTrihedronSolver( Nbp, K );
         trihedronSolver.loadSegments( prim2D );
-        V_tri = trihedronSolver.solve;
+%         V_tri = trihedronSolver.solve;
+        V_tri = trihedronSolver.solve_withGT( R_gt );
         
         % Error
         err_trihedron{k} = angularDistance(V_tri,R_gt);
@@ -165,8 +184,10 @@ for k=14
 %     end
 end
 % Set camera image borders
+if WITH_PLOT
 figure(hF_image);
 Cam.setImageBorder;
+end
 
 D1 = [cell_d{:}];
 D2 = [cell_v{:}];
@@ -179,4 +200,18 @@ fprintf('Trihedron Procrustes error: %f\n', angularDistance(R_pro,R_gt));
 figure
 hist( [err_trihedron{:}] );
 
+end
+
+if WITH_TRIHEDRON && WITH_ELQURSH
+    figure; title('Error histogram');hold on;
+    plot(1, err_elqursh, '*b')
+    plot(2, [err_trihedron{:}], '*g')
+    ax = axis; axis([0 3 ax(3:4)]);
+    
+    figure; title('Error histogram');hold on;
+    hist( err_elqursh, 20, 0:0.1:10 );
+    hist( [err_trihedron{:}], 0:0.1:10 );
+    h = findobj(gca,'Type','patch');
+    set(h(2),'FaceColor','b','EdgeColor','k');
+    set(h(1),'FaceColor','g','EdgeColor','k');
 end
