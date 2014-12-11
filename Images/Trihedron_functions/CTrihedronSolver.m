@@ -53,7 +53,6 @@ classdef CTrihedronSolver < handle
         end
         
         % Solver functions
-<<<<<<< HEAD
         function solveThirdDirection( this )
             % Compute intersection point
             cell_Nbp = mat2cell(this.Nbp,3,[1 1 1]);
@@ -78,11 +77,8 @@ classdef CTrihedronSolver < handle
             n3 = Om_t * delta;
             
         end
-        
-        function [rho, OmU, D] = solveReducedParams( this )
-=======
+
         function [rho, OmU, D] = getReducedParams( this )
->>>>>>> 43ab5fa1fd2ed07c1f810a23ab3f9db3ea0124ab
             % [rho, OmU, D] = CTrihedronSolver.solveReducedParams
             % Solve the system of equations for trihedron directions
             % in reduced bases
