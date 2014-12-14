@@ -53,31 +53,93 @@ classdef CTrihedronSolver < handle
         end
         
         % Solver functions
-        function solveThirdDirection( this )
-            % Compute intersection point
-            cell_Nbp = mat2cell(this.Nbp,3,[1 1 1]);
-            t = snormalize( cross( cell_Nbp{1}, cell_Nbp{2} ) );
+        function checkJunction( this )           
+            % Check if 3-junction
+            if abs( det( this.Nbp ) ) < 1e-10
+                % Consider simple meeting lines
+                this.getReducedJunction;
+                this.chooseTrihedronNormals;
+                return
+            end
+            
+            % Compute intersection direction t (of planes 1 and 2)
+            n = mat2cell(this.Nbp,3,[1 1 1]);
+            t = snormalize( cross( n{1}, n{2} ) );
             Om_t = null(t');
             
-            % Obtain null spaces (Om) for orthogonal bases
-            Om{1} = [ t, cross(t,cell_Nbp{1}) ];
-            Om{2} = [ t, cross(t,cell_Nbp{2}) ];
-%             Om{3} = [ t, cross(t,cell_Nbp{3}) ];
-
             % delta is the reduced vector for n3 direction,
             % n3 = null(t') * delta
             % Define new bilinear form
-            n1 = cell_Nbp{1};
-            n2 = cell_Nbp{2};
-            nm = cell_Nbp{3};
-            M = ( nm' * (t * t') * nm ) / ( n1' * skew(t) * skew(t) * n2 )...
-                * ( skew(t) * n2 * n1' * skew(t) ) + nm*nm';
+            nm = n{3};
+            M = (nm' * t)^2 / (n{1}' * skew(t)*skew(t) * n{2})...
+                * ( skew(t) * n{2} * n{1}' * skew(t) ) + nm*nm';
             M = Om_t' * skew(t) * M * skew(t) * Om_t;
-            delta = null(M);
-            n3 = Om_t * delta;
+            M = 0.5 * (M+M'); % Symmetrize
             
+            [U,D] = eig( M ); % Diagonalize matrix
+            if sign(D(1,1)) == sign(D(2,2))
+                warning('Not different signs');
+                keyboard
+            end
+            n3 = Om_t * U * snormalize(...
+                  [ +sqrt(abs(D(2,2))), +sqrt(abs(D(1,1)))
+                    -sqrt(abs(D(2,2))), +sqrt(abs(D(1,1))) ]');
+            % Check good solution (for each a0 sign)
+            a12 = n{1}'*skew(t)*skew(t)*n{2};
+            a23 = n{2}'*skew(t)*skew(t)*n3;
+            a31 = n{1}'*skew(t)*skew(t)*n3;
+            a0  = sqrt( [a12 a12] .* a23 .* a31 );
+            err1 = +nm'*t*a0 + a12 * nm'*skew(t)*n3;
+            err2 = -nm'*t*a0 + a12 * nm'*skew(t)*n3;
+            [~,ind(1)] = min(abs(err1));
+            [~,ind(2)] = min(abs(err2));
+            
+            a0_sign = [+1 -1];
+            for ii = 1:2
+                this.Nbp(:,3) = n3(:,ind(ii));
+                
+                this.getReducedJunction;
+                Det = this.setSigns( diag([a0_sign(ii) 1]) * this.rho );
+                if Det == 1
+                    break
+                end
+            end
+
         end
 
+        function [rho, Om] = getReducedJunction( this )
+            % [rho, Om, D] = CTrihedronSolver.getReducedJunction
+            % Solve the system of equations for trihedron directions
+            % in reduced bases
+            
+            if abs(det( this.Nbp )) > 1e-10
+                error('Use getReducedJunction only with meeting corners');
+            end
+            
+            % Obtain null spaces (Om) in which v lies (orthogonality condition)
+            n = mat2cell(this.Nbp,3,[1 1 1]); % Reshape to cell array
+            t = snormalize( cross( n{1}, n{2} ) );
+            Om = cell(1,3);
+            Om{1} = [ t, cross(t,n{1}) ];
+            Om{2} = [ t, cross(t,n{2}) ];
+            Om{3} = [ t, cross(t,n{3}) ];
+            
+            % Compute bilinear forms matrices
+            % Bilinear forms become diagonal for chosen bases, with form
+            % D_ij = [ 1 0 ; 0 -alpha_ij ];
+            d = zeros(1,3);
+            for k=1:3
+                ij = setdiff(1:3,k); i=ij(1); j=ij(2);
+                d(k) = n{i}'*skew(t)*skew(t)*n{j};
+            end            
+            d_m = sqrt( prod(d) );
+            rho = snormalize( [ d_m d_m d_m ; d ] );
+            
+            % Store class intermediate results
+            this.rho = rho;
+            this.Om  = Om;
+        end
+        
         function [rho, OmU, D] = getReducedParams( this )
             % [rho, OmU, D] = CTrihedronSolver.solveReducedParams
             % Solve the system of equations for trihedron directions
@@ -108,86 +170,7 @@ classdef CTrihedronSolver < handle
             [U{1},S{3},V{2}] = svd( B{1,2} );
             [U{2},S{1},V{3}] = svd( B{2,3} );
             [U{3},S{2},V{1}] = svd( B{3,1} );
-            
-% % %             % Linear system
-% % %             M = cell(6,6);
-% % %             M{1,5} = U{1}; M{2,6} = U{1};
-% % %             M{1,3} = -V{1}; M{2,4} = -V{1};
-% % %             M{3,1} = U{2}; M{4,2} = U{2};
-% % %             M{3,5} = -V{2}; M{4,6} = -V{2};
-% % %             M{5,3} = U{3}; M{6,4} = U{3};
-% % %             M{5,1} = -V{3}; M{6,2} = -V{3};
-% % %             for ii=1:numel(M)
-% % %                 if isempty(M{ii})
-% % %                     M{ii} = zeros(2,2);
-% % %                 end
-% % %             end
-% % %             MM = cell2mat( M );
-% % %             NN = null(MM);
-% % %             % Temporal
-% % %             WWa = mat2cell(reshape(NN(:,1),2,[]), 2, [2 2 2]);
-% % %             WWb = mat2cell(reshape(NN(:,2),2,[]), 2, [2 2 2]);
-% % %             [Wa{1},Wa{2},Wa{3}] = deal( WWa{:} );
-% % %             [Wb{1},Wb{2},Wb{3}] = deal( WWb{:} );
-% % %             
-% % %             % Check random transformations
-% % %             for k=1:3
-% % %                 Q{k} = rand(2);
-% % %             end
-% % %             [U_{1},S_{3},V_{2}] = svd( Q{1}'*B{1,2}*Q{2} );
-% % %             [U_{2},S_{1},V_{3}] = svd( Q{2}'*B{2,3}*Q{3} );
-% % %             [U_{3},S_{2},V_{1}] = svd( Q{3}'*B{3,1}*Q{1} );
-% % %             
-% % %             [vv,dd] = eig( B{1,2} )
-% % %             [vv,dd] = eig( B{2,3} )
-% % %             [vv,dd] = eig( B{3,1} )
-% % %             
-% % %             % Seek simultaneous singular eigenvectors
-% % %             A{3} = inv(B{1,3}) * inv(B{3,1}) * ...
-% % %                    B{3,2} * B{2,3};
-% % %             A{3} = B{3,1} * B{1,3} * B{3,2} * B{2,3};
-% % %             A{2} = B{2,1} * B{1,2} * B{2,3} * B{3,2};
-% % %             A{1} = B{1,2} * B{2,1} * B{1,3} * B{3,1};
-% % %             [Q{3},~,T{3}] = svd( A{3} );
-% % %             [Q{2},~,T{2}] = svd( A{2} );
-% % %             [Q{1},~,T{1}] = svd( A{1} );
-% % %             
-% % %             for k=1:3
-% % %                 Om{k} = Om{k} * Q{k};
-% % %             end
-% % %             for k=1:3
-% % %                 ij = setdiff(1:3,k); i=ij(1); j=ij(2);
-% % %                 B{i,j} = Om{i}' * Om{j};
-% % %                 B{j,i} = Om{j}' * Om{i};
-% % %             end
-% % %             
-% % %             % Big bilinears
-% % %             Os = zeros(2);
-% % %             BB{3} = 0.5 * [ Os B{1,2} Os
-% % %                             B{1,2} Os Os
-% % %                             Os Os Os ];
-% % %             BB{2} = 0.5 * [ Os Os B{1,3}
-% % %                             Os Os Os
-% % %                             B{1,3} Os Os ];
-% % %             BB{1} = 0.5 * [ Os Os Os
-% % %                             Os Os B{2,3}
-% % %                             Os B{2,3} Os ];
-% % %             
-% % %             % Diagonalize bilinear forms
-% % %             U = cell(1,3);
-% % %             [U{1},S{3},V{2}] = svd( B{1,2} );
-% % %             [U{2},S{1},V{3}] = svd( B{2,3} );
-% % %             [U{3},S{2},V{1}] = svd( B{3,1} );
-% % %             
-% % %             % Create new system for nullspace vector computation
-% % %             syms a b
-% % %             for k=1:3
-% % %                 W_{k} = a*Wa{k} + b*Wb{k};
-% % %             end
-% % %             for k=1:3
-% % %                 eq{k} = W_{k}(:,1).' * S{k} * W_{k}(:,2);
-% % %             end
-            
+                        
             % Make each base dextrorotatory
             for k=1:3
                 U{k} = U{k} * diag( [1 det(U{k})] );
@@ -236,10 +219,10 @@ classdef CTrihedronSolver < handle
                 for i=1:3
                     s = sign( this.v_im{i}' *...
                               this.Dproj{i} *...
-                              this.K * this.OmU{i} *...
+                              this.K * this.Om{i} *...
                               rho(:,i) );
                     rho(:,i) = s * rho(:,i);
-                    n{i} = this.OmU{i} * rho(:,i);
+                    n{i} = this.Om{i} * rho(:,i);
                 end
                 R_tri = cell2mat( n );
                 
@@ -249,6 +232,26 @@ classdef CTrihedronSolver < handle
             end
             
             this.rho = rho; % Store good solution
+        end
+        
+        function determinant = setSigns( this, rho )
+            % CTrihedronSolver.setSigns
+            % Using information about segments sign in image,
+            % choose dextrorotatory solution
+            
+            n = cell(1,3);
+            for i=1:3
+                s = sign( this.v_im{i}' *...
+                    this.Dproj{i} *...
+                    this.K * this.Om{i} *...
+                    rho(:,i) );
+                rho(:,i) = s * rho(:,i);
+                n{i} = this.Om{i} * rho(:,i);
+            end
+            R_tri = cell2mat( n );
+            determinant = sign( det(R_tri) );
+            
+            this.rho = rho; % Store new solution
         end
         
         function rho = refineReducedSystem( ~, B, c, rho0 )
@@ -305,21 +308,25 @@ classdef CTrihedronSolver < handle
             % Recover solution in original complete basis
             V_tri = zeros(3,3);
             for k=1:3
-                V_tri(:,k) = this.OmU{k} * this.rho(:,k);
+                V_tri(:,k) = this.Om{k} * this.rho(:,k);
             end
         end
         
         % Complete method
         function V_tri = solve( this )
-            this.getReducedParams;
-            this.chooseTrihedronNormals;
+            this.checkJunction;
+%             this.getReducedJunction;
+%             this.getReducedParams;
+%             this.chooseTrihedronNormals;
             
             % Refine in non-diagonal basis (for most general case)
-            this.rho2lam;
-            this.lam = this.refineReducedSystem( this.B, this.c, this.lam );
-            V_tri = this.lam2v;
+%             this.rho2lam;
+%             if any(this.c ~= 0)
+%                 this.lam = this.refineReducedSystem( this.B, this.c, this.lam );
+%             end
+%             V_tri = this.lam2v;
             
-%             V_tri = this.rho2v;
+            V_tri = this.rho2v;
         end
         
         function V_tri = solve_withGT( this, V_gt )
