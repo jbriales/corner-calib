@@ -8,6 +8,10 @@ classdef CSegment2D
         v
     end
     
+    properties(Dependent)
+        n
+    end
+    
     methods
         function this = CSegment2D(p1,p2)           
             if nargin ~= 0 % Allow nargin == 0 syntax
@@ -25,18 +29,30 @@ classdef CSegment2D
             end
         end
         
-        function h = plot( this, format )
+        function n = get.n(this)
+            n = [ 0 -1 ; 1 0 ] * this.v;
+        end
+        
+        function [h,g] = plot( this, format, tag )
             % Complete input with default values
             if ~exist('format','var')
                 format = '-k';
+            end
+            if ~exist('tag','var')
+                tag = [];
             end
             
             if numel(this)>1
                 n = numel(this);
                 % Solve multiple cases with recursive calls
                 h = zeros(1,n);
+                g = zeros(1,n);
                 for k=1:n
-                    h(k) = this(k).plot(format);
+                    if isempty(tag)
+                        h(k) = this(k).plot(format);
+                    else
+                        [h(k),g(k)] = this(k).plot(format,tag{k});
+                    end
                 end
                 return % Finish plot
             end
@@ -44,6 +60,10 @@ classdef CSegment2D
             vec = [this.p1(:) this.p2(:)]';
             cell_vec = num2cell(vec,[1,3]);
             h = plot( cell_vec{:}, format );
+            if ~isempty(tag)
+                xy = 0.5*(this.p1 + this.p2);
+                g = text(xy(1),xy(2),tag);
+            end
         end
     end
     
