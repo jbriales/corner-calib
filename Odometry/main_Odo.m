@@ -140,6 +140,7 @@ end
 for k=1:Nprim
 % for k=[4 14 18 20]
 % for k=14
+% for k=19:21
     prim = primitives{k};
     % Take care of segments orientation
     % (building a dextrorotatory system)
@@ -158,7 +159,7 @@ for k=1:Nprim
     prim2D = prim.project(Cam);
     if WITH_PLOT
     figure(hF_image);
-    prim2D.plot;
+    prim2D.plot('-k',{'x','y','z'});
     end
     
     for ii=1:3
@@ -172,8 +173,11 @@ for k=1:Nprim
 %     if rank(Nbp) == 2 || abs(det(Nbp)) < 1e-2
         trihedronSolver = CTrihedronSolver( Nbp, K );
         trihedronSolver.loadSegments( prim2D );
-%         V_tri = trihedronSolver.solve;
-        V_tri = trihedronSolver.solve_withGT( R_gt );
+        V_tri = trihedronSolver.solve;
+        if WITH_PLOT
+            plotHomLineWin(inv(K')*trihedronSolver.Nbp(:,3), 'r');
+        end
+%         V_tri = trihedronSolver.solve_withGT( R_gt );
         
         % Error
         err_trihedron{k} = angularDistance(V_tri,R_gt);
@@ -204,8 +208,8 @@ end
 
 if WITH_TRIHEDRON && WITH_ELQURSH
     figure; title('Error histogram');hold on;
-    plot(1, err_elqursh, '*b')
-    plot(2, [err_trihedron{:}], '*g')
+    plot(1, err_elqursh, '*b');
+    plot(2, [err_trihedron{:}], '*g');
     ax = axis; axis([0 3 ax(3:4)]);
     
     figure; title('Error histogram');hold on;
