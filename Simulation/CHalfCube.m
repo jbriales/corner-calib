@@ -8,6 +8,7 @@ classdef CHalfCube < CPattern
     
     properties
         segments
+        sd  % Standard Deviation (m) of random noise in vertexes
     end
     
     properties (SetAccess = protected) % (Read-only)
@@ -16,7 +17,7 @@ classdef CHalfCube < CPattern
     
     methods
         % Constructor
-        function this = CHalfCube( L, R, t )
+        function this = CHalfCube( L, R, t, sd )
             if ~exist('R','var')
                 R = eye(3);
             end
@@ -25,6 +26,9 @@ classdef CHalfCube < CPattern
             end
             if ~exist('L','var')
                 L = 1;
+            end
+            if ~exist('sd','var')
+                sd = 0;
             end
             this = this@CPattern( R, t );
             
@@ -48,6 +52,9 @@ classdef CHalfCube < CPattern
                         0 L L ;
                         L 0 L ;
                         L L 0 ]';
+            % Apply cube noise to vertexes
+            this.p3D = this.p3D + sd * randn(3,7);
+            % Transform vertexes to given cube pose
             this.p3D = makeinhomogeneous( this.T * makehomogeneous( this.p3D ) );
             
             % Create cell array of segments
