@@ -5,6 +5,7 @@ classdef CTrihedronSolver < handle
     properties
         % Input
         Nbp % Back-projected planes normals
+        A_Nbp % Back-projected planes covariance matrices
         K   % Camera intrinsic calibration
         c   % Cos of angles among trihedron directions
         
@@ -16,6 +17,11 @@ classdef CTrihedronSolver < handle
         OmU
         B
         D
+        
+        % Output
+        V
+        Am_V
+        obj_V
         
         % Solution selection variables
         Dproj
@@ -49,6 +55,43 @@ classdef CTrihedronSolver < handle
             for k=1:3
                 this.Dproj{k} = DprojectionP2( segments(k).p1 );
                 this.v_im{k}  = segments(k).v;
+            end
+        end
+        
+        function loadCovariance( this, C_A_N )
+            this.A_Nbp = C_A_N;
+        end
+        
+        % Auxiliar reading functions
+        function obj_V = getManifoldObject( this )
+            obj_V = this.obj_V;
+        end
+        
+        % Uncertainty estimation
+        function computeCovariance( this )
+            % Compute covariance by 1st propagation from
+            % normals of interpretation planes
+            if ~any(this.c)
+                this.obj_V = Manifold.SO3( this.V );
+                
+                    % Compute covariance of trihedron normals
+                    J_Phi_eps = cross( this.V, this.Nbp, 1 )';
+                    J_Phi_Nbp = mat2cell( this.V, 3, [1 1 1] );
+                    J_Phi_Nbp = blkdiag( J_Phi_Nbp{:} )';
+                    J_eps_Nbp = - J_Phi_eps \ J_Phi_Nbp;
+                    
+                    if numel( this.A_Nbp ) == 3
+                        % Diagonal non-correlated case
+                        A_N = blkdiag( this.A_Nbp{:} );
+                    elseif all( size( this.A_Nbp ) == [3 3] )
+                        % Full (correlated) case
+                        A_N = cell2mat( this.A_Nbp );
+                    else
+                        error('Wrong A_Nbp property, check');
+                    end
+                    this.obj_V.setMinimalCov( ...
+                        J_eps_Nbp * A_N * J_eps_Nbp' );
+                    this.Am_V = this.obj_V.A_x;
             end
         end
         
@@ -327,6 +370,7 @@ classdef CTrihedronSolver < handle
 %             V_tri = this.lam2v;
             
             V_tri = this.rho2v;
+            this.V = V_tri;
         end
         
         function V_tri = solve_withGT( this, V_gt )
