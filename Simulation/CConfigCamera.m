@@ -9,7 +9,7 @@ classdef CConfigCamera < handle
     %   res - image resolution (height x width)
     %   sd - Standard Deviation (in [pixel]) of image pixels
     
-    properties (SetAccess = protected ) % Only changeable through constructor
+    properties %(SetAccess = protected ) % Only changeable through constructor
         K       % Intrinsic calibration matrix
         distortion % NL distortion parameters
         res     % Image resolution (width x height)
