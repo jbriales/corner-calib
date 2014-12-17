@@ -42,9 +42,14 @@ classdef S2 < Manifold.Base
         
         function [n, ob] = plus( obj, eps )
             H = Householder( obj.X );
+            % Check H projects to [0,0,+1]
+            % Is correct to multiply by -1?
+            if [0 0 1] * H * obj.X < 0
+                H = - H;
+            end
             n_eps = obj.exp( eps );
             
-            n = H * n_eps;
+            n = H * n_eps;            
             
             if nargout == 2
                 ob = Manifold.S2( n );

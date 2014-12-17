@@ -10,7 +10,8 @@ end
 n = length( x );
 I = eye( n );
 
-v = x - sign( x(1) ) * norm(x) * I(:,ei);
+% Fix sign taking element which gets one (last element here)
+v = x + sign( x(ei) ) * norm(x) * I(:,ei);
 if ~exist('a','var')
     H = I - 2 * (v * v') / (v'*v);
     out = H;
