@@ -156,7 +156,7 @@ classdef CTrihedron < CPattern
                 if 0 % Perform Monte Carlo simulation
                     keyboard
                     obj_pts = Manifold.Rn( img_pts(:), eye(8) );
-                    out = Manifold.MonteCarloSim( ...,
+                    out = Manifold.MonteCarloSim( ...
                         @(in)obj.simulateTOimage( reshape(in.X,2,4), Rig.Camera.sd ),...
                         obj_pts, 'Ref', obj_xi, 'N', 1e4 );
                     keyboard
@@ -194,8 +194,41 @@ classdef CTrihedron < CPattern
                     keyboard
                 end
                 
+                
                 obj_Rtri = computeTrihedronNormals( obj_xi, Rig.Camera.K, obj_Nbp );
+                if 0 % Computation with new solver class
+                    OP3Asolver = CTrihedronSolver( reshape(obj_Nbp.X,3,3), Rig.Camera.K );
+                    OP3Asolver.loadXi( obj_xi );
+                    V_tri = OP3Asolver.solve;
+                    OP3Asolver.loadCovariance( ...
+                        mat2cell( obj_Nbp.A_X, [3 3 3], [3 3 3] ) );
+                    OP3Asolver.computeCovariance;
+                    obj_V = OP3Asolver.obj_V;
+                end
+
                 % Checked with Monte Carlo: 0.36% relative error with N=1e5
+                if 0 % Perform Monte Carlo simulation
+                    keyboard
+                    
+                    out = Manifold.MonteCarloSim( ...
+                        @(in)obj.auxiliar( ...
+                            in, OP3Asolver ),...
+                        obj_xi, 'Ref', obj_Rtri, 'N', 1e3 );
+                    out = Manifold.MonteCarloSim( ...
+                        @(in)obj.auxiliar2( ...
+                            in, OP3Asolver ),...
+                        obj_Nbp, 'Ref', obj_Rtri, 'N', 1e3 );
+                    out = Manifold.MonteCarloSim( ...
+                        @(in)computeTrihedronNormals( ...
+                            in, Rig.Camera.K ),...
+                        obj_xi, 'Ref', obj_Rtri, 'N', 1e3 );
+                    keyboard
+                end
+                % Very important note:
+                % Sampling normal distribution on sphere is not trivial
+                % since it's not a Lie group, so there are no elemental
+                % directions. Generation in plane followed by projection is
+                % not working
             else
                 co = [];
                 return
@@ -211,6 +244,20 @@ classdef CTrihedron < CPattern
 
             co = CTrihedronObservation( obj_Rtri, obj_LP2, obj_Nbp, c_ray,...
                 v, A_v, [], [], q, A_q );
+        end
+        
+        function obj_R = auxiliar2( ~, obj_Nbp, OP3Asolver )
+            OP3Asolver.Nbp = reshape(obj_Nbp.X,3,3);
+            V_tri = OP3Asolver.solve;
+            obj_R = Manifold.SO3( V_tri );
+        end
+        
+        function obj_R = auxiliar( ~, xi, OP3Asolver )
+            OP3Asolver.loadXi( xi );
+            [obj_Nbp, ~] = computeBackprojectedNormals( xi, OP3Asolver.K );
+            OP3Asolver.Nbp = reshape(obj_Nbp.X,3,3);
+            V_tri = OP3Asolver.solve;
+            obj_R = Manifold.SO3( V_tri );
         end
         
         % Get calibrated data from corner (line normals, center and
