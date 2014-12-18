@@ -43,9 +43,28 @@ if verbose
 end
 
 %% Generation of random samples
-inc_eps = mvnrnd( zeros(1,X0.dim), X0.A_x, N )';
-[~,X] = X0 + inc_eps; %#ok<RHSFN>
-clear inc_eps
+% if isa(X0,'Manifold.Dyn')
+%     keyboard
+%     if all( cellfun(@(X)isa(X,'Manifold.S2'), X0.vars ) )
+%         X = mvnrnd( X0.X', X0.A_X, N )';
+%         CX = mat2cell(X,[3 3 3],ones(1,N));
+%         clear X
+%         for ii=1:N
+%             X(ii) = Manifold.Dyn( ...
+%                 Manifold.S2(CX{1,ii}),...
+%                 Manifold.S2(CX{2,ii}),...
+%                 Manifold.S2(CX{3,ii}) );
+%         end
+%     else
+%         inc_eps = mvnrnd( zeros(1,X0.dim), X0.A_x, N )';
+%         [~,X] = X0 + inc_eps; %#ok<RHSFN>
+%         clear inc_eps
+%     end
+% else
+    inc_eps = mvnrnd( zeros(1,X0.dim), X0.A_x, N )';
+    [~,X] = X0 + inc_eps; %#ok<RHSFN>
+    clear inc_eps
+% end
 
 %% Loop solving of problem
 Y = Ref.empty(0,N);
