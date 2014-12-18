@@ -47,7 +47,7 @@ classdef CTrihedronSolver < handle
         
         % Auxiliar loading functions
         function loadXi( this, xi )
-            this.Dproj = deal( DprojectionP2( xi.c.X ) );
+            this.Dproj = repmat( {DprojectionP2( xi.c.X )}, 1,3 );
             this.v_im  = { xi.v(1).X , xi.v(2).X , xi.v(3).X };
         end
         
