@@ -196,7 +196,7 @@ classdef CTrihedron < CPattern
                 
                 
                 obj_Rtri = computeTrihedronNormals( obj_xi, Rig.Camera.K, obj_Nbp );
-                if 0 % Computation with new solver class
+                if 1 % Computation with new solver class
                     OP3Asolver = CTrihedronSolver( reshape(obj_Nbp.X,3,3), Rig.Camera.K );
                     OP3Asolver.loadXi( obj_xi );
                     V_tri = OP3Asolver.solve;
@@ -207,7 +207,45 @@ classdef CTrihedron < CPattern
                 end
 
                 % Checked with Monte Carlo: 0.36% relative error with N=1e5
-                if 0 % Perform Monte Carlo simulation
+                if 1 % Perform Monte Carlo simulation
+                    keyboard
+                    
+                    [out,RR,inc] = Manifold.MonteCarloSim( ...
+                        @(in)computeTrihedronNormals( ...
+                            in, Rig.Camera.K ),...
+                        obj_xi, 'Ref', obj_Rtri, 'N', 1e4 );
+                    figure
+                    %                     error_ellipse( out.A_x )
+                    subplot(2,2,1), hold on
+%                     plotcov3( zeros(3,1), out.A_x )
+                    error_ellipse( out.A_x )
+                    plot3( inc(1,:), inc(2,:), inc(3,:), '.k',...
+                        'MarkerSize',0.5)
+                    
+                    subplot(2,2,2), hold on
+
+                    id = [1 2];
+                    plotcov2( zeros(2,1), out.A_x(id,id),...
+                        'num-pts', 100,...
+                        'plot-axes', 0)
+                    plot( inc(1,:), inc(2,:), '.k',...
+                        'MarkerSize',0.5)
+                    
+                    subplot(2,2,3), hold on
+                    id = [2 3];
+                    plotcov2( zeros(2,1), out.A_x(id,id),...
+                        'num-pts', 100,...
+                        'plot-axes', 0)
+                    plot( inc(2,:), inc(3,:), '.k',...
+                        'MarkerSize',0.5)
+                    
+                    subplot(2,2,4), hold on
+                    id = [3 1];
+                    plotcov2( zeros(2,1), out.A_x(id,id),...
+                        'num-pts', 100,...
+                        'plot-axes', 0)
+                    plot( inc(3,:), inc(1,:), '.k',...
+                        'MarkerSize',0.5)
                     keyboard
                     
                     out = Manifold.MonteCarloSim( ...
