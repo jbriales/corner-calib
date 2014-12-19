@@ -8,7 +8,7 @@ classdef COdometryTest < handle
         WITH_PLOT = true;
         WITH_COVARIANCE = true;
         cam_sd = 0;
-        lin_sd = 1e-5;
+        lin_sd = 1e-3;
         cube_sd = 1e-3;
         rig_ini = 'rig.ini';
         pose_gen_ini = 'pose_gen.ini';
@@ -449,15 +449,33 @@ classdef COdometryTest < handle
                     if this.WITH_COVARIANCE
                         objs_l(ii) = Manifold.S2( snormalize(l) );
                         
-                        Am_l = this.lin_sd^2 * eye(2);
-                        objs_l(ii).setMinimalCov( Am_l );
-                        A_l = null(l') * Am_l * null(l')';
+                        % Compute lines uncertainty from points
+                        p1h = [ prim2D(ii).p1; 1 ];
+                        p2h = [ prim2D(ii).p2; 1 ];
+                        % Store points object
+                        A_p1h = this.lin_sd^2 * eye(3);
+                        A_p1h(3,3) = 0; % Make covariance homogeneous 
+                        A_p2h = this.lin_sd^2 * eye(3);
+                        A_p2h(3,3) = 0; % Make covariance homogeneous 
+                        l  = cross( p1h, p2h );
+                        J_ = [-skew(p1h) skew(p2h)];
+                        A_ = [A_p2h zeros(3,3);
+                              zeros(3,3) A_p1h];
+                        A_l = J_ * A_ * J_';
+                        % Homogeneize
+                        JJ = null(l') * null(l')';
+                        A_lh = JJ * A_l * JJ;
+                        objs_l(ii).setRepresentationCov( A_lh );
+                        
+%                         Am_l = this.lin_sd^2 * eye(2);
+%                         objs_l(ii).setMinimalCov( Am_l );
+%                         A_lh = null(l') * Am_l * null(l')';
                         J_n_l = Dsnormalize(K'*l) * K';
                         objs_n(ii) = Manifold.S2( cell_n{ii} );
-%                         objs_n(ii).setRepresentationCov( J_n_l * A_l * J_n_l' );
+                        objs_n(ii).setRepresentationCov( J_n_l * A_lh * J_n_l' );
                         % Temporary
-                        sd_n = 1e-6;
-                        objs_n(ii).setMinimalCov( sd_n * eye(2) );
+%                         sd_n = 1e-6;
+%                         objs_n(ii).setMinimalCov( sd_n * eye(2) );
                     end
                 end
                 
@@ -471,10 +489,10 @@ classdef COdometryTest < handle
                     trihedronSolver.computeCovariance;
                     obj_V = trihedronSolver.obj_V;
                     
-                    WITH_MONTECARLO = false;
+                    WITH_MONTECARLO = true;
                     if WITH_MONTECARLO
                         keyboard
-                        % Set manifold framework inputs
+                        % Set manifold framework inputs                        
                         obj_L = Manifold.Dyn( objs_l(1), objs_l(2), objs_l(3) );
                         A_L = blkdiag( objs_l.A_x );
                         obj_L.setMinimalCov( A_L );
@@ -482,15 +500,28 @@ classdef COdometryTest < handle
                         obj_N = Manifold.Dyn( objs_n(1), objs_n(2), objs_n(3) );
                         obj_N.setMinimalCov( blkdiag( objs_n.A_x ) );
                         
+                        obj_pts = Manifold.Rn( ...
+                                    [prim2D(1).p1;...
+                                     prim2D(1).p2;...
+                                     prim2D(2).p1;...
+                                     prim2D(2).p2;...
+                                     prim2D(3).p1;...
+                                     prim2D(3).p2] );
+                        obj_pts.setMinimalCov( this.lin_sd^2*eye(12) );
+                        
                         % Set temporary necessary variables
                         this.prim2D = prim2D;
 
 %                         out = Manifold.MonteCarloSim( ...
 %                             @(X)this.Fun_OP3A_Fast(X),...
 %                             obj_L, 'Ref', obj_V, 'N', 1e3 );
+%                         out = Manifold.MonteCarloSim( ...
+%                             @(X)this.Fun_OP3A_Fast_N(X),...
+%                             obj_N, 'Ref', obj_V, 'N', 1e4 );
                         out = Manifold.MonteCarloSim( ...
-                            @(X)this.Fun_OP3A_Fast_N(X),...
-                            obj_N, 'Ref', obj_V, 'N', 1e4 );
+                            @(X)this.Fun_OP3A_Fast_pts(X),...
+                            obj_pts, 'Ref', obj_V, 'N', 1e4 );
+                        keyboard
                     end
                 end
                 
@@ -546,6 +577,23 @@ classdef COdometryTest < handle
         end
         function V = Fun_OP3A_Fast_N( this, N )
             N = reshape( N.X, 3,3 );
+            
+            trihedronSolver = CTrihedronSolver( N, this.Cam.K );
+            trihedronSolver.loadSegments( this.prim2D );
+            V = trihedronSolver.solve;
+            V = Manifold.SO3( V );
+        end
+        function V = Fun_OP3A_Fast_pts( this, obj_pts )
+            pts = reshape(obj_pts.X,2,[]);
+            Cpts = mat2cell(pts, 2, [2 2 2]);
+            cell_n = cell(1,3);
+            for ii=1:3
+                p1h = [ Cpts{ii}(:,1); 1 ];
+                p2h = [ Cpts{ii}(:,2); 1 ];
+                l  = cross( p1h, p2h );
+                cell_n{ii} = snormalize( this.Cam.K' * l );
+            end
+            N = [cell_n{:}];
             
             trihedronSolver = CTrihedronSolver( N, this.Cam.K );
             trihedronSolver.loadSegments( this.prim2D );
