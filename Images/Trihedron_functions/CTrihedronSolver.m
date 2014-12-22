@@ -173,6 +173,7 @@ classdef CTrihedronSolver < handle
             d = zeros(1,3);
             for k=1:3
                 ij = setdiff(1:3,k); i=ij(1); j=ij(2);
+                % TODO: Change to simplified expression -n{i}'*n{j}
                 d(k) = n{i}'*skew(t)*skew(t)*n{j};
             end            
             d_m = sqrt( prod(d) );
