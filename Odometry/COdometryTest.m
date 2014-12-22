@@ -306,6 +306,64 @@ classdef COdometryTest < handle
             set(gca,'XTickLabel',Clab);
         end
         
+        function testFreiburg( this )
+            % Get camera configuration
+            config_file = fullfile( pwd, 'configs', 'freiburg3RGB.ini' );
+            SConfigCam = readConfigFile( config_file );
+            this.Cam = CRealCamera( SConfigCam );
+            
+            % Load all existing images in dataset
+            dataset_folder = '/media/cloud/Datasets/rgbd_dataset_freiburg3_cabinet/';
+            raw = CRawlogCam( dataset_folder, [], 'Freiburg' );
+            
+            keyboard
+            tracker = CGtracker;
+            % Skip tracking for stored steps
+            for i=1:raw.Nobs
+                % Check if this iteration is already solved
+                if exist( raw.frames(i).path_metafile, 'file' )
+                    tracker.loadSegs( raw.frames(i).path_metafile );
+                    continue;
+                end
+                
+                % Code continues if not solved yet:
+                % ---------------------------------               
+                % Load next image from rawlog
+                im = raw.frames(i).loadImg;
+                
+                if isempty( tracker.segs )
+                    % If there is no previous information,
+                    % request user hint
+                    tracker.hint;
+                else
+                    if isempty( tracker.img ) && i > 1
+                        % Load the previous image to track
+                        tracker.loadImage( raw.frames(i-1).loadImg );
+                    end 
+                    % If there was a previous image,
+                    % update segments position
+                    tracker.IAT_update( im );
+                    % tracker.segs.plot('y')
+                end
+                tracker.loadImage( im );
+
+                % Clean current figure
+                clf
+                imshow( tracker.img ); hold on;
+                freezeColors;
+                tags = cellfun(@(x)num2str(x), num2cell(1:numel(tracker.segs)),...
+                    'UniformOutput', false);
+                tracker.segs.plot('y', tags);
+                
+                % Optimize estimation by SVD method
+                tracker.SVD_update;
+                
+                % Save current results
+                temp_segs = tracker.segs; % Temporal variable
+                save( raw.frames(i).path_metafile, 'temp_segs' );
+            end
+        end
+        
         function [err, global_err] = syntheticElqursh( this )
             
             % Assign variables from properties
