@@ -1,4 +1,4 @@
-classdef CSegment2D
+classdef CSegment2D < handle
     %CSegment3D Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -10,6 +10,7 @@ classdef CSegment2D
     
     properties(Dependent)
         n
+        d
     end
     
     methods
@@ -29,8 +30,23 @@ classdef CSegment2D
             end
         end
         
+        function transform( this, type, T )
+            switch type
+                case 'euclidean2D'
+                    R = T(:,1:2);
+                    t = T(:,3);
+                    this.p1 = R * this.p1  + t;
+                    this.p2 = R * this.p2  + t;
+                otherwise
+                    warning('Unknown transformation %s\n',type);
+            end
+        end
+        
         function n = get.n(this)
             n = [ 0 -1 ; 1 0 ] * this.v;
+        end
+        function d = get.d(this)
+            d = norm( this.p2 - this.p1 );
         end
         
         function [h,g] = plot( this, format, tag )
