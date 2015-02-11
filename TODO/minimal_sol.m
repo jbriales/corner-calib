@@ -20,6 +20,8 @@ for k=1:3
     N{k} = null( kron( v{k}', n{k}' ) );
 end
 
+a = CSimLidar;
+
 xy = null( [N{1} N{2}] );
 x = snormalize( xy(1:size(N{1},2),:) ) % Normalize x vectors to keep orthonormal nullspaces
 N12 = N{1}*x;
@@ -43,16 +45,20 @@ B  = Na'*Nb;
 [U,~] = eig( Qa );
 Da = U' * Qa * U; 
 Db = U' * Qb * U;
-Bd = U' * B  * U;
+B = U' * 0.5*(B+B') * U;
 % GT value: rho such that lam = U * rho
 rho = U' * lam;
+
+tic
+[x y z] = sw_Zhou_alt(diag(Da), diag(Db), diag(B), [B(2,3),B(1,3),B(1,2)] );
+toc
 
 % Symbols
 Srho = sym('r%d',[1 3])';
 % sym( 'Srho', 'real' )
 Srho' * Da * Srho
 Srho' * Db * Srho
-Srho' * Bd * Srho
+Srho' * B * Srho
 
 BB = [ diag(B) ;
        B(1,2) + B(2,1)
