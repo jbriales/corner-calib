@@ -1,5 +1,5 @@
 classdef CPose3D < handle
-    %CPose Pose of a 3D object wrt reference (typically World)
+    %CPose3D Pose of a 3D object wrt reference (typically World)
     %   Fully defined through its orientation and 
     %   translation wrt reference frame
     %   Constructor:
