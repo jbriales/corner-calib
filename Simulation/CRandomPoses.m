@@ -1,4 +1,4 @@
-classdef CRandomPoses
+classdef CRandomPoses < handle
     %CRandomPoses Class for generation of random poses
     %   Detailed explanation goes here
     
@@ -10,6 +10,9 @@ classdef CRandomPoses
         ang_x_max
         ang_y_max
         device
+        
+        % Store rng configuration to continue
+        srng
     end
     
     methods
@@ -41,6 +44,11 @@ classdef CRandomPoses
             % this.gen(N) returns N poses fulfilling
             % the conditions imposed in constructor
             extractStructFields( this );
+            
+            % Reset last state of rng:
+            if ~isempty( this.srng )
+                rng( this.srng );
+            end
             
             max_ang = 90 - min_ang;
             R_Cam_LRF = [ 0 -1 0 ; 0 0 -1 ; 1 0 0 ];
@@ -101,6 +109,9 @@ classdef CRandomPoses
                 R = mat2cell( R, 3, 3, ones(1,N) );
                 R = permute( R, [1 3 2] );
             end
+            
+            % Save current state of rng
+            this.srng = rng;
         end
     end
     
