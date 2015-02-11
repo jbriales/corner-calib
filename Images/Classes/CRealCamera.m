@@ -269,6 +269,15 @@ classdef CRealCamera < CConfigCamera & handle
 %             end
         end
         
+        function SimCam = cloneAsSimCam( obj, cam_sd )
+            
+            if ~exist('cam_sd','var')
+                cam_sd = obj.sd;
+            end
+            SimCam = CSimCamera( eye(3), zeros(3,1), obj.K,...
+                    obj.res, obj.f, cam_sd );
+        end
+        
     end
 end
 

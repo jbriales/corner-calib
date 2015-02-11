@@ -6,6 +6,9 @@ classdef CFrame < handle
         % Image data
         img
         
+        % Pose data (if available)
+        pose
+        
         % Timesample
         ts
         
