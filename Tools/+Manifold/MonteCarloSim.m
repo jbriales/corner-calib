@@ -1,4 +1,4 @@
-function out = MonteCarloSim( F, X0, varargin )
+function [out, YY, inc] = MonteCarloSim( F, X0, varargin )
 % out = simulate( F, X0, options )
 % Output:
 %   mu is the mean value (Montecarlo)
@@ -107,4 +107,9 @@ if ~isempty(Ref)
     end
 end
 
+if nargout >= 2
+    % Output also all computed output
+    YY  = Y;
+    inc = inc_eps;
+end
 end

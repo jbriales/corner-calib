@@ -93,6 +93,27 @@ classdef SO3 < Manifold.Base
             u = logmap( R );
         end
         
+        % NOTE: Static methods should substitute to class method as factory
+        % of methods
+        function J_R_eps = Jexp( R )
+            % J_R_eps = Jexp( R )
+            % Returns 9x3 jacobian of Matrix SO(3) wrt minimal so(3)
+            % representation
+            J_R_eps  = [ -skew(R(:,1))
+                         -skew(R(:,2))
+                         -skew(R(:,3)) ];
+        end
+        
+        % NOTE: Static methods should substitute to class method as factory
+        % of methods
+        function J_eps_R = Jlog( R )
+            % J_R_eps = Jlog( R )
+            % Returns 3x9 jacobian of minimal so(3) representation wrt Matrix SO(3)
+            J_eps_R = 0.5 * [ -skew(R(:,1))
+                              -skew(R(:,2))
+                              -skew(R(:,3)) ]';
+        end
+        
         function mu_R = mean( RR )
             if isa(RR,'Manifold.SO3')
                 RR = [RR.X];
