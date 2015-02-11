@@ -9,6 +9,10 @@ classdef CConfigCamera < handle
     %   res - image resolution (height x width)
     %   sd - Standard Deviation (in [pixel]) of image pixels
     
+    properties % Some other preassigned parameters
+        noise_type = 'Gaussian';
+    end
+    
     properties %(SetAccess = protected ) % Only changeable through constructor
         K       % Intrinsic calibration matrix
         distortion % NL distortion parameters
@@ -26,7 +30,7 @@ classdef CConfigCamera < handle
     end
     
     properties (SetAccess = protected, Dependent)
-        % Empty
+        size    % Image matrix size (height x width)
     end
        
     methods
@@ -61,6 +65,10 @@ classdef CConfigCamera < handle
             obj.FOVv = 2 * atan( K(2,3)/K(2,2) );
             obj.FOVhd = rad2deg( obj.FOVh );
             obj.FOVvd = rad2deg( obj.FOVv );
+        end
+        
+        function size = get.size( obj )
+            size = [obj.res(2) obj.res(1)];
         end
         
         function setImageBorder( obj )

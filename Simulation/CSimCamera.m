@@ -30,9 +30,15 @@ classdef CSimCamera < CBaseCamera
             
             uv_pixels = makeinhomogeneous( obj.K * p3D );
             
-            % Apply gaussian noise to pixels
-            uv_pixels = uv_pixels + obj.sd * randn(2,size(p3D,2));
-            
+            % Apply noise to pixels (depending on noise_type configuration
+            % of CConfigCamera
+            switch obj.noise_type
+                case 'Gaussian'
+                    uv_pixels = uv_pixels + obj.sd * randn(2,size(p3D,2));
+                case 'Uniform'
+                    uv_pixels = uv_pixels + obj.sd * (-1+2*rand(2,size(p3D,2)));
+            end
+                    
             % Update canonical projection space with noise
             uv_proj   = obj.K \ makehomogeneous( uv_pixels );
         end
@@ -46,8 +52,14 @@ classdef CSimCamera < CBaseCamera
             
             uv_pixels = makeinhomogeneous( obj.K * p3D );
             
-            % Apply gaussian noise to pixels
-            uv_pixels = uv_pixels + obj.sd * randn(2,size(p3D,2));
+            % Apply noise to pixels (depending on noise_type configuration
+            % of CConfigCamera
+            switch obj.noise_type
+                case 'Gaussian'
+                    uv_pixels = uv_pixels + obj.sd * randn(2,size(p3D,2));
+                case 'Uniform'
+                    uv_pixels = uv_pixels + obj.sd * (-1+2*rand(2,size(p3D,2)));
+            end
             
             % Update canonical projection space with noise
             if nargout > 1

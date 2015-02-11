@@ -1,9 +1,12 @@
-classdef CBaseCamera < CPose3D & CConfigCamera
+classdef CBaseCamera < CPose3D & CConfigCamera & matlab.mixin.Copyable
     %CBaseLidar Base class for Lidar object
     % This base class stores configuration parameters and pose
     %   Constructor:
     %   Lidar = CBaseLidar( R, t, N, FOVd, sd, d_range )
     % This class inherits from CPlane3D and CConfigLidar
+    %   The inheritance from matlab.mixin.Copyable allows to use copy method
+    % to make a full copy of the object to a different one (not pointing to
+    % the same original object).
     %
     % See also CPlane3D, CConfigLidar.
     
@@ -54,6 +57,7 @@ classdef CBaseCamera < CPose3D & CConfigCamera
                 v = [ obj.t , pts3D(:,i) ];
                 h(i) = line( v(1,:), v(2,:), v(3,:) );
             end
+            set(h,'Color',color); % Set input color to lines
         end
     end
 end
