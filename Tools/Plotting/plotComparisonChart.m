@@ -7,13 +7,13 @@ clear plotOpts;
 
 % Check size of inputs (only one should be > 1)
 if ~exist( 'cam_sd_vals', 'var' )
-    cam_sd_vals = comp_obj.cam_sd_n;
+    cam_sd_vals = comp_obj.cam_sd_vals;
 end
 if ~exist( 'scan_sd_vals', 'var' )
-    scan_sd_vals = comp_obj.scan_sd_n;
+    scan_sd_vals = comp_obj.scan_sd_vals;
 end
 if ~exist( 'Nobs_vals', 'var' )
-    Nobs_vals = comp_obj.N_co_n;
+    Nobs_vals = comp_obj.Nobs_vals;
 end
 if ~exist( 'with_outliers', 'var' )
     with_outliers = true;
@@ -34,9 +34,9 @@ end
 xlab = xlabels{imax};
 
 % Check if the scan_sd value is correct
-cam_idxs  = comp_obj.getIndexes('cam_sd_n',cam_sd_vals);
-scan_idxs = comp_obj.getIndexes('scan_sd_n',scan_sd_vals);
-Nobs_idxs = comp_obj.getIndexes('N_co_n',Nobs_vals);
+cam_idxs  = comp_obj.getIndexes('cam_sd_vals',cam_sd_vals);
+scan_idxs = comp_obj.getIndexes('scan_sd_vals',scan_sd_vals);
+Nobs_idxs = comp_obj.getIndexes('Nobs_vals',Nobs_vals);
 
 % Extract dim x Nsim matrices for representation
 all_R_err = [];
@@ -71,7 +71,7 @@ for idx_pattern = 1:size(patterns,1)
         N_met = N_met+1;
     end
 end
-err.xtick = num2str( comp_obj.cam_sd_n );
+err.xtick = num2str( comp_obj.cam_sd_vals );
 
 % Parameters to control the position in X label
 Npos    = 5;    % gap between samples in X label

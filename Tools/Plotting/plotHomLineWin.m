@@ -15,6 +15,7 @@ l = l(:); % Make column vector
 border = [ 1 1 0 0
            0 0 1 1
             -axis  ];
+        
 if 1
     p = makeinhomogeneous( skew(l) * border );
     in = insideAxis( p );
