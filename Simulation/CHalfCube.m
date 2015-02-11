@@ -29,8 +29,11 @@ classdef CHalfCube < CPattern
             end
             if ~exist('sd','var')
                 sd = 0;
-            end
+            end            
             this = this@CPattern( R, t );
+            
+            % Store sd of cube points
+            this.sd = sd;
             
             this.L = L;
             
@@ -44,6 +47,38 @@ classdef CHalfCube < CPattern
             for i=1:this.NF
                 this.face{i} = CPolygon( R * face_R{i}, t, p );
             end
+            
+            this.p3D = - [ 0 0 0 ;
+                        L 0 0 ;
+                        0 L 0 ;
+                        0 0 L ;
+                        0 L L ;
+                        L 0 L ;
+                        L L 0 ]';
+            % Apply cube noise to vertexes
+            this.p3D = this.p3D + sd * randn(3,7);
+            % Transform vertexes to given cube pose
+            this.p3D = makeinhomogeneous( this.T * makehomogeneous( this.p3D ) );
+            
+            % Create cell array of segments
+            % First dimension: direction {x,y,z}
+            % Second dimension: segment label {1,2,3}
+            indexes_pairs = { [3,7],[1,2],[4,6];
+                              [4,5],[1,3],[2,7];
+                              [3,5],[1,4],[2,6] };
+            this.segments = cell(3,3);
+            pts = num2cell(this.p3D,[1,9]);
+            for i=1:3
+                for j=1:3
+                    this.segments{i,j} = CSegment3D(pts{indexes_pairs{i,j}});
+                end
+            end
+        end
+        
+        function updateNoise( this )
+            
+            sd = this.sd; % Use object defined noise
+            L = this.L;
             
             this.p3D = - [ 0 0 0 ;
                         L 0 0 ;
