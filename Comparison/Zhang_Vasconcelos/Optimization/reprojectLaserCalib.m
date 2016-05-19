@@ -53,3 +53,11 @@ ylrs = cell2mat( err );
 % toc
 
 y = ylrs;
+
+end
+
+function X = skew(x)
+% Creates a skew symmetrix matrix from a vectr x in R3
+
+X = [0 -x(3) x(2) ; x(3) 0 -x(1) ; -x(2) x(1) 0 ];
+end
